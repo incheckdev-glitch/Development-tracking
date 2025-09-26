@@ -1,308 +1,1449 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>InCheck Issues Dashboard</title>
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Filter,
+  Flame,
+  Loader2,
+  MapPin,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  ServerCrash,
+  Settings,
+  Thermometer,
+  Trash2,
+  Upload,
+  Wrench,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-  <!-- Libs -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+// =============================================================
+// InCheck 360 — Sensors Interface (Single-File React Page)
+// Inspired by Jolt-style operational UIs. Ready to plug into APIs.
+// - TailwindCSS for styling
+// - shadcn/ui for components
+// - lucide-react for icons
+// - recharts for live trend charts
+// =============================================================
 
-  <style>
-    :root {
-      --priority-high:#ef4444; --priority-medium:#f59e0b; --priority-low:#10b981;
-      --status-resolved:#10b981; --status-underdev:#3b82f6; --status-rejected:#ef4444;
-      --status-onhold:#f59e0b; --status-notstarted:#6b7280;
-      --bg:#0b1020; --card:#0f1630; --muted:#9aa6d1; --text:#e8edff;
-      --accent:#4f8cff; --border:#1e2643; --shadow:0 8px 24px rgba(0,0,0,.35);
+// -----------------------------
+// Types
+// -----------------------------
+
+type SensorStatus = "active" | "alarm" | "offline" | "maintenance";
+
+type Sensor = {
+  id: string;
+  name: string;
+  type: "temperature" | "vibration" | "pressure" | "humidity" | "custom";
+  site: string;
+  location: string;
+  lastReading: number;
+  unit: string;
+  status: SensorStatus;
+  battery: number; // percent
+  lastSeen: string; // ISO
+  notes?: string;
+};
+
+type Reading = {
+  ts: string; // ISO
+  value: number;
+};
+
+// -----------------------------
+// Mock API Layer (replace with your real endpoints)
+// -----------------------------
+const mockSites = ["Plant A", "Plant B", "Warehouse 3", "Data Center"];
+const mockTypes = ["temperature", "vibration", "pressure", "humidity", "custom"] as const;
+
+function randomBetween(min: number, max: number) {
+  return Math.round((Math.random() * (max - min) + min) * 10) / 10;
+}
+
+function generateSensors(n: number): Sensor[] {
+  const statuses: SensorStatus[] = ["active", "alarm", "offline", "maintenance"];
+  return Array.from({ length: n }).map((_, i) => {
+    const t = mockTypes[Math.floor(Math.random() * mockTypes.length)];
+    const unit = t === "temperature" ? "°C" : t === "pressure" ? "bar" : t === "vibration" ? "mm/s" : t === "humidity" ? "%RH" : "units";
+    const value = t === "temperature" ? randomBetween(10, 80) : t === "pressure" ? randomBetween(2, 8) : t === "vibration" ? randomBetween(0, 15) : t === "humidity" ? randomBetween(15, 90) : randomBetween(0, 100);
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const battery = Math.floor(Math.random() * 100);
+    return {
+      id: `S${(i + 1).toString().padStart(4, "0")}`,
+      name: `${t.toUpperCase()}-${i + 1}`,
+      type: t,
+      site: mockSites[Math.floor(Math.random() * mockSites.length)],
+      location: `Zone ${1 + Math.floor(Math.random() * 6)}`,
+      lastReading: value,
+      unit,
+      status,
+      battery,
+      lastSeen: new Date(Date.now() - Math.random() * 36e5 * 24).toISOString(),
+      notes: Math.random() > 0.7 ? "Investigate mounting bracket vibration." : undefined,
+    };
+  });
+}
+
+function generateReadings(sensor: Sensor, points = 48): Reading[] {
+  const base = sensor.lastReading;
+  return Array.from({ length: points }).map((_, i) => {
+    const ts = new Date(Date.now() - (points - i) * 30 * 60 * 1000).toISOString();
+    const jitter = (Math.random() - 0.5) * (sensor.type === "temperature" ? 2 : 0.8);
+    let value = base + jitter;
+    if (sensor.type === "vibration") value = Math.max(0, base + (Math.random() - 0.5) * 2.5);
+    return { ts, value: Math.round(value * 100) / 100 };
+  });
+}
+
+const mockDB: { sensors: Sensor[]; readings: Record<string, Reading[]> } = {
+  sensors: generateSensors(68),
+  readings: {},
+};
+mockDB.sensors.forEach((s) => (mockDB.readings[s.id] = generateReadings(s)));
+
+const api = {
+  listSensors: async (): Promise<Sensor[]> => {
+    await new Promise((r) => setTimeout(r, 300));
+    return JSON.parse(JSON.stringify(mockDB.sensors));
+  },
+  getSensor: async (id: string): Promise<Sensor | undefined> => {
+    await new Promise((r) => setTimeout(r, 180));
+    return mockDB.sensors.find((s) => s.id === id);
+  },
+  upsertSensor: async (sensor: Partial<Sensor> & { id?: string }): Promise<Sensor> => {
+    await new Promise((r) => setTimeout(r, 280));
+    if (sensor.id) {
+      const idx = mockDB.sensors.findIndex((s) => s.id === sensor.id);
+      mockDB.sensors[idx] = { ...mockDB.sensors[idx], ...sensor } as Sensor;
+      return mockDB.sensors[idx];
+    } else {
+      const nextId = `S${(mockDB.sensors.length + 1).toString().padStart(4, "0")}`;
+      const created: Sensor = {
+        id: nextId,
+        name: sensor.name || `NEW-${nextId}`,
+        type: (sensor.type as Sensor["type"]) || "custom",
+        site: sensor.site || mockSites[0],
+        location: sensor.location || "Zone 1",
+        lastReading: sensor.lastReading ?? 0,
+        unit: sensor.unit || "units",
+        status: (sensor.status as SensorStatus) || "active",
+        battery: sensor.battery ?? 100,
+        lastSeen: new Date().toISOString(),
+        notes: sensor.notes,
+      };
+      mockDB.sensors.unshift(created);
+      mockDB.readings[created.id] = generateReadings(created);
+      return created;
     }
-    :root[data-theme="light"] {
-      --bg:#f4f6ff; --card:#ffffff; --muted:#5a678c; --text:#0d1326;
-      --accent:#2563eb; --border:#e7eaf6; --shadow:0 10px 24px rgba(16,24,40,.08);
+  },
+  deleteSensors: async (ids: string[]) => {
+    await new Promise((r) => setTimeout(r, 250));
+    ids.forEach((id) => {
+      const idx = mockDB.sensors.findIndex((s) => s.id === id);
+      if (idx >= 0) mockDB.sensors.splice(idx, 1);
+      delete mockDB.readings[id];
+    });
+    return true;
+  },
+  readings: async (id: string): Promise<Reading[]> => {
+    await new Promise((r) => setTimeout(r, 220));
+    return JSON.parse(JSON.stringify(mockDB.readings[id] || []));
+  },
+};
+
+// -----------------------------
+// Helpers
+// -----------------------------
+function statusBadge(status: SensorStatus) {
+  const map: Record<SensorStatus, string> = {
+    active: "bg-emerald-100 text-emerald-700",
+    alarm: "bg-red-100 text-red-700",
+    offline: "bg-zinc-100 text-zinc-700",
+    maintenance: "bg-amber-100 text-amber-700",
+  };
+  const iconMap: Record<SensorStatus, React.ReactNode> = {
+    active: <Thermometer className="h-3.5 w-3.5" />,
+    alarm: <Flame className="h-3.5 w-3.5" />,
+    offline: <ServerCrash className="h-3.5 w-3.5" />,
+    maintenance: <Wrench className="h-3.5 w-3.5" />,
+  };
+  return (
+    <Badge className={`gap-1 ${map[status]}`} variant="secondary">
+      {iconMap[status]}
+      <span className="capitalize">{status}</span>
+    </Badge>
+  );
+}
+
+function csvExport(rows: Sensor[]) {
+  const headers = [
+    "id",
+    "name",
+    "type",
+    "site",
+    "location",
+    "lastReading",
+    "unit",
+    "status",
+    "battery",
+    "lastSeen",
+    "notes",
+  ];
+  const content = [headers.join(",")]
+    .concat(
+      rows.map((r) =>
+        [
+          r.id,
+          r.name,
+          r.type,
+          r.site,
+          r.location,
+          r.lastReading,
+          r.unit,
+          r.status,
+          r.battery,
+          r.lastSeen,
+          (r.notes || "").replaceAll(",", ";"),
+        ].join(",")
+      )
+    )
+    .join("\n");
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `incheck-sensors-${Date.now()}.csv`;
+  a.click();
+}
+
+// -----------------------------
+// Main Page Component
+// -----------------------------
+export default function InCheckSensorsPage() {
+  const [loading, setLoading] = useState(true);
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const [query, setQuery] = useState("");
+  const [site, setSite] = useState<string | "all">("all");
+  const [type, setType] = useState<string | "all">("all");
+  const [status, setStatus] = useState<SensorStatus | "all">("all");
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    api
+      .listSensors()
+      .then((rows) => {
+        if (!mounted) return;
+        setSensors(rows);
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, [refreshKey]);
+
+  const filtered = useMemo(() => {
+    return sensors.filter((s) => {
+      const matchesQuery = query
+        ? [s.id, s.name, s.type, s.site, s.location].join(" ").toLowerCase().includes(query.toLowerCase())
+        : true;
+      const matchesSite = site === "all" ? true : s.site === site;
+      const matchesType = type === "all" ? true : s.type === type;
+      const matchesStatus = status === "all" ? true : s.status === status;
+      return matchesQuery && matchesSite && matchesType && matchesStatus;
+    });
+  }, [sensors, query, site, type, status]);
+
+  const selectionArray = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected]);
+
+  const stats = useMemo(() => {
+    const total = filtered.length;
+    const byStatus: Record<SensorStatus, number> = {
+      active: 0,
+      alarm: 0,
+      offline: 0,
+      maintenance: 0,
+    };
+    filtered.forEach((s) => (byStatus[s.status]++));
+    return { total, byStatus };
+  }, [filtered]);
+
+  function resetSelection() {
+    setSelected({});
+  }
+
+  function handleImportCSV(file: File) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const text = reader.result as string;
+        const [header, ...lines] = text.split(/\r?\n/).filter(Boolean);
+        const cols = header.split(",");
+        const idx = (k: string) => cols.indexOf(k);
+        const created: Sensor[] = [];
+        for (const line of lines) {
+          const parts = line.split(",");
+          const payload: Partial<Sensor> = {
+            id: parts[idx("id")] || undefined,
+            name: parts[idx("name")] || undefined,
+            type: (parts[idx("type")] as any) || undefined,
+            site: parts[idx("site")] || undefined,
+            location: parts[idx("location")] || undefined,
+            lastReading: parts[idx("lastReading")] ? Number(parts[idx("lastReading")]) : undefined,
+            unit: parts[idx("unit")] || undefined,
+            status: (parts[idx("status")] as any) || undefined,
+            battery: parts[idx("battery")] ? Number(parts[idx("battery")]) : undefined,
+            lastSeen: parts[idx("lastSeen")] || undefined,
+            notes: parts[idx("notes")] || undefined,
+          };
+          const row = await api.upsertSensor(payload);
+          created.push(row);
+        }
+        toast.success(`Imported ${created.length} sensors`);
+        setRefreshKey((k) => k + 1);
+      } catch (e: any) {
+        toast.error("Import failed: " + e?.message || e);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
+      {/* Header */}
+      <div className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <Thermometer className="h-6 w-6" />
+          <h1 className="text-xl font-semibold">InCheck 360 · Sensors</h1>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setRefreshKey((k) => k + 1)}>
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Preferences
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Display</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem checked>
+                  Compact table
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem>
+                  Show battery percent
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => toast.info("Theme settings coming soon")}>Theme…</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" /> Add Sensor
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[560px]">
+                <DialogHeader>
+                  <DialogTitle>Add Sensor</DialogTitle>
+                  <DialogDescription>Create a new sensor record.</DialogDescription>
+                </DialogHeader>
+                <SensorForm
+                  onSubmit={async (payload) => {
+                    const row = await api.upsertSensor(payload);
+                    toast.success(`Sensor ${row.name} created`);
+                    setRefreshKey((k) => k + 1);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" />
+              <Input
+                className="pl-9"
+                placeholder="Search (ID, name, site, location…)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <Select value={site} onValueChange={(v) => setSite(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Site" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sites</SelectItem>
+                {mockSites.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Select value={type} onValueChange={(v) => setType(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {mockTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="alarm">Alarm</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 flex gap-2">
+            <Button variant="outline" className="w-full gap-2" onClick={() => toast.message("Advanced filters coming soon")}> <Filter className="h-4 w-4"/> Filters</Button>
+            <Button variant="ghost" className="w-full" onClick={() => { setQuery(""); setSite("all"); setType("all"); setStatus("all"); }}>Reset</Button>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard title="Total" value={stats.total} subtitle="Sensors" />
+          <KpiCard title="Active" value={stats.byStatus.active} subtitle="Normal operation" />
+          <KpiCard title="Alarms" value={stats.byStatus.alarm} subtitle="Attention needed" />
+          <KpiCard title="Offline" value={stats.byStatus.offline} subtitle="No heartbeat" />
+        </div>
+      </div>
+
+      {/* Actions Bar */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4">
+        <Card>
+          <CardContent className="p-3 flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              className="gap-2"
+              onClick={async () => {
+                if (!selectionArray.length) return toast.info("Select at least one row");
+                csvExport(sensors.filter((s) => selected[s.id]));
+              }}
+            >
+              <Download className="h-4 w-4" /> Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" /> Import CSV
+            </Button>
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImportCSV(f);
+                e.currentTarget.value = "";
+              }}
+            />
+            <Separator orientation="vertical" className="h-6" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  Bulk Actions <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (!selectionArray.length) return toast.info("Select sensors first");
+                    await api.deleteSensors(selectionArray);
+                    toast.success(`Deleted ${selectionArray.length} sensors`);
+                    resetSelection();
+                    setRefreshKey((k) => k + 1);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete selected
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (!selectionArray.length) return toast.info("Select sensors first");
+                    toast.success("Triggered firmware update (simulated)");
+                  }}
+                >
+                  <Wrench className="h-4 w-4 mr-2" /> Firmware update
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="ml-auto text-sm text-muted-foreground">
+              {selectionArray.length} selected
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table */}
+      <div className=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4 pb-24\">
+        <Card className=\"overflow-hidden\">
+          <CardHeader className=\"p-3 sm:p-4\">
+            <CardTitle className=\"text-base\">Sensors</CardTitle>
+          </CardHeader>
+          <CardContent className=\"p-0\">
+            {loading ? (
+              <div className=\"flex items-center justify-center py-16\">
+                <Loader2 className=\"h-5 w-5 animate-spin mr-2\" /> Loading…
+              </div>
+            ) : (
+              <SensorsTable
+                rows={filtered}
+                selected={selected}
+                onSelectedChange={setSelected}
+                onOpenDetails={(id) => setDetailId(id)}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Prototype Mode (XD-like) */}
+      <PrototypeBuilder />
+
+      {/* Drawer: Sensor Details */}
+      <SensorDrawer
+        id={detailId}
+        onClose={() => setDetailId(null)}
+        onUpdate={async (payload) => {
+          const row = await api.upsertSensor(payload);
+          toast.success(`Saved ${row.name}`);
+          setRefreshKey((k) => k + 1);
+        }}
+      />
+      {/* Flow (Onboarding → Provision → Calibrate → Monitor → Alerts → Reports) */}
+      <FlowPanel />
+    </div>
+  );
+}
+
+// -----------------------------
+// Components
+
+// -----------------------------
+// Prototype Builder (XD-like clickable prototype from images/PDF pages)
+function PrototypeBuilder() {
+  const [open, setOpen] = useState(false);
+  type Screen = { id: string; name: string; url: string; w: number; h: number; hotspots: Array<{ id: string; x: number; y: number; w: number; h: number; target: string }>; }
+  const [screens, setScreens] = useState<Screen[]>([]);
+  const [current, setCurrent] = useState<string | null>(null);
+  const [mode, setMode] = useState<"view"|"draw">("view");
+  const [drawing, setDrawing] = useState<null | { x: number; y: number }>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const jsonRef = useRef<HTMLInputElement | null>(null);
+
+  function addImages(files: FileList) {
+    const arr: Promise<Screen>[] = Array.from(files).map(async (f, i) => {
+      const url = URL.createObjectURL(f);
+      const dim = await getImageSize(url);
+      return { id: `${Date.now()}-${i}`, name: f.name, url, w: dim.w, h: dim.h, hotspots: [] };
+    });
+    Promise.all(arr).then((list) => {
+      setScreens((s) => [...s, ...list]);
+      if (!current && list[0]) setCurrent(list[0].id);
+    });
+  }
+
+  function exportJSON() {
+    const payload = JSON.stringify({ screens }, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "prototype.json"; a.click();
+  }
+
+  function importJSON(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => { try { const data = JSON.parse(String(reader.result)); if (data?.screens) { setScreens(data.screens); setCurrent(data.screens[0]?.id ?? null); toast.success("Prototype loaded"); } } catch(e){ toast.error("Invalid JSON"); } };
+    reader.readAsText(file);
+  }
+
+  const currentScreen = screens.find(s => s.id === current) || null;
+
+  function onCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (mode !== "draw" || !currentScreen) return;
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (!drawing) { setDrawing({ x, y }); } else {
+      const w = Math.max(10, x - drawing.x);
+      const h = Math.max(10, y - drawing.y);
+      const id = `${Date.now()}`;
+      const target = currentScreen.id; // default to self; user can change below
+      setScreens(screens.map(s => s.id !== currentScreen.id ? s : { ...s, hotspots: [...s.hotspots, { id, x: drawing.x, y: drawing.y, w, h, target }] }));
+      setDrawing(null);
     }
-    body { margin:0; font-family:Inter,system-ui; background:var(--bg); color:var(--text); }
-    header { display:flex; align-items:center; gap:12px; padding:10px 16px;
-      background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
-    .brand { font-weight:700; display:flex; gap:8px; align-items:center; }
-    .logo { width:28px; height:28px; border-radius:8px; background:var(--accent); display:grid; place-items:center; color:#fff; font-weight:800; }
-    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center; }
-    .btn, .select, .input { padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:transparent; color:inherit; font:inherit; }
-    .btn { cursor:pointer; font-weight:600; }
-    .btn.primary { background:var(--accent); border:none; color:#fff; }
-    .wrap { padding:18px; max-width:1400px; margin:auto; display:grid; gap:18px; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); }
+  }
 
-    .grid { display:grid; gap:16px; }
-    .cols-4 { grid-template-columns:repeat(4,1fr); }
-    @media(max-width:900px){ .cols-4{ grid-template-columns:repeat(2,1fr) } }
-    @media(max-width:600px){ .cols-4{ grid-template-columns:1fr } }
+  return (
+    <>
+      <div className="fixed bottom-5 right-24 z-40">
+        <Button variant="outline" className="rounded-2xl" onClick={() => setOpen(true)}>Prototype</Button>
+      </div>
 
-    /* KPI Cards */
-    .kpi {
-      background: linear-gradient(135deg,var(--card),rgba(79,140,255,.05));
-      border-radius: 14px;
-      padding: 16px;
-      text-align:center;
-      transition: all .2s ease;
-      cursor:pointer;
-    }
-    .kpi:hover {
-      box-shadow: 0 6px 18px rgba(79,140,255,.25);
-      transform: translateY(-2px);
-    }
-    .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; }
-    .kpi .value{ font-size:30px; font-weight:800; margin-top:6px; }
-    .kpi .sub{ font-size:12px; color:var(--muted); }
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle>Prototype Builder</DialogTitle>
+            <DialogDescription>Upload your XD-exported screens (PNG/JPG). Draw hotspots to link screens.</DialogDescription>
+          </DialogHeader>
 
-    .charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px }
-    @media(max-width:900px){ .charts{ grid-template-columns:1fr } }
+          <div className="grid grid-cols-12 gap-4">
+            <div className="col-span-3 space-y-3">
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()}>Add screens</Button>
+                <input type="file" accept="image/*" multiple className="hidden" ref={fileRef} onChange={(e)=>{ if(e.target.files) addImages(e.target.files); e.currentTarget.value=""; }} />
+                <Button size="sm" variant="outline" onClick={exportJSON}>Export JSON</Button>
+                <Button size="sm" variant="outline" onClick={() => jsonRef.current?.click()}>Load JSON</Button>
+                <input type="file" accept="application/json" ref={jsonRef} className="hidden" onChange={(e)=>{ const f=e.target.files?.[0]; if(f) importJSON(f); e.currentTarget.value=""; }} />
+              </div>
+              <div className="text-xs text-muted-foreground">Screens</div>
+              <div className="space-y-2 max-h-[420px] overflow-auto pr-1">
+                {screens.map(s => (
+                  <button key={s.id} onClick={()=>setCurrent(s.id)} className={`w-full text-left p-2 rounded-xl border ${current===s.id?"border-emerald-500 bg-emerald-50":"hover:bg-slate-50"}`}>
+                    <div className="truncate text-sm font-medium">{s.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{s.w}×{s.h}px · {s.hotspots.length} hotspots</div>
+                  </button>
+                ))}
+              </div>
+              {currentScreen && (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">Hotspots</div>
+                  <div className="space-y-1 max-h-[200px] overflow-auto pr-1">
+                    {currentScreen.hotspots.map(h => (
+                      <div key={h.id} className="p-2 rounded-lg border flex items-center gap-2">
+                        <div className="text-[10px] font-mono">{Math.round(h.x)},{Math.round(h.y)} {Math.round(h.w)}×{Math.round(h.h)}</div>
+                        <Select value={h.target} onValueChange={(v)=> setScreens(screens.map(s => s.id!==currentScreen.id ? s : { ...s, hotspots: s.hotspots.map(x => x.id===h.id ? { ...x, target: v } : x) }))}>
+                          <SelectTrigger className="h-7"><SelectValue placeholder="Target"/></SelectTrigger>
+                          <SelectContent>{screens.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button size="icon" variant="ghost" onClick={()=> setScreens(screens.map(s => s.id!==currentScreen.id ? s : { ...s, hotspots: s.hotspots.filter(x => x.id!==h.id) }))}><Trash2 className="h-4 w-4"/></Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
-    /* Table */
-    table{ width:100%; border-collapse:collapse; font-size:14px; }
-    thead th{ text-align:left; padding:12px 10px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; box-shadow:0 2px 6px rgba(0,0,0,.2);}
-    tbody td{ padding:10px; border-bottom:1px solid var(--border); }
-    tbody tr:nth-child(even){ background:rgba(255,255,255,.03); }
-    tr:hover{ background:rgba(255,255,255,.05) }
-    .table-wrap{ max-height:460px; overflow:auto; border:1px solid var(--border); border-radius:10px; }
+            <div className="col-span-9">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant={mode==="view"?"secondary":"outline"} onClick={()=>setMode("view")}>Preview</Button>
+                  <Button size="sm" variant={mode==="draw"?"secondary":"outline"} onClick={()=>setMode("draw")}>Draw hotspot</Button>
+                </div>
+                {currentScreen && <div className="text-xs text-muted-foreground">{currentScreen.name}</div>}
+              </div>
 
-    .pill {
-      display:inline-block;
-      padding:3px 8px;
-      border-radius:12px;
-      font-size:12px;
-      font-weight:600;
-      color:#fff;
-    }
-    .priority-High { background: var(--priority-high); }
-    .priority-Medium { background: var(--priority-medium); }
-    .priority-Low { background: var(--priority-low); }
-    .status-Resolved { background: var(--status-resolved); }
-    .status-Rejected { background: var(--status-rejected); }
-    .status-On\ Hold { background: var(--status-onhold); }
-    .status-Not\ Started { background: var(--status-notstarted); }
+              <div className="relative border rounded-2xl overflow-hidden bg-white" style={{ width: "100%", height: "520px" }}>
+                {currentScreen ? (
+                  <div className="w-full h-full overflow-auto">
+                    <div
+                      className={`relative inline-block ${mode==='draw'?'cursor-crosshair':''}`}
+                      onClick={onCanvasClick}
+                      style={{ backgroundImage: `url(${currentScreen.url})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'top left', width: currentScreen.w, height: currentScreen.h }}
+                    >
+                      {currentScreen.hotspots.map(h => (
+                        <button key={h.id} onClick={(e)=>{ e.stopPropagation(); setCurrent(h.target); }} className="absolute border-2 border-emerald-500/70 rounded-md hover:bg-emerald-200/20" style={{ left: h.x, top: h.y, width: h.w, height: h.h }} />
+                      ))}
+                      {drawing && mode==='draw' && (
+                        <div className="absolute border-2 border-sky-500/70 rounded-md" style={{ left: drawing.x, top: drawing.y, width: 40, height: 40 }} />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Upload screens to start.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
-    /* Charts */
-    canvas { max-height: 250px; }
+async function getImageSize(url: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => { const img = new Image(); (img as any).onload = () => resolve({ w: (img as any).naturalWidth, h: (img as any).naturalHeight }); (img as any).src = url; });
+}
 
-    /* Dropdown */
-    .dropdown{ position:relative; }
-    .dropdown-content{ display:none; position:absolute; right:0; background:var(--card); border:1px solid var(--border); padding:10px; border-radius:8px; box-shadow:var(--shadow); }
-    .dropdown:hover .dropdown-content{ display:block; }
-    .dropdown-content label{ display:flex; gap:6px; font-size:13px; margin:4px 0; cursor:pointer; }
-  </style>
-</head>
-<body>
-  <header>
-    <div class="brand"><div class="logo">IC</div> InCheck Issues</div>
-    <div class="toolbar">
-      <input id="searchInput" class="input" type="search" placeholder="Search…" />
-      <select id="themeSelect" class="select"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
-      <button id="refreshNow" class="btn">🔄 Refresh</button>
-      <button id="createTicketBtn" class="btn primary">➕ Create Ticket</button>
-      <div class="dropdown">
-        <button class="btn">👁 Columns</button>
-        <div class="dropdown-content" id="columnToggles">
-          <label><input type="checkbox" value="desc"> Description</label>
-          <label><input type="checkbox" value="location"> Issue Location</label>
-          <label><input type="checkbox" value="file"> Media URL Reference</label>
-          <label><input type="checkbox" value="type"> Type</label>
-          <label><input type="checkbox" value="related"> Issue Related</label>
+// -----------------------------
+function KpiCard({ title, value, subtitle }: { title: string; value: number; subtitle: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-semibold">{value}</div>
+          <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function SensorsTable({
+  rows,
+  selected,
+  onSelectedChange,
+  onOpenDetails,
+}: {
+  rows: Sensor[];
+  selected: Record<string, boolean>;
+  onSelectedChange: (v: Record<string, boolean>) => void;
+  onOpenDetails: (id: string) => void;
+}) {
+  const [page, setPage] = useState(0);
+  const [sort, setSort] = useState<{ key: keyof Sensor; dir: "asc" | "desc" }>({ key: "id", dir: "asc" });
+  const pageSize = 12;
+
+  const sorted = useMemo(() => {
+    const arr = [...rows];
+    arr.sort((a, b) => {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      const av = (a[sort.key] as any) ?? "";
+      const bv = (b[sort.key] as any) ?? "";
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+    return arr;
+  }, [rows, sort]);
+
+  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const sliced = sorted.slice(page * pageSize, page * pageSize + pageSize);
+
+  function toggleAll(v: boolean) {
+    const next = { ...selected };
+    sliced.forEach((r) => (next[r.id] = v));
+    onSelectedChange(next);
+  }
+
+  function toggleOne(id: string, v: boolean) {
+    onSelectedChange({ ...selected, [id]: v });
+  }
+
+  const isAllVisibleSelected = sliced.every((r) => selected[r.id]);
+
+  function SortableHeader({ k, label }: { k: keyof Sensor; label: string }) {
+    const active = sort.key === k;
+    const dir = active ? sort.dir : undefined;
+    return (
+      <TableHead>
+        <button
+          onClick={() => setSort({ key: k, dir: active && dir === "asc" ? "desc" : "asc" })}
+          className="flex items-center gap-1"
+        >
+          <span>{label}</span>
+          {active && <ChevronDown className={`h-3 w-3 ${dir === "asc" ? "rotate-180" : ""}`} />}
+        </button>
+      </TableHead>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table className="text-sm">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <input type="checkbox" checked={isAllVisibleSelected} onChange={(e) => toggleAll(e.target.checked)} />
+            </TableHead>
+            <SortableHeader k="id" label="ID" />
+            <SortableHeader k="name" label="Name" />
+            <SortableHeader k="type" label="Type" />
+            <SortableHeader k="site" label="Site" />
+            <SortableHeader k="location" label="Location" />
+            <SortableHeader k="status" label="Status" />
+            <SortableHeader k="lastReading" label="Value" />
+            <SortableHeader k="battery" label="Battery" />
+            <SortableHeader k="lastSeen" label="Last Seen" />
+            <TableHead className="w-10"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sliced.map((s) => (
+            <TableRow key={s.id} className="hover:bg-slate-50/80">
+              <TableCell>
+                <input type="checkbox" checked={!!selected[s.id]} onChange={(e) => toggleOne(s.id, e.target.checked)} />
+              </TableCell>
+              <TableCell className="font-mono text-xs">{s.id}</TableCell>
+              <TableCell>
+                <div className="font-medium">{s.name}</div>
+                <div className="text-xs text-muted-foreground">{s.notes || "—"}</div>
+              </TableCell>
+              <TableCell className="capitalize">{s.type}</TableCell>
+              <TableCell>{s.site}</TableCell>
+              <TableCell className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {s.location}
+              </TableCell>
+              <TableCell>{statusBadge(s.status)}</TableCell>
+              <TableCell>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-medium">{s.lastReading}</span>
+                  <span className="text-xs text-muted-foreground">{s.unit}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-xs">{s.battery}%</div>
+                <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${s.battery < 20 ? "bg-red-500" : s.battery < 50 ? "bg-amber-500" : "bg-emerald-500"}`}
+                    style={{ width: `${s.battery}%` }}
+                  />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(s.lastSeen).toLocaleString()}
+                </div>
+              </TableCell>
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onOpenDetails(s.id)}>Open details</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(s.id)}>Copy ID</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between p-3">
+        <div className="text-xs text-muted-foreground">
+          Page {page + 1} of {pages} &middot; {rows.length} results
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= pages - 1}
+            onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
-  </header>
+  );
+}
 
-  <div class="wrap">
-    <div class="grid cols-4" id="kpis"></div>
-    <div class="charts">
-      <div class="card"><canvas id="byModule"></canvas></div>
-      <div class="card"><canvas id="byPriority"></canvas></div>
-      <div class="card"><canvas id="byStatus"></canvas></div>
-      <div class="card"><canvas id="byType"></canvas></div>
-    </div>
-    <div class="card">
-      <strong>Issues</strong> <span id="rowCount" class="muted"></span>
-      <div class="table-wrap">
-        <table id="issuesTable">
-          <thead><tr id="tableHead"></tr></thead>
-          <tbody><tr><td>Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+function SensorDrawer({ id, onClose, onUpdate }: { id: string | null; onClose: () => void; onUpdate: (payload: Partial<Sensor> & { id: string }) => Promise<void> }) {
+  const [row, setRow] = useState<Sensor | null>(null);
+  const [data, setData] = useState<Reading[]>([]);
+  const [loading, setLoading] = useState(false);
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_zyuaejPwZomAhzvaDOUwajunj7jYsAeWR4_yFQsYtubfaFCa6tWKeqP7hklvSRDM97BOyoPWTVSh/pub?output=csv";
-
-  const els = {
-    tableHead: document.querySelector('#tableHead'),
-    tableBody: document.querySelector('#issuesTable tbody'),
-    rowCount: document.querySelector('#rowCount'),
-    columnToggles: document.querySelector('#columnToggles'),
-    kpis: document.querySelector('#kpis'),
-    charts: {}
-  };
-
-  let rows = [], filtered = [];
-  let visibleOptional = new Set();
-
-  function normalizeRow(raw){
-    const lower={}; for(const k in raw){ if(!k) continue; lower[k.toLowerCase().trim()] = String(raw[k] ?? '').trim(); }
-    const pick=(...keys)=>{ for(const key of keys){ if(lower[key]) return lower[key]; } return ''; };
-    return {
-      id: pick('incheck id'),
-      ref: pick('youtrack reference'),
-      module: pick('module'),
-      title: pick('title'),
-      desc: pick('description'),
-      location: pick('issue location'),
-      file: pick('media url reference'),
-      type: pick('type'),
-      priority: pick('priority'),
-      related: pick('issue related'),
-      status: pick('task status')
+  useEffect(() => {
+    let mounted = true;
+    async function run() {
+      if (!id) return;
+      setLoading(true);
+      const [r, d] = await Promise.all([api.getSensor(id), api.readings(id)]);
+      if (!mounted) return;
+      setRow(r || null);
+      setData(d);
+      setLoading(false);
+    }
+    run();
+    return () => {
+      mounted = false;
     };
-  }
+  }, [id]);
 
-  const priorityBadge = p => `<span class="pill priority-${p||'Low'}">${p||'-'}</span>`;
-  const statusBadge = s => `<span class="pill status-${(s||'Unknown').replace(/\s/g,'\\ ')}">${s||'-'}</span>`;
+  return (
+    <Drawer open={!!id} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="max-h-[92vh]">
+        <div className="mx-auto w-full max-w-5xl p-4">
+          {row && (
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <DrawerHeader className="px-0">
+                  <DrawerTitle className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-muted-foreground">{row.id}</span>
+                    <span className="text-lg font-semibold">{row.name}</span>
+                    {statusBadge(row.status)}
+                  </DrawerTitle>
+                  <DrawerDescription>
+                    {row.site} · {row.location} · Last seen {new Date(row.lastSeen).toLocaleString()}
+                  </DrawerDescription>
+                </DrawerHeader>
 
-  function renderTable(){
-    els.tableHead.innerHTML = `
-      <th>ID</th><th>Youtrack Ref</th><th>Module</th><th>Title</th><th>Priority</th><th>Status</th>
-      ${visibleOptional.has('desc')?'<th>Description</th>':''}
-      ${visibleOptional.has('location')?'<th>Location</th>':''}
-      ${visibleOptional.has('file')?'<th>Media URL</th>':''}
-      ${visibleOptional.has('type')?'<th>Type</th>':''}
-      ${visibleOptional.has('related')?'<th>Related</th>':''}
-    `;
-    els.tableBody.innerHTML = filtered.map(r=>`
-      <tr>
-        <td>${r.id||'-'}</td>
-        <td>${r.ref||'-'}</td>
-        <td>${r.module||'-'}</td>
-        <td>${r.title||'-'}</td>
-        <td>${priorityBadge(r.priority)}</td>
-        <td>${statusBadge(r.status)}</td>
-        ${visibleOptional.has('desc')?`<td>${r.desc||'-'}</td>`:''}
-        ${visibleOptional.has('location')?`<td>${r.location||'-'}</td>`:''}
-        ${visibleOptional.has('file')?`<td>${r.file?`<a href="${r.file}" target="_blank">Link</a>`:'-'}</td>`:''}
-        ${visibleOptional.has('type')?`<td>${r.type||'-'}</td>`:''}
-        ${visibleOptional.has('related')?`<td>${r.related||'-'}</td>`:''}
-      </tr>
-    `).join('');
-    els.rowCount.textContent = `${filtered.length} rows`;
-  }
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <Card className="lg:col-span-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground">Trend (last 24h)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-64">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="ts" tickFormatter={(v) => new Date(v).toLocaleTimeString()} minTickGap={40} />
+                            <YAxis />
+                            <Tooltip labelFormatter={(v) => new Date(v).toLocaleString()} />
+                            <Line type="monotone" dataKey="value" dot={false} strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </CardContent>
+                  </Card>
 
-  function renderKpis(){
-    const total=filtered.length; const counts={};
-    filtered.forEach(r=>{ counts[r.status]=(counts[r.status]||0)+1; });
-    els.kpis.innerHTML='';
-    const add=(label,val)=>{
-      const pct = total ? Math.round((val*100)/total) : 0;
-      const d=document.createElement('div');
-      d.className='card kpi';
-      d.innerHTML=`<div class="label">${label}</div><div class="value">${val}</div><div class="sub">${pct}%</div>`;
-      d.onclick=()=>{ applyFilters({status:label}); };
-      els.kpis.appendChild(d);
-    };
-    add('Total Issues', total);
-    Object.entries(counts).forEach(([s,v])=> add(s,v));
-  }
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground">Quick Info</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>Type</span>
+                        <span className="capitalize font-medium">{row.type}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Last Value</span>
+                        <span className="font-medium">{row.lastReading} {row.unit}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Battery</span>
+                        <span className="font-medium">{row.battery}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Site</span>
+                        <span className="font-medium">{row.site}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Location</span>
+                        <span className="font-medium">{row.location}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-  function drawCharts(){
-    const ctx = (id) => document.getElementById(id);
-    const group = (key) => filtered.reduce((a, r) => {
-      const val = (r[key] && r[key].trim()) || 'Unspecified';
-      a[val] = (a[val] || 0) + 1;
-      return a;
-    }, {});
-    const make = (id, type, data) => {
-      if(els.charts[id]) els.charts[id].destroy();
-      const labels = Object.keys(data);
-      const values = Object.values(data);
-      if (!labels.length) return;
-      els.charts[id] = new Chart(ctx(id), {
-        type,
-        data: {
-          labels,
-          datasets: [{
-            data: values,
-            backgroundColor: labels.map((l,i)=>[
-              '#4f8cff','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9'
-            ][i % 6])
-          }]
-        },
-        options: {
-          responsive:true,
-          plugins:{
-            legend:{display:type!=='bar'},
-            tooltip:{callbacks:{
-              label:ctx=>{
-                const total=values.reduce((a,b)=>a+b,0)||1;
-                const pct=Math.round((ctx.raw*100)/total);
-                return `${ctx.raw} (${pct}%)`;
-              }
-            }}
-          },
-          scales:type==='bar'?{y:{beginAtZero:true}}:{}
-        }
-      });
-    };
-    make('byModule','bar',group('module'));
-    make('byPriority','doughnut',group('priority'));
-    make('byStatus','bar',group('status'));
-    make('byType','bar',group('type'));
-  }
+                <div className="mt-4">
+                  <Tabs defaultValue="overview">
+                    <TabsList>
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                      <TabsTrigger value="notes">Notes</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="overview" className="pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Card>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm">Health</CardTitle></CardHeader>
+                          <CardContent className="text-sm space-y-1">
+                            <div>Uptime: <span className="font-medium">{Math.round(90 + Math.random()*10)}%</span></div>
+                            <div>RSSI: <span className="font-medium">-{50 + Math.floor(Math.random()*30)} dBm</span></div>
+                            <div>Firmware: <span className="font-medium">v{(1+Math.random()).toFixed(2)}</span></div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm">Thresholds</CardTitle></CardHeader>
+                          <CardContent className="text-sm space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span>Warning</span>
+                              <span className="font-medium">Auto</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Critical</span>
+                              <span className="font-medium">Auto</span>
+                            </div>
+                            <Button className="w-full mt-2" variant="outline" onClick={() => toast.message("Threshold editor not wired")}>Edit thresholds</Button>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm">Actions</CardTitle></CardHeader>
+                          <CardContent className="space-y-2">
+                            <Button className="w-full" variant="secondary" onClick={() => toast.success("Calibrate: started (simulated)")}>Calibrate</Button>
+                            <Button className="w-full" variant="outline" onClick={() => toast.success("Ping sent")}>Ping</Button>
+                            <Button className="w-full" variant="outline" onClick={() => toast.success("Reboot scheduled")}>Reboot</Button>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="maintenance" className="pt-3">
+                      <div className="space-y-3 text-sm">
+                        <div className="p-3 bg-slate-50 rounded-xl border">2025-06-02 — Replaced battery. <span className="text-muted-foreground">(Tech: Omar)</span></div>
+                        <div className="p-3 bg-slate-50 rounded-xl border">2025-04-18 — Cleaned sensor probe. <span className="text-muted-foreground">(Tech: Lina)</span></div>
+                        <div className="p-3 bg-slate-50 rounded-xl border">2025-02-11 — Firmware updated to v1.12. <span className="text-muted-foreground">(Tech: Ali)</span></div>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="notes" className="pt-3">
+                      <Textarea defaultValue={row.notes || ""} placeholder="Add operator notes…" />
+                      <div className="flex justify-end mt-2">
+                        <Button onClick={() => toast.success("Notes saved (simulated)")}>Save</Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
 
-  function applyFilters(extra={}){
-    const q=document.getElementById('searchInput').value.toLowerCase();
-    filtered=rows.filter(r=>{
-      const hay=[r.id,r.ref,r.module,r.title,r.desc,r.status,r.priority].join(' ').toLowerCase();
-      return (!q || hay.includes(q)) && (!extra.status || r.status===extra.status);
-    });
-    renderTable(); renderKpis(); drawCharts();
-  }
+              {/* Edit Panel */}
+              <div className="w-full max-w-sm">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Edit</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <SensorForm
+                      defaults={row || undefined}
+                      onSubmit={async (payload) => {
+                        await onUpdate({ ...payload, id: row!.id });
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+                <div className="flex justify-end mt-3">
+                  <DrawerClose asChild>
+                    <Button variant="outline">Close</Button>
+                  </DrawerClose>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
-  async function loadSheet(){
-    const res=await fetch(SHEET_URL); const text=await res.text();
-    rows=Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
-    filtered=[...rows];
-    renderTable(); renderKpis(); drawCharts();
-  }
-
-  // Column toggles
-  els.columnToggles.addEventListener('change', e=>{
-    if(e.target.checked) visibleOptional.add(e.target.value); else visibleOptional.delete(e.target.value);
-    renderTable();
+function SensorForm({ onSubmit, defaults }: { onSubmit: (payload: Partial<Sensor>) => Promise<void> | void; defaults?: Partial<Sensor> }) {
+  const [saving, setSaving] = useState(false);
+  const [local, setLocal] = useState<Partial<Sensor>>({
+    name: "",
+    type: "temperature",
+    unit: "°C",
+    site: mockSites[0],
+    location: "Zone 1",
+    status: "active",
+    battery: 100,
+    lastReading: 0,
+    notes: "",
+    ...defaults,
   });
-  document.getElementById('searchInput').addEventListener('input',()=>applyFilters());
 
-  // Theme switching
-  function applyTheme(mode) {
-    if (mode === 'system') {
-      document.documentElement.removeAttribute('data-theme');
-      localStorage.setItem('theme','system');
-    } else {
-      document.documentElement.setAttribute('data-theme', mode);
-      localStorage.setItem('theme', mode);
+  useEffect(() => {
+    setLocal((l) => ({ ...l, ...defaults }));
+  }, [defaults]);
+
+  useEffect(() => {
+    // auto unit per type
+    const map: Record<string, string> = {
+      temperature: "°C",
+      pressure: "bar",
+      vibration: "mm/s",
+      humidity: "%RH",
+      custom: "units",
+    };
+    setLocal((l) => ({ ...l, unit: map[String(l.type || "custom")] }));
+  }, [local.type]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      await onSubmit(local);
+      toast.success("Saved");
+    } catch (e: any) {
+      toast.error("Save failed: " + (e?.message || e));
+    } finally {
+      setSaving(false);
     }
   }
-  function initTheme() {
-    const saved = localStorage.getItem('theme') || 'system';
-    document.getElementById('themeSelect').value = saved;
-    applyTheme(saved);
-  }
-  document.getElementById('themeSelect').addEventListener('change', e => {
-    applyTheme(e.target.value);
-  });
-  initTheme();
 
-  loadSheet();
-});
-</script>
-</body>
-</html>
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <Label>Name</Label>
+          <Input value={local.name || ""} onChange={(e) => setLocal({ ...local, name: e.target.value })} required />
+        </div>
+        <div>
+          <Label>Type</Label>
+          <Select value={String(local.type)} onValueChange={(v) => setLocal({ ...local, type: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {mockTypes.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Unit</Label>
+          <Input value={local.unit || ""} onChange={(e) => setLocal({ ...local, unit: e.target.value })} />
+        </div>
+        <div>
+          <Label>Site</Label>
+          <Select value={String(local.site)} onValueChange={(v) => setLocal({ ...local, site: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {mockSites.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Location</Label>
+          <Input value={local.location || ""} onChange={(e) => setLocal({ ...local, location: e.target.value })} />
+        </div>
+        <div>
+          <Label>Status</Label>
+          <Select value={String(local.status)} onValueChange={(v) => setLocal({ ...local, status: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">active</SelectItem>
+              <SelectItem value="alarm">alarm</SelectItem>
+              <SelectItem value="offline">offline</SelectItem>
+              <SelectItem value="maintenance">maintenance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Battery %</Label>
+          <Input type="number" min={0} max={100} value={Number(local.battery ?? 0)} onChange={(e) => setLocal({ ...local, battery: Number(e.target.value) })} />
+        </div>
+        <div>
+          <Label>Last Reading</Label>
+          <Input type="number" value={Number(local.lastReading ?? 0)} onChange={(e) => setLocal({ ...local, lastReading: Number(e.target.value) })} />
+        </div>
+        <div>
+          <Label>Notes</Label>
+          <Input value={local.notes || ""} onChange={(e) => setLocal({ ...local, notes: e.target.value })} />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin"/> : "Save"}</Button>
+      </div>
+    </form>
+  );
+}
+
+// -----------------------------
+// Flow Panel (single-file, floats bottom-right)
+function FlowPanel() {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"discover"|"provision"|"calibrate"|"monitor"|"alerts"|"reports">("discover");
+  const [discovering, setDiscovering] = useState(false);
+  const [found, setFound] = useState<Array<{ tempId: string; type: Sensor["type"]; signal: number }>>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [site, setSite] = useState(mockSites[0]);
+  const [location, setLocation] = useState("Zone 1");
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionedId, setProvisionedId] = useState<string | null>(null);
+  const [calibrating, setCalibrating] = useState(false);
+  const [baseline, setBaseline] = useState<number | null>(null);
+
+  async function runDiscovery() {
+    setDiscovering(true);
+    const d = await api.discoverDevices();
+    setFound(d);
+    setDiscovering(false);
+  }
+
+  async function runProvision() {
+    if (!selected) return toast.info("Pick a device to provision");
+    setProvisioning(true);
+    const dev = found.find(f => f.tempId === selected)!;
+    const s = await api.provisionDevice({ tempId: selected, name: name || dev.tempId, site, location, type: dev.type });
+    setProvisionedId(s.id);
+    setProvisioning(false);
+    toast.success(`Provisioned ${s.name}`);
+    setStep("calibrate");
+  }
+
+  async function runCalibration() {
+    if (!provisionedId) return;
+    setCalibrating(true);
+    const res = await api.calibrate({ id: provisionedId });
+    setCalibrating(false);
+    setBaseline(res.baseline);
+    toast.success("Calibration complete");
+    setStep("monitor");
+  }
+
+  return (
+    <>
+      {/* Floating button */}
+      <div className="fixed bottom-5 right-5 z-50">
+        <Button className="rounded-2xl shadow-lg" onClick={() => { setOpen(true); setStep("discover"); runDiscovery(); }}>
+          <Plus className="h-4 w-4 mr-1"/> Flow
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Sensor Flow</DialogTitle>
+            <DialogDescription>Onboard → Calibrate → Monitor → Alerts → Reports</DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={step} onValueChange={(v) => setStep(v as any)} className="mt-1">
+            <TabsList className="w-full flex flex-wrap">
+              <TabsTrigger value="discover">Discover</TabsTrigger>
+              <TabsTrigger value="provision" disabled={!selected}>Provision</TabsTrigger>
+              <TabsTrigger value="calibrate" disabled={!provisionedId}>Calibrate</TabsTrigger>
+              <TabsTrigger value="monitor" disabled={!provisionedId}>Monitor</TabsTrigger>
+              <TabsTrigger value="alerts" disabled={!provisionedId}>Alerts</TabsTrigger>
+              <TabsTrigger value="reports" disabled={!provisionedId}>Reports</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="discover" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Scan nearby devices</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Button onClick={runDiscovery} disabled={discovering} variant="secondary">{discovering ? <Loader2 className="h-4 w-4 animate-spin"/> : <RefreshCw className="h-4 w-4"/>} Scan</Button>
+                    <div className="text-xs text-muted-foreground">{found.length} found</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {found.map(f => (
+                      <button key={f.tempId} onClick={() => { setSelected(f.tempId); setStep("provision"); setName(""); }} className={`p-3 rounded-2xl border text-left ${selected===f.tempId?"border-emerald-500 ring-2 ring-emerald-200":"hover:bg-slate-50"}`}>
+                        <div className="font-medium">{f.tempId}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{f.type}</div>
+                        <div className="mt-1 text-xs">Signal: {f.signal}%</div>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="provision" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Provision device</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Name</Label>
+                      <Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., TEMP-CHILLER-01"/>
+                    </div>
+                    <div>
+                      <Label>Site</Label>
+                      <Select value={site} onValueChange={setSite}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>{mockSites.map(s=> <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Location</Label>
+                      <Input value={location} onChange={(e)=>setLocation(e.target.value)} placeholder="Zone / Asset"/>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={runProvision} disabled={provisioning || !selected}>{provisioning? <Loader2 className="h-4 w-4 animate-spin"/> : "Provision"}</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="calibrate" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Calibration</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={runCalibration} disabled={calibrating || !provisionedId}>{calibrating? <Loader2 className="h-4 w-4 animate-spin"/> : "Run calibration"}</Button>
+                    {baseline!==null && <div className="text-sm">Baseline: <span className="font-medium">{baseline}</span></div>}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="monitor" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Monitoring</CardTitle></CardHeader>
+                <CardContent className="text-sm">Once provisioned and calibrated, the device starts streaming to the table in the main page. Use Filters to locate it quickly.</CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="alerts" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Alert Rules</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-4 gap-2 items-end">
+                    <div>
+                      <Label>When value</Label>
+                      <Select defaultValue=">">
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value=">">Greater than</SelectItem>
+                          <SelectItem value="<">Less than</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Threshold</Label>
+                      <Input type="number" defaultValue={50} />
+                    </div>
+                    <div>
+                      <Label>Notify</Label>
+                      <Select defaultValue="email">
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="email">Email</SelectItem>
+                          <SelectItem value="sms">SMS</SelectItem>
+                          <SelectItem value="webhook">Webhook</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="secondary" onClick={() => toast.success("Alert saved (simulated)")}>Save</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reports" className="pt-3">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Export / Reports</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <Button onClick={() => csvExport(mockDB.sensors)} className="gap-2"><Download className="h-4 w-4"/> Export all sensors</Button>
+                  <div className="text-xs text-muted-foreground">For PDFs, render a server report endpoint and link it here.</div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// -----------------------------
+// Integration Notes
+// 1) Replace the mock `api` calls at the top with your real backend endpoints.
+//    - listSensors(): GET /sensors
+//    - getSensor(id): GET /sensors/:id
+//    - upsertSensor(payload): POST /sensors (or PUT /sensors/:id)
+//    - deleteSensors(ids): DELETE /sensors (body: { ids: string[] })
+//    - readings(id): GET /sensors/:id/readings?window=24h
+// 2) Flow endpoints to connect:
+//    - discoverDevices(): GET /provision/discover
+//    - provisionDevice(): POST /provision { tempId, name, site, location, type }
+//    - calibrate(): POST /sensors/:id/calibrate
+// 3) Keep return shapes compatible with the Sensor/Reading types or adapt mapping.
+// 4) Tailwind, shadcn/ui, lucide-react, recharts, sonner should be installed and configured in your app.
