@@ -11,87 +11,61 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    /* ------------------------
-       THEME & LAYOUT STYLES
-    -------------------------*/
+    /* Theme & layout (dark/light) */
     :root {
-      --status-resolved:#10b981;
-      --status-underdev:#3b82f6;
-      --status-rejected:#ef4444;
-      --status-onhold:#f59e0b;
-      --status-notstarted:#6b7280;
-      --status-sent:#8b5cf6;
-      --status-onstage:#0ea5e9;
-      --priority-high:#ef4444;
-      --priority-medium:#f59e0b;
-      --priority-low:#10b981;
+      --priority-high:#ef4444; --priority-medium:#f59e0b; --priority-low:#10b981;
+      --status-resolved:#10b981; --status-underdev:#3b82f6; --status-rejected:#ef4444;
+      --status-onhold:#f59e0b; --status-notstarted:#6b7280;
       --bg:#0b1020; --card:#0f1630; --muted:#9aa6d1; --text:#e8edff;
-      --accent:#4f8cff; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
-      --info:#3b82f6; --purple:#8b5cf6; --neutral:#6b7280; --border:#1e2643;
-      --shadow:0 8px 24px rgba(0,0,0,.35);
-      --focus: 0 0 0 3px rgba(79,140,255,.35);
+      --accent:#4f8cff; --border:#1e2643; --shadow:0 8px 24px rgba(0,0,0,.35);
     }
     :root[data-theme="light"] {
       --bg:#f4f6ff; --card:#ffffff; --muted:#5a678c; --text:#0d1326;
-      --accent:#2563eb; --danger:#dc2626; --ok:#059669; --warn:#d97706;
-      --info:#1d4ed8; --purple:#7c3aed; --neutral:#374151; --border:#e7eaf6;
-      --shadow:0 10px 24px rgba(16,24,40,.08);
-      --focus: 0 0 0 3px rgba(37,99,235,.25);
+      --accent:#2563eb; --border:#e7eaf6; --shadow:0 10px 24px rgba(16,24,40,.08);
     }
-    * { box-sizing:border-box }
-    body {
-      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
-      background:var(--bg); color:var(--text);
-    }
-    header {
-      position:sticky; top:0; z-index:20; background:var(--card);
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; gap:12px; padding:10px 16px;
-      box-shadow:var(--shadow);
-    }
-    .brand { display:flex; align-items:center; gap:10px; font-weight:700; }
-    .logo { width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
-      background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; font-weight:800; }
-    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap }
-    .btn, .select, .input { padding:8px 12px; border-radius:10px; border:1px solid var(--border);
-      background:transparent; color:inherit; font:inherit; }
-    .btn { cursor:pointer; font-weight:600; background:var(--card) }
-    .btn.primary { background:var(--accent); border-color:transparent; color:#fff }
-    .wrap { display:grid; grid-template-columns:1fr; gap:18px; padding:18px; max-width:1400px; margin:0 auto }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;
-      box-shadow:var(--shadow); }
+    body { margin:0; font-family:Inter,system-ui; background:var(--bg); color:var(--text); }
+    header { display:flex; align-items:center; gap:12px; padding:10px 16px;
+      background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+    .brand { font-weight:700; display:flex; gap:8px; align-items:center; }
+    .logo { width:28px; height:28px; border-radius:8px; background:var(--accent); display:grid; place-items:center; color:#fff; font-weight:800; }
+    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center; }
+    .btn, .select, .input { padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:transparent; color:inherit; font:inherit; }
+    .btn { cursor:pointer; font-weight:600; }
+    .btn.primary { background:var(--accent); border:none; color:#fff; }
+    .wrap { padding:18px; max-width:1400px; margin:auto; display:grid; gap:18px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); }
 
-    table { width:100%; border-collapse:separate; border-spacing:0; font-size:14px }
-    thead th { position:sticky; top:0; background:var(--card); text-align:left; padding:12px 10px;
-      border-bottom:1px solid var(--border); }
-    tbody td { padding:11px 10px; border-bottom:1px solid var(--border) }
-    tr:hover { background:rgba(255,255,255,.03) }
-    .table-wrap { max-height:460px; overflow:auto; border-radius:10px; border:1px solid var(--border) }
+    .grid { display:grid; gap:16px; }
+    .cols-4 { grid-template-columns:repeat(4,1fr); }
+    @media(max-width:900px){ .cols-4{ grid-template-columns:repeat(2,1fr) } }
+    @media(max-width:600px){ .cols-4{ grid-template-columns:1fr } }
 
-    /* Dropdown for column visibility */
-    .dropdown { position: relative; display: inline-block; }
-    .dropdown-content {
-      display: none; position: absolute; right: 0;
-      background: var(--card); border: 1px solid var(--border);
-      padding: 10px; border-radius: 8px; box-shadow: var(--shadow); z-index: 50;
-    }
-    .dropdown:hover .dropdown-content { display: block; }
-    .dropdown-content label {
-      display: flex; align-items: center; gap: 6px; font-size: 13px;
-      margin: 4px 0; cursor: pointer;
-    }
+    .kpi { text-align:center; cursor:pointer; }
+    .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; }
+    .kpi .value{ font-size:26px; font-weight:800; }
+    .kpi .sub{ font-size:12px; color:var(--muted); }
+
+    .charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px }
+    @media(max-width:900px){ .charts{ grid-template-columns:1fr } }
+
+    table{ width:100%; border-collapse:collapse; font-size:14px; }
+    thead th{ text-align:left; padding:12px 10px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; }
+    tbody td{ padding:10px; border-bottom:1px solid var(--border); }
+    tr:hover{ background:rgba(255,255,255,.05) }
+    .table-wrap{ max-height:460px; overflow:auto; border:1px solid var(--border); border-radius:10px; }
+
+    .dropdown{ position:relative; }
+    .dropdown-content{ display:none; position:absolute; right:0; background:var(--card); border:1px solid var(--border); padding:10px; border-radius:8px; box-shadow:var(--shadow); }
+    .dropdown:hover .dropdown-content{ display:block; }
+    .dropdown-content label{ display:flex; gap:6px; font-size:13px; margin:4px 0; cursor:pointer; }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand"><div class="logo">IC</div><div>InCheck Issues</div></div>
+    <div class="brand"><div class="logo">IC</div> InCheck Issues</div>
     <div class="toolbar">
       <input id="searchInput" class="input" type="search" placeholder="Search…" />
-      <select id="themeSelect" class="select">
-        <option value="system">System</option>
-        <option value="dark">Dark</option>
-        <option value="light">Light</option>
-      </select>
+      <select id="themeSelect" class="select"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
       <button id="refreshNow" class="btn">🔄 Refresh</button>
       <button id="createTicketBtn" class="btn primary">➕ Create Ticket</button>
       <div class="dropdown">
@@ -108,24 +82,22 @@
   </header>
 
   <div class="wrap">
-    <main class="content">
-      <div class="grid cols-4" id="kpis"></div>
-      <div class="charts">
-        <div class="card"><canvas id="byModule"></canvas></div>
-        <div class="card"><canvas id="byPriority"></canvas></div>
-        <div class="card"><canvas id="byStatus"></canvas></div>
-        <div class="card"><canvas id="byType"></canvas></div>
+    <div class="grid cols-4" id="kpis"></div>
+    <div class="charts">
+      <div class="card"><canvas id="byModule"></canvas></div>
+      <div class="card"><canvas id="byPriority"></canvas></div>
+      <div class="card"><canvas id="byStatus"></canvas></div>
+      <div class="card"><canvas id="byType"></canvas></div>
+    </div>
+    <div class="card">
+      <strong>Issues</strong> <span id="rowCount" class="muted"></span>
+      <div class="table-wrap">
+        <table id="issuesTable">
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody><tr><td>Loading…</td></tr></tbody>
+        </table>
       </div>
-      <div class="card">
-        <strong>Issues</strong> <span id="rowCount" class="muted"></span>
-        <div class="table-wrap">
-          <table id="issuesTable">
-            <thead><tr id="tableHead"></tr></thead>
-            <tbody><tr><td>Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 
 <script>
@@ -136,7 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
     tableHead: document.querySelector('#tableHead'),
     tableBody: document.querySelector('#issuesTable tbody'),
     rowCount: document.querySelector('#rowCount'),
-    columnToggles: document.querySelector('#columnToggles')
+    columnToggles: document.querySelector('#columnToggles'),
+    kpis: document.querySelector('#kpis'),
+    charts: {}
   };
 
   let rows = [], filtered = [];
@@ -162,12 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderTable(){
     els.tableHead.innerHTML = `
-      <th>ID</th>
-      <th>Youtrack Ref</th>
-      <th>Module</th>
-      <th>Title</th>
-      <th>Priority</th>
-      <th>Status</th>
+      <th>ID</th><th>Youtrack Ref</th><th>Module</th><th>Title</th><th>Priority</th><th>Status</th>
       ${visibleOptional.has('desc')?'<th>Description</th>':''}
       ${visibleOptional.has('location')?'<th>Location</th>':''}
       ${visibleOptional.has('file')?'<th>Media URL</th>':''}
@@ -192,19 +161,55 @@ document.addEventListener("DOMContentLoaded", () => {
     els.rowCount.textContent = `${filtered.length} rows`;
   }
 
+  function renderKpis(){
+    const total=filtered.length; const counts={};
+    filtered.forEach(r=>{ counts[r.status]=(counts[r.status]||0)+1; });
+    els.kpis.innerHTML='';
+    const add=(label,val)=>{
+      const pct = total ? Math.round((val*100)/total) : 0;
+      const d=document.createElement('div');
+      d.className='card kpi';
+      d.innerHTML=`<div class="label">${label}</div><div class="value">${val}</div><div class="sub">${pct}%</div>`;
+      d.onclick=()=>{ applyFilters({status:label}); };
+      els.kpis.appendChild(d);
+    };
+    add('Total Issues', total);
+    Object.entries(counts).forEach(([s,v])=> add(s,v));
+  }
+
+  function drawCharts(){
+    const ctx=(id)=>document.getElementById(id);
+    const group=(key)=>filtered.reduce((a,r)=>{a[r[key]||'Unspecified']=(a[r[key]||'Unspecified']||0)+1;return a;},{});
+    const make=(id,type,data)=>{ if(els.charts[id]) els.charts[id].destroy();
+      els.charts[id]=new Chart(ctx(id),{type,data:{labels:Object.keys(data),datasets:[{data:Object.values(data)}]},
+        options:{responsive:true,plugins:{legend:{display:type!=='bar'}}}}); };
+    make('byModule','bar',group('module'));
+    make('byPriority','doughnut',group('priority'));
+    make('byStatus','bar',group('status'));
+    make('byType','bar',group('type'));
+  }
+
+  function applyFilters(extra={}){
+    const q=document.getElementById('searchInput').value.toLowerCase();
+    filtered=rows.filter(r=>{
+      const hay=[r.id,r.ref,r.module,r.title,r.desc,r.status,r.priority].join(' ').toLowerCase();
+      return (!q || hay.includes(q)) && (!extra.status || r.status===extra.status);
+    });
+    renderTable(); renderKpis(); drawCharts();
+  }
+
   async function loadSheet(){
-    const res = await fetch(SHEET_URL);
-    const text = await res.text();
-    rows = Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
-    filtered = [...rows];
-    renderTable();
+    const res=await fetch(SHEET_URL); const text=await res.text();
+    rows=Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
+    filtered=[...rows];
+    renderTable(); renderKpis(); drawCharts();
   }
 
   els.columnToggles.addEventListener('change', e=>{
-    if(e.target.checked) visibleOptional.add(e.target.value);
-    else visibleOptional.delete(e.target.value);
+    if(e.target.checked) visibleOptional.add(e.target.value); else visibleOptional.delete(e.target.value);
     renderTable();
   });
+  document.getElementById('searchInput').addEventListener('input',()=>applyFilters());
 
   loadSheet();
 });
