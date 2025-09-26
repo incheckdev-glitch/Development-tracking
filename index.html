@@ -11,7 +11,6 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    /* Theme & layout (dark/light) */
     :root {
       --priority-high:#ef4444; --priority-medium:#f59e0b; --priority-low:#10b981;
       --status-resolved:#10b981; --status-underdev:#3b82f6; --status-rejected:#ef4444;
@@ -40,20 +39,54 @@
     @media(max-width:900px){ .cols-4{ grid-template-columns:repeat(2,1fr) } }
     @media(max-width:600px){ .cols-4{ grid-template-columns:1fr } }
 
-    .kpi { text-align:center; cursor:pointer; }
+    /* KPI Cards */
+    .kpi {
+      background: linear-gradient(135deg,var(--card),rgba(79,140,255,.05));
+      border-radius: 14px;
+      padding: 16px;
+      text-align:center;
+      transition: all .2s ease;
+      cursor:pointer;
+    }
+    .kpi:hover {
+      box-shadow: 0 6px 18px rgba(79,140,255,.25);
+      transform: translateY(-2px);
+    }
     .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; }
-    .kpi .value{ font-size:26px; font-weight:800; }
+    .kpi .value{ font-size:30px; font-weight:800; margin-top:6px; }
     .kpi .sub{ font-size:12px; color:var(--muted); }
 
     .charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px }
     @media(max-width:900px){ .charts{ grid-template-columns:1fr } }
 
+    /* Table */
     table{ width:100%; border-collapse:collapse; font-size:14px; }
-    thead th{ text-align:left; padding:12px 10px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; }
+    thead th{ text-align:left; padding:12px 10px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; box-shadow:0 2px 6px rgba(0,0,0,.2);}
     tbody td{ padding:10px; border-bottom:1px solid var(--border); }
+    tbody tr:nth-child(even){ background:rgba(255,255,255,.03); }
     tr:hover{ background:rgba(255,255,255,.05) }
     .table-wrap{ max-height:460px; overflow:auto; border:1px solid var(--border); border-radius:10px; }
 
+    .pill {
+      display:inline-block;
+      padding:3px 8px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:600;
+      color:#fff;
+    }
+    .priority-High { background: var(--priority-high); }
+    .priority-Medium { background: var(--priority-medium); }
+    .priority-Low { background: var(--priority-low); }
+    .status-Resolved { background: var(--status-resolved); }
+    .status-Rejected { background: var(--status-rejected); }
+    .status-On\ Hold { background: var(--status-onhold); }
+    .status-Not\ Started { background: var(--status-notstarted); }
+
+    /* Charts */
+    canvas { max-height: 250px; }
+
+    /* Dropdown */
     .dropdown{ position:relative; }
     .dropdown-content{ display:none; position:absolute; right:0; background:var(--card); border:1px solid var(--border); padding:10px; border-radius:8px; box-shadow:var(--shadow); }
     .dropdown:hover .dropdown-content{ display:block; }
@@ -134,6 +167,9 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  const priorityBadge = p => `<span class="pill priority-${p||'Low'}">${p||'-'}</span>`;
+  const statusBadge = s => `<span class="pill status-${(s||'Unknown').replace(/\s/g,'\\ ')}">${s||'-'}</span>`;
+
   function renderTable(){
     els.tableHead.innerHTML = `
       <th>ID</th><th>Youtrack Ref</th><th>Module</th><th>Title</th><th>Priority</th><th>Status</th>
@@ -149,8 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${r.ref||'-'}</td>
         <td>${r.module||'-'}</td>
         <td>${r.title||'-'}</td>
-        <td>${r.priority||'-'}</td>
-        <td>${r.status||'-'}</td>
+        <td>${priorityBadge(r.priority)}</td>
+        <td>${statusBadge(r.status)}</td>
         ${visibleOptional.has('desc')?`<td>${r.desc||'-'}</td>`:''}
         ${visibleOptional.has('location')?`<td>${r.location||'-'}</td>`:''}
         ${visibleOptional.has('file')?`<td>${r.file?`<a href="${r.file}" target="_blank">Link</a>`:'-'}</td>`:''}
@@ -178,11 +214,44 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawCharts(){
-    const ctx=(id)=>document.getElementById(id);
-    const group=(key)=>filtered.reduce((a,r)=>{a[r[key]||'Unspecified']=(a[r[key]||'Unspecified']||0)+1;return a;},{});
-    const make=(id,type,data)=>{ if(els.charts[id]) els.charts[id].destroy();
-      els.charts[id]=new Chart(ctx(id),{type,data:{labels:Object.keys(data),datasets:[{data:Object.values(data)}]},
-        options:{responsive:true,plugins:{legend:{display:type!=='bar'}}}}); };
+    const ctx = (id) => document.getElementById(id);
+    const group = (key) => filtered.reduce((a, r) => {
+      const val = (r[key] && r[key].trim()) || 'Unspecified';
+      a[val] = (a[val] || 0) + 1;
+      return a;
+    }, {});
+    const make = (id, type, data) => {
+      if(els.charts[id]) els.charts[id].destroy();
+      const labels = Object.keys(data);
+      const values = Object.values(data);
+      if (!labels.length) return;
+      els.charts[id] = new Chart(ctx(id), {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: labels.map((l,i)=>[
+              '#4f8cff','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9'
+            ][i % 6])
+          }]
+        },
+        options: {
+          responsive:true,
+          plugins:{
+            legend:{display:type!=='bar'},
+            tooltip:{callbacks:{
+              label:ctx=>{
+                const total=values.reduce((a,b)=>a+b,0)||1;
+                const pct=Math.round((ctx.raw*100)/total);
+                return `${ctx.raw} (${pct}%)`;
+              }
+            }}
+          },
+          scales:type==='bar'?{y:{beginAtZero:true}}:{}
+        }
+      });
+    };
     make('byModule','bar',group('module'));
     make('byPriority','doughnut',group('priority'));
     make('byStatus','bar',group('status'));
@@ -205,11 +274,32 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTable(); renderKpis(); drawCharts();
   }
 
+  // Column toggles
   els.columnToggles.addEventListener('change', e=>{
     if(e.target.checked) visibleOptional.add(e.target.value); else visibleOptional.delete(e.target.value);
     renderTable();
   });
   document.getElementById('searchInput').addEventListener('input',()=>applyFilters());
+
+  // Theme switching
+  function applyTheme(mode) {
+    if (mode === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme','system');
+    } else {
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem('theme', mode);
+    }
+  }
+  function initTheme() {
+    const saved = localStorage.getItem('theme') || 'system';
+    document.getElementById('themeSelect').value = saved;
+    applyTheme(saved);
+  }
+  document.getElementById('themeSelect').addEventListener('change', e => {
+    applyTheme(e.target.value);
+  });
+  initTheme();
 
   loadSheet();
 });
