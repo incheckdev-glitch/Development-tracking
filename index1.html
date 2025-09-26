@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InCheck Issues Dashboard</title>
+
+  <!-- Libs -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* keep your styles the same */
+    /* ... (keeping your CSS unchanged for brevity) ... */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      z-index: 50;
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    .dropdown-content label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      margin: 4px 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><div class="logo">IC</div><div>InCheck Issues</div></div>
+    <div class="toolbar">
+      <input id="searchInput" class="input" type="search" placeholder="Search…" />
+      <select id="themeSelect" class="select">
+        <option value="system">System</option>
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+      <button id="refreshNow" class="btn"><span class="icon">🔄</span> Refresh</button>
+      <button id="createTicketBtn" class="btn primary"><span class="icon">➕</span> Create Ticket</button>
+      
+      <!-- Column visibility dropdown -->
+      <div class="dropdown">
+        <button class="btn">👁 Columns</button>
+        <div class="dropdown-content" id="columnToggles">
+          <label><input type="checkbox" value="desc"> Description</label>
+          <label><input type="checkbox" value="location"> Issue Location</label>
+          <label><input type="checkbox" value="file"> Media URL Reference</label>
+          <label><input type="checkbox" value="type"> Type</label>
+          <label><input type="checkbox" value="related"> Issue Related</label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <main class="content">
+      <div class="grid cols-4" id="kpis"></div>
+      <div class="charts">
+        <div class="card"><canvas id="byModule"></canvas></div>
+        <div class="card"><canvas id="byPriority"></canvas></div>
+        <div class="card"><canvas id="byStatus"></canvas></div>
+        <div class="card"><canvas id="byType"></canvas></div>
+      </div>
+      <div class="card">
+        <strong>Issues</strong> <span id="rowCount" class="muted"></span>
+        <div class="table-wrap">
+          <table id="issuesTable">
+            <thead><tr id="tableHead"></tr></thead>
+            <tbody><tr><td>Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_zyuaejPwZomAhzvaDOUwajunj7jYsAeWR4_yFQsYtubfaFCa6tWKeqP7hklvSRDM97BOyoPWTVSh/pub?output=csv";
+
+  const els = {
+    tableHead: document.querySelector('#tableHead'),
+    tableBody: document.querySelector('#issuesTable tbody'),
+    rowCount: document.querySelector('#rowCount'),
+    columnToggles: document.querySelector('#columnToggles')
+  };
+
+  let rows = [], filtered = [];
+  let visibleOptional = new Set();
+
+  function normalizeRow(raw){
+    const lower={}; for(const k in raw){ if(!k) continue; lower[k.toLowerCase().trim()] = String(raw[k] ?? '').trim(); }
+    const pick=(...keys)=>{ for(const key of keys){ if(lower[key]) return lower[key]; } return ''; };
+    return {
+      id: pick('incheck id'),
+      ref: pick('youtrack reference'),
+      module: pick('module'),
+      title: pick('title'),
+      desc: pick('description'),
+      location: pick('issue location'),
+      file: pick('media url reference'),
+      type: pick('type'),
+      priority: pick('priority'),
+      related: pick('issue related'),
+      status: pick('task status')
+    };
+  }
+
+  function renderTable(){
+    els.tableHead.innerHTML = `
+      <th>ID</th>
+      <th>Youtrack Ref</th>
+      <th>Module</th>
+      <th>Title</th>
+      <th>Priority</th>
+      <th>Status</th>
+      ${visibleOptional.has('desc')?'<th>Description</th>':''}
+      ${visibleOptional.has('location')?'<th>Location</th>':''}
+      ${visibleOptional.has('file')?'<th>Media URL</th>':''}
+      ${visibleOptional.has('type')?'<th>Type</th>':''}
+      ${visibleOptional.has('related')?'<th>Related</th>':''}
+    `;
+    els.tableBody.innerHTML = filtered.map(r=>`
+      <tr>
+        <td>${r.id||'-'}</td>
+        <td>${r.ref||'-'}</td>
+        <td>${r.module||'-'}</td>
+        <td>${r.title||'-'}</td>
+        <td>${r.priority||'-'}</td>
+        <td>${r.status||'-'}</td>
+        ${visibleOptional.has('desc')?`<td>${r.desc||'-'}</td>`:''}
+        ${visibleOptional.has('location')?`<td>${r.location||'-'}</td>`:''}
+        ${visibleOptional.has('file')?`<td>${r.file?`<a href="${r.file}" target="_blank">Link</a>`:'-'}</td>`:''}
+        ${visibleOptional.has('type')?`<td>${r.type||'-'}</td>`:''}
+        ${visibleOptional.has('related')?`<td>${r.related||'-'}</td>`:''}
+      </tr>
+    `).join('');
+    els.rowCount.textContent = `${filtered.length} rows`;
+  }
+
+  async function loadSheet(){
+    const res = await fetch(SHEET_URL);
+    const text = await res.text();
+    rows = Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
+    filtered = [...rows];
+    renderTable();
+  }
+
+  els.columnToggles.addEventListener('change', e=>{
+    if(e.target.checked) visibleOptional.add(e.target.value);
+    else visibleOptional.delete(e.target.value);
+    renderTable();
+  });
+
+  loadSheet();
+});
+</script>
+</body>
+</html>
