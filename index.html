@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>InCheck Issues Dashboard</title>
 
-  <!-- Fonts & Libs -->
+  <!-- Libs -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
   <style>
     :root {
+      --priority-high:#ef4444; --priority-medium:#f59e0b; --priority-low:#10b981;
+      --status-resolved:#10b981; --status-underdev:#3b82f6; --status-rejected:#ef4444;
+      --status-onhold:#f59e0b; --status-notstarted:#6b7280;
       --bg:#0b1020; --card:#0f1630; --muted:#9aa6d1; --text:#e8edff;
       --accent:#4f8cff; --border:#1e2643; --shadow:0 8px 24px rgba(0,0,0,.35);
     }
@@ -21,86 +22,115 @@
       --bg:#f4f6ff; --card:#ffffff; --muted:#5a678c; --text:#0d1326;
       --accent:#2563eb; --border:#e7eaf6; --shadow:0 10px 24px rgba(16,24,40,.08);
     }
+    body { margin:0; font-family:Inter,system-ui; background:var(--bg); color:var(--text); }
+    header { display:flex; align-items:center; gap:12px; padding:10px 16px;
+      background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+    .brand { font-weight:700; display:flex; gap:8px; align-items:center; }
+    .logo { width:28px; height:28px; border-radius:8px; background:var(--accent); display:grid; place-items:center; color:#fff; font-weight:800; }
+    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center; }
+    .btn, .select, .input { padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:transparent; color:inherit; font:inherit; }
+    .btn { cursor:pointer; font-weight:600; }
+    .btn.primary { background:var(--accent); border:none; color:#fff; }
+    .wrap { padding:18px; max-width:1400px; margin:auto; display:grid; gap:18px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); }
 
-    * { box-sizing:border-box }
-    body {
-      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
-      background:var(--bg); color:var(--text);
-    }
+    .grid { display:grid; gap:16px; }
+    .cols-4 { grid-template-columns:repeat(4,1fr); }
+    @media(max-width:900px){ .cols-4{ grid-template-columns:repeat(2,1fr) } }
+    @media(max-width:600px){ .cols-4{ grid-template-columns:1fr } }
 
-    header {
-      position:sticky; top:0; z-index:20; background:var(--card);
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; gap:12px; padding:10px 16px;
-      box-shadow:var(--shadow);
+    /* KPI Cards */
+    .kpi {
+      background: linear-gradient(135deg,var(--card),rgba(79,140,255,.05));
+      border-radius: 14px;
+      padding: 16px;
+      text-align:center;
+      transition: all .2s ease;
+      cursor:pointer;
     }
-    .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; }
-    .brand .logo {
-      width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
-      background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; font-weight:800;
+    .kpi:hover {
+      box-shadow: 0 6px 18px rgba(79,140,255,.25);
+      transform: translateY(-2px);
     }
-    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center }
-    .btn, .select, .input {
-      padding:8px 12px; border-radius:10px; border:1px solid var(--border);
-      background:transparent; color:inherit; font:inherit; cursor:pointer;
+    .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; }
+    .kpi .value{ font-size:30px; font-weight:800; margin-top:6px; }
+    .kpi .sub{ font-size:12px; color:var(--muted); }
+
+    .charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px }
+    @media(max-width:900px){ .charts{ grid-template-columns:1fr } }
+
+    /* Table */
+    table{ width:100%; border-collapse:collapse; font-size:14px; }
+    thead th{ text-align:left; padding:12px 10px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; box-shadow:0 2px 6px rgba(0,0,0,.2);}
+    tbody td{ padding:10px; border-bottom:1px solid var(--border); }
+    tbody tr:nth-child(even){ background:rgba(255,255,255,.03); }
+    tr:hover{ background:rgba(255,255,255,.05) }
+    .table-wrap{ max-height:460px; overflow:auto; border:1px solid var(--border); border-radius:10px; }
+
+    .pill {
+      display:inline-block;
+      padding:3px 8px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:600;
+      color:#fff;
     }
-    .btn.primary { background:var(--accent); border:none; color:#fff }
-    .wrap { display:grid; grid-template-columns:280px 1fr; gap:18px; padding:18px; max-width:1400px; margin:0 auto }
-    @media(max-width:980px){ .wrap { grid-template-columns:1fr } }
-    .sidebar { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
-    .content { display:grid; gap:18px }
-    .grid.cols-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px }
-    @media(max-width:980px){ .grid.cols-4{ grid-template-columns:repeat(2,1fr) } }
-    @media(max-width:600px){ .grid.cols-4{ grid-template-columns:1fr } }
-    .card {
-      background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;
-      box-shadow:var(--shadow);
-    }
-    .charts { display:grid; grid-template-columns:repeat(2,1fr); gap:16px }
-    @media(max-width:980px){ .charts{ grid-template-columns:1fr } }
-    table { width:100%; border-collapse:separate; border-spacing:0; font-size:14px }
-    thead th { background:var(--card); padding:12px 10px; border-bottom:1px solid var(--border) }
-    tbody td { padding:11px 10px; border-bottom:1px solid var(--border) }
+    .priority-High { background: var(--priority-high); }
+    .priority-Medium { background: var(--priority-medium); }
+    .priority-Low { background: var(--priority-low); }
+    .status-Resolved { background: var(--status-resolved); }
+    .status-Rejected { background: var(--status-rejected); }
+    .status-On\ Hold { background: var(--status-onhold); }
+    .status-Not\ Started { background: var(--status-notstarted); }
+
+    /* Charts */
+    canvas { max-height: 250px; }
+
+    /* Dropdown */
+    .dropdown{ position:relative; }
+    .dropdown-content{ display:none; position:absolute; right:0; background:var(--card); border:1px solid var(--border); padding:10px; border-radius:8px; box-shadow:var(--shadow); }
+    .dropdown:hover .dropdown-content{ display:block; }
+    .dropdown-content label{ display:flex; gap:6px; font-size:13px; margin:4px 0; cursor:pointer; }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand"><div class="logo">IC</div><div>InCheck Issues</div></div>
+    <div class="brand"><div class="logo">IC</div> InCheck Issues</div>
     <div class="toolbar">
+      <input id="searchInput" class="input" type="search" placeholder="Search…" />
+      <select id="themeSelect" class="select"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
       <button id="refreshNow" class="btn">🔄 Refresh</button>
-      <button id="exportPdfBtn" class="btn primary">📑 Export PDF Report</button>
+      <button id="createTicketBtn" class="btn primary">➕ Create Ticket</button>
+      <div class="dropdown">
+        <button class="btn">👁 Columns</button>
+        <div class="dropdown-content" id="columnToggles">
+          <label><input type="checkbox" value="desc"> Description</label>
+          <label><input type="checkbox" value="location"> Issue Location</label>
+          <label><input type="checkbox" value="file"> Media URL Reference</label>
+          <label><input type="checkbox" value="type"> Type</label>
+          <label><input type="checkbox" value="related"> Issue Related</label>
+        </div>
+      </div>
     </div>
   </header>
 
   <div class="wrap">
-    <aside class="sidebar">
-      <h3>Filters</h3>
-      <label>Module <select id="moduleFilter" class="select"></select></label>
-      <label>Priority <select id="priorityFilter" class="select"></select></label>
-      <label>Status <select id="statusFilter" class="select"></select></label>
-    </aside>
-    <main class="content">
-      <div class="grid cols-4" id="kpis"></div>
-      <div class="charts">
-        <div class="card"><canvas id="byModule" height="140"></canvas></div>
-        <div class="card"><canvas id="byPriority" height="140"></canvas></div>
-        <div class="card"><canvas id="byStatus" height="140"></canvas></div>
-        <div class="card"><canvas id="byType" height="140"></canvas></div>
+    <div class="grid cols-4" id="kpis"></div>
+    <div class="charts">
+      <div class="card"><canvas id="byModule"></canvas></div>
+      <div class="card"><canvas id="byPriority"></canvas></div>
+      <div class="card"><canvas id="byStatus"></canvas></div>
+      <div class="card"><canvas id="byType"></canvas></div>
+    </div>
+    <div class="card">
+      <strong>Issues</strong> <span id="rowCount" class="muted"></span>
+      <div class="table-wrap">
+        <table id="issuesTable">
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody><tr><td>Loading…</td></tr></tbody>
+        </table>
       </div>
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <strong>Issues</strong><span id="rowCount" class="muted"></span>
-        </div>
-        <div class="table-wrap">
-          <table id="issuesTable">
-            <thead><tr>
-              <th>ID</th><th>Module</th><th>Title</th><th>Priority</th><th>Status</th><th>Type</th><th>Date</th>
-            </tr></thead>
-            <tbody><tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 
 <script>
@@ -108,124 +138,168 @@ document.addEventListener("DOMContentLoaded", () => {
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_zyuaejPwZomAhzvaDOUwajunj7jYsAeWR4_yFQsYtubfaFCa6tWKeqP7hklvSRDM97BOyoPWTVSh/pub?output=csv";
 
   const els = {
+    tableHead: document.querySelector('#tableHead'),
     tableBody: document.querySelector('#issuesTable tbody'),
     rowCount: document.querySelector('#rowCount'),
-    moduleFilter: document.querySelector('#moduleFilter'),
-    priorityFilter: document.querySelector('#priorityFilter'),
-    statusFilter: document.querySelector('#statusFilter'),
-    refresh: document.querySelector('#refreshNow'),
-    exportPdfBtn: document.querySelector('#exportPdfBtn'),
-    kpis: document.querySelector('#kpis')
+    columnToggles: document.querySelector('#columnToggles'),
+    kpis: document.querySelector('#kpis'),
+    charts: {}
   };
 
-  let rows = [], filtered = [], charts = {};
+  let rows = [], filtered = [];
+  let visibleOptional = new Set();
 
-  function normalizeRow(r){
+  function normalizeRow(raw){
+    const lower={}; for(const k in raw){ if(!k) continue; lower[k.toLowerCase().trim()] = String(raw[k] ?? '').trim(); }
+    const pick=(...keys)=>{ for(const key of keys){ if(lower[key]) return lower[key]; } return ''; };
     return {
-      id: r["Incheck Id"] || "",
-      module: r["Module"] || "Unspecified",
-      title: r["Title"] || "",
-      priority: r["Priority"] || "",
-      status: r["Task Status"] || "",
-      type: r["Type"] || "",
-      date: r["Date"] || ""
+      id: pick('incheck id'),
+      ref: pick('youtrack reference'),
+      module: pick('module'),
+      title: pick('title'),
+      desc: pick('description'),
+      location: pick('issue location'),
+      file: pick('media url reference'),
+      type: pick('type'),
+      priority: pick('priority'),
+      related: pick('issue related'),
+      status: pick('task status')
     };
   }
 
-  function parseCsv(t){ 
-    return Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
-  }
+  const priorityBadge = p => `<span class="pill priority-${p||'Low'}">${p||'-'}</span>`;
+  const statusBadge = s => `<span class="pill status-${(s||'Unknown').replace(/\s/g,'\\ ')}">${s||'-'}</span>`;
 
   function renderTable(){
+    els.tableHead.innerHTML = `
+      <th>ID</th><th>Youtrack Ref</th><th>Module</th><th>Title</th><th>Priority</th><th>Status</th>
+      ${visibleOptional.has('desc')?'<th>Description</th>':''}
+      ${visibleOptional.has('location')?'<th>Location</th>':''}
+      ${visibleOptional.has('file')?'<th>Media URL</th>':''}
+      ${visibleOptional.has('type')?'<th>Type</th>':''}
+      ${visibleOptional.has('related')?'<th>Related</th>':''}
+    `;
     els.tableBody.innerHTML = filtered.map(r=>`
       <tr>
-        <td>${r.id}</td><td>${r.module}</td><td>${r.title}</td>
-        <td>${r.priority}</td><td>${r.status}</td><td>${r.type}</td><td>${r.date}</td>
+        <td>${r.id||'-'}</td>
+        <td>${r.ref||'-'}</td>
+        <td>${r.module||'-'}</td>
+        <td>${r.title||'-'}</td>
+        <td>${priorityBadge(r.priority)}</td>
+        <td>${statusBadge(r.status)}</td>
+        ${visibleOptional.has('desc')?`<td>${r.desc||'-'}</td>`:''}
+        ${visibleOptional.has('location')?`<td>${r.location||'-'}</td>`:''}
+        ${visibleOptional.has('file')?`<td>${r.file?`<a href="${r.file}" target="_blank">Link</a>`:'-'}</td>`:''}
+        ${visibleOptional.has('type')?`<td>${r.type||'-'}</td>`:''}
+        ${visibleOptional.has('related')?`<td>${r.related||'-'}</td>`:''}
       </tr>
     `).join('');
     els.rowCount.textContent = `${filtered.length} rows`;
   }
 
   function renderKpis(){
-    const total=filtered.length;
-    const counts={};
-    filtered.forEach(r=> counts[r.status]=(counts[r.status]||0)+1 );
-    els.kpis.innerHTML = `<div class="card kpi"><div>Total Issues</div><div>${total}</div></div>` +
-      Object.entries(counts).map(([s,v])=>`<div class="card kpi"><div>${s}</div><div>${v}</div></div>`).join('');
-  }
-
-  function groupCount(list,key){
-    return list.reduce((a, r) => { const val=r[key]||'Unspecified'; a[val]=(a[val]||0)+1; return a; },{});
+    const total=filtered.length; const counts={};
+    filtered.forEach(r=>{ counts[r.status]=(counts[r.status]||0)+1; });
+    els.kpis.innerHTML='';
+    const add=(label,val)=>{
+      const pct = total ? Math.round((val*100)/total) : 0;
+      const d=document.createElement('div');
+      d.className='card kpi';
+      d.innerHTML=`<div class="label">${label}</div><div class="value">${val}</div><div class="sub">${pct}%</div>`;
+      d.onclick=()=>{ applyFilters({status:label}); };
+      els.kpis.appendChild(d);
+    };
+    add('Total Issues', total);
+    Object.entries(counts).forEach(([s,v])=> add(s,v));
   }
 
   function drawCharts(){
-    const ctx = id => document.getElementById(id);
-    const make = (id,type,data) => {
-      if(charts[id]) charts[id].destroy();
-      const labels = Object.keys(data), values = Object.values(data);
-      charts[id] = new Chart(ctx(id),{
+    const ctx = (id) => document.getElementById(id);
+    const group = (key) => filtered.reduce((a, r) => {
+      const val = (r[key] && r[key].trim()) || 'Unspecified';
+      a[val] = (a[val] || 0) + 1;
+      return a;
+    }, {});
+    const make = (id, type, data) => {
+      if(els.charts[id]) els.charts[id].destroy();
+      const labels = Object.keys(data);
+      const values = Object.values(data);
+      if (!labels.length) return;
+      els.charts[id] = new Chart(ctx(id), {
         type,
-        data:{labels,datasets:[{data:values,backgroundColor:['#4f8cff','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9']}]},
-        options:{responsive:true,plugins:{legend:{display:type!=='bar'}}}
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: labels.map((l,i)=>[
+              '#4f8cff','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9'
+            ][i % 6])
+          }]
+        },
+        options: {
+          responsive:true,
+          plugins:{
+            legend:{display:type!=='bar'},
+            tooltip:{callbacks:{
+              label:ctx=>{
+                const total=values.reduce((a,b)=>a+b,0)||1;
+                const pct=Math.round((ctx.raw*100)/total);
+                return `${ctx.raw} (${pct}%)`;
+              }
+            }}
+          },
+          scales:type==='bar'?{y:{beginAtZero:true}}:{}
+        }
       });
     };
-    make('byModule','bar',groupCount(filtered,'module'));
-    make('byPriority','doughnut',groupCount(filtered,'priority'));
-    make('byStatus','bar',groupCount(filtered,'status'));
-    make('byType','bar',groupCount(filtered,'type'));
+    make('byModule','bar',group('module'));
+    make('byPriority','doughnut',group('priority'));
+    make('byStatus','bar',group('status'));
+    make('byType','bar',group('type'));
   }
 
-  async function loadSheet(){
-    const res = await fetch(SHEET_URL); const text = await res.text();
-    rows = parseCsv(text); filtered=[...rows];
+  function applyFilters(extra={}){
+    const q=document.getElementById('searchInput').value.toLowerCase();
+    filtered=rows.filter(r=>{
+      const hay=[r.id,r.ref,r.module,r.title,r.desc,r.status,r.priority].join(' ').toLowerCase();
+      return (!q || hay.includes(q)) && (!extra.status || r.status===extra.status);
+    });
     renderTable(); renderKpis(); drawCharts();
   }
 
-  // 📑 Export PDF
-  els.exportPdfBtn.addEventListener('click', async () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({orientation:'p',unit:'pt',format:'a4'});
-    const margin = 40;
+  async function loadSheet(){
+    const res=await fetch(SHEET_URL); const text=await res.text();
+    rows=Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(normalizeRow);
+    filtered=[...rows];
+    renderTable(); renderKpis(); drawCharts();
+  }
 
-    doc.setFontSize(18);
-    doc.text("InCheck Issues Report", margin, 40);
-    doc.setFontSize(12);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 60);
-
-    // KPIs
-    doc.setFontSize(14); doc.text("KPIs", margin, 90);
-    let y=110;
-    const counts={};
-    filtered.forEach(r=> counts[r.status]=(counts[r.status]||0)+1 );
-    doc.setFontSize(11);
-    doc.text(`Total Issues: ${filtered.length}`, margin, y); y+=16;
-    for(const [s,v] of Object.entries(counts)){ doc.text(`${s}: ${v}`, margin, y); y+=16; }
-
-    // Charts
-    y+=10;
-    for(const id of ['byModule','byPriority','byStatus','byType']){
-      const canvas=document.getElementById(id);
-      if(canvas){
-        const img=canvas.toDataURL('image/png',1.0);
-        doc.addPage();
-        doc.text(id.replace('by','By '), margin, 40);
-        doc.addImage(img,'PNG',margin,60,500,300);
-      }
-    }
-
-    // Table
-    doc.addPage();
-    doc.text("Issues Table", margin, 40);
-    doc.autoTable({
-      startY:60, head:[["ID","Module","Title","Priority","Status","Type","Date"]],
-      body:filtered.map(r=>[r.id,r.module,r.title,r.priority,r.status,r.type,r.date]),
-      styles:{fontSize:8,cellPadding:3}
-    });
-
-    doc.save(`InCheck_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+  // Column toggles
+  els.columnToggles.addEventListener('change', e=>{
+    if(e.target.checked) visibleOptional.add(e.target.value); else visibleOptional.delete(e.target.value);
+    renderTable();
   });
+  document.getElementById('searchInput').addEventListener('input',()=>applyFilters());
 
-  els.refresh.addEventListener('click', loadSheet);
+  // Theme switching
+  function applyTheme(mode) {
+    if (mode === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme','system');
+    } else {
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem('theme', mode);
+    }
+  }
+  function initTheme() {
+    const saved = localStorage.getItem('theme') || 'system';
+    document.getElementById('themeSelect').value = saved;
+    applyTheme(saved);
+  }
+  document.getElementById('themeSelect').addEventListener('change', e => {
+    applyTheme(e.target.value);
+  });
+  initTheme();
 
   loadSheet();
 });
