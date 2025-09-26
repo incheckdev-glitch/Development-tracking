@@ -11,33 +11,74 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    /* keep your styles the same */
-    /* ... (keeping your CSS unchanged for brevity) ... */
-    .dropdown {
-      position: relative;
-      display: inline-block;
+    /* ------------------------
+       THEME & LAYOUT STYLES
+    -------------------------*/
+    :root {
+      --status-resolved:#10b981;
+      --status-underdev:#3b82f6;
+      --status-rejected:#ef4444;
+      --status-onhold:#f59e0b;
+      --status-notstarted:#6b7280;
+      --status-sent:#8b5cf6;
+      --status-onstage:#0ea5e9;
+      --priority-high:#ef4444;
+      --priority-medium:#f59e0b;
+      --priority-low:#10b981;
+      --bg:#0b1020; --card:#0f1630; --muted:#9aa6d1; --text:#e8edff;
+      --accent:#4f8cff; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --info:#3b82f6; --purple:#8b5cf6; --neutral:#6b7280; --border:#1e2643;
+      --shadow:0 8px 24px rgba(0,0,0,.35);
+      --focus: 0 0 0 3px rgba(79,140,255,.35);
     }
+    :root[data-theme="light"] {
+      --bg:#f4f6ff; --card:#ffffff; --muted:#5a678c; --text:#0d1326;
+      --accent:#2563eb; --danger:#dc2626; --ok:#059669; --warn:#d97706;
+      --info:#1d4ed8; --purple:#7c3aed; --neutral:#374151; --border:#e7eaf6;
+      --shadow:0 10px 24px rgba(16,24,40,.08);
+      --focus: 0 0 0 3px rgba(37,99,235,.25);
+    }
+    * { box-sizing:border-box }
+    body {
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    header {
+      position:sticky; top:0; z-index:20; background:var(--card);
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:12px; padding:10px 16px;
+      box-shadow:var(--shadow);
+    }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; }
+    .logo { width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; font-weight:800; }
+    .toolbar { margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    .btn, .select, .input { padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+      background:transparent; color:inherit; font:inherit; }
+    .btn { cursor:pointer; font-weight:600; background:var(--card) }
+    .btn.primary { background:var(--accent); border-color:transparent; color:#fff }
+    .wrap { display:grid; grid-template-columns:1fr; gap:18px; padding:18px; max-width:1400px; margin:0 auto }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;
+      box-shadow:var(--shadow); }
+
+    table { width:100%; border-collapse:separate; border-spacing:0; font-size:14px }
+    thead th { position:sticky; top:0; background:var(--card); text-align:left; padding:12px 10px;
+      border-bottom:1px solid var(--border); }
+    tbody td { padding:11px 10px; border-bottom:1px solid var(--border) }
+    tr:hover { background:rgba(255,255,255,.03) }
+    .table-wrap { max-height:460px; overflow:auto; border-radius:10px; border:1px solid var(--border) }
+
+    /* Dropdown for column visibility */
+    .dropdown { position: relative; display: inline-block; }
     .dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      z-index: 50;
+      display: none; position: absolute; right: 0;
+      background: var(--card); border: 1px solid var(--border);
+      padding: 10px; border-radius: 8px; box-shadow: var(--shadow); z-index: 50;
     }
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
+    .dropdown:hover .dropdown-content { display: block; }
     .dropdown-content label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      margin: 4px 0;
-      cursor: pointer;
+      display: flex; align-items: center; gap: 6px; font-size: 13px;
+      margin: 4px 0; cursor: pointer;
     }
   </style>
 </head>
@@ -51,10 +92,8 @@
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
-      <button id="refreshNow" class="btn"><span class="icon">🔄</span> Refresh</button>
-      <button id="createTicketBtn" class="btn primary"><span class="icon">➕</span> Create Ticket</button>
-      
-      <!-- Column visibility dropdown -->
+      <button id="refreshNow" class="btn">🔄 Refresh</button>
+      <button id="createTicketBtn" class="btn primary">➕ Create Ticket</button>
       <div class="dropdown">
         <button class="btn">👁 Columns</button>
         <div class="dropdown-content" id="columnToggles">
