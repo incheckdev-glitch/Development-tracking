@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- PapaParse for CSV -->
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body { background: #f5f6fa; }
@@ -40,43 +40,24 @@
 
       <!-- Summary -->
       <div id="summary" class="row mb-4">
-        <div class="col-md-4">
-          <div class="card shadow p-3"><h5>Total Hours</h5><h3 id="totalHours">Loading...</h3></div>
-        </div>
-        <div class="col-md-4">
-          <div class="card shadow p-3"><h5>Average Hours/Day</h5><h3 id="avgHours">Loading...</h3></div>
-        </div>
-        <div class="col-md-4">
-          <div class="card shadow p-3"><h5>Attendance Days</h5><h3 id="daysCount">Loading...</h3></div>
-        </div>
+        <div class="col-md-4"><div class="card shadow p-3"><h5>Total Hours</h5><h3 id="totalHours">Loading...</h3></div></div>
+        <div class="col-md-4"><div class="card shadow p-3"><h5>Average Hours/Day</h5><h3 id="avgHours">Loading...</h3></div></div>
+        <div class="col-md-4"><div class="card shadow p-3"><h5>Attendance Days</h5><h3 id="daysCount">Loading...</h3></div></div>
       </div>
 
       <!-- Charts -->
       <div id="charts" class="row mb-4">
-        <div class="col-md-6">
-          <div class="card shadow p-3"><h5>Hours Worked per Day</h5><canvas id="barChart"></canvas></div>
-        </div>
-        <div class="col-md-6">
-          <div class="card shadow p-3"><h5>Total Hours by Employee</h5><canvas id="pieChart"></canvas></div>
-        </div>
-        <div class="col-md-12 mt-4">
-          <div class="card shadow p-3"><h5>Trend: Total Hours Over Time</h5><canvas id="lineChart"></canvas></div>
-        </div>
+        <div class="col-md-6"><div class="card shadow p-3"><h5>Hours Worked per Day</h5><canvas id="barChart"></canvas></div></div>
+        <div class="col-md-6"><div class="card shadow p-3"><h5>Total Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
+        <div class="col-md-12 mt-4"><div class="card shadow p-3"><h5>Trend: Total Hours Over Time</h5><canvas id="lineChart"></canvas></div></div>
       </div>
 
-      <!-- Attendance Table -->
+      <!-- Table -->
       <div id="table" class="card shadow p-3">
         <h5>Attendance Log</h5>
         <table id="attendanceTable" class="table table-striped" style="width:100%">
           <thead>
-            <tr>
-              <th>Month</th>
-              <th>Date</th>
-              <th>Employee</th>
-              <th>Sign In</th>
-              <th>Sign Out</th>
-              <th>Total Hours</th>
-            </tr>
+            <tr id="headerRow"></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -98,90 +79,78 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
 <script>
-  const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?output=csv";
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?output=csv";
 
-  Papa.parse(csvUrl, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      // Normalize headers and values
-      const cleanedData = results.data.map(row => {
-        const normalized = {};
-        for (let key in row) {
-          if (!key) continue;
-          const cleanKey = key.trim().toLowerCase(); // normalize key
-          normalized[cleanKey] = (row[key] || "").trim();
-        }
-        return normalized;
-      });
+Papa.parse(csvUrl, {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    console.log("DEBUG Headers:", Object.keys(results.data[0] || {}));
+    console.log("DEBUG First row:", results.data[0]);
 
-      console.log("DEBUG First Row:", cleanedData[0]); // <-- see headers
-
-      const data = cleanedData.filter(r => r["employee name"] && r["date"]);
-      const tableBody = document.querySelector("#attendanceTable tbody");
-      tableBody.innerHTML = "";
-      let totalHours = 0;
-      let countHours = 0;
-      const dailyTotals = {};
-      const empTotals = {};
-
-      data.forEach(row => {
-        const month = row["month"];
-        const date = row["date"];
-        const emp = row["employee name"];
-        const inTime = row["sign in time"];
-        const outTime = row["sign out time"];
-        const hours = parseFloat(row["total hours"]) || 0;
-
-        if(hours > 0){ totalHours += hours; countHours++; }
-        dailyTotals[date] = (dailyTotals[date] || 0) + hours;
-        empTotals[emp] = (empTotals[emp] || 0) + hours;
-
-        const tr = `<tr>
-          <td>${month}</td>
-          <td>${date}</td>
-          <td>${emp}</td>
-          <td>${inTime}</td>
-          <td>${outTime}</td>
-          <td>${hours || ""}</td>
-        </tr>`;
-        tableBody.insertAdjacentHTML("beforeend", tr);
-      });
-
-      // KPIs
-      const daysCount = Object.keys(dailyTotals).length;
-      const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
-      document.getElementById("totalHours").textContent = totalHours.toFixed(2);
-      document.getElementById("avgHours").textContent = avgHours;
-      document.getElementById("daysCount").textContent = daysCount;
-
-      // Charts
-      new Chart(document.getElementById("barChart"), {
-        type: "bar",
-        data: { labels: Object.keys(dailyTotals),
-                datasets: [{ label: "Total Hours", data: Object.values(dailyTotals) }] }
-      });
-
-      new Chart(document.getElementById("pieChart"), {
-        type: "pie",
-        data: { labels: Object.keys(empTotals),
-                datasets: [{ data: Object.values(empTotals) }] }
-      });
-
-      new Chart(document.getElementById("lineChart"), {
-        type: "line",
-        data: { labels: Object.keys(dailyTotals),
-                datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"blue" }] }
-      });
-
-      // DataTable with export buttons
-      $('#attendanceTable').DataTable({
-        dom: 'Bfrtip',
-        buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
-      });
+    if (!results.data.length) {
+      alert("CSV loaded but no data found!");
+      return;
     }
-  });
+
+    // Use first row’s keys exactly
+    const keys = Object.keys(results.data[0]);
+
+    // Build table header dynamically
+    const headerRow = document.getElementById("headerRow");
+    keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+
+    const tableBody = document.querySelector("#attendanceTable tbody");
+    let totalHours = 0;
+    let countHours = 0;
+    const dailyTotals = {};
+    const empTotals = {};
+
+    results.data.forEach(row => {
+      const hours = parseFloat(row["Total Hours"] || row["total hours"] || 0) || 0;
+      if(hours > 0){ totalHours += hours; countHours++; }
+
+      if(row["Date"]) dailyTotals[row["Date"]] = (dailyTotals[row["Date"]] || 0) + hours;
+      if(row["Employee Name "] || row["Employee Name"]) {
+        let emp = row["Employee Name "] || row["Employee Name"];
+        empTotals[emp] = (empTotals[emp] || 0) + hours;
+      }
+
+      const tr = `<tr>${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
+      tableBody.insertAdjacentHTML("beforeend", tr);
+    });
+
+    // KPIs
+    const daysCount = Object.keys(dailyTotals).length;
+    const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
+    document.getElementById("totalHours").textContent = totalHours.toFixed(2);
+    document.getElementById("avgHours").textContent = avgHours;
+    document.getElementById("daysCount").textContent = daysCount;
+
+    // Charts
+    new Chart(document.getElementById("barChart"), {
+      type: "bar",
+      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals) }] }
+    });
+
+    new Chart(document.getElementById("pieChart"), {
+      type: "pie",
+      data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals) }] }
+    });
+
+    new Chart(document.getElementById("lineChart"), {
+      type: "line",
+      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"blue" }] }
+    });
+
+    // DataTable
+    $('#attendanceTable').DataTable({
+      dom: 'Bfrtip',
+      buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+    });
+  }
+});
 </script>
 </body>
 </html>
