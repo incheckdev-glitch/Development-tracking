@@ -36,7 +36,7 @@
 
     <!-- Main Content -->
     <div class="col-md-10 p-4">
-      <h2 class="mb-4">Employee Attendance (Live from Google Sheet)</h2>
+      <h2 class="mb-4">Employee Attendance (AttendanceSummary Sheet)</h2>
 
       <!-- Summary -->
       <div id="summary" class="row mb-4">
@@ -56,9 +56,7 @@
       <div id="table" class="card shadow p-3">
         <h5>Attendance Log</h5>
         <table id="attendanceTable" class="table table-striped" style="width:100%">
-          <thead>
-            <tr id="headerRow"></tr>
-          </thead>
+          <thead><tr id="headerRow"></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -79,22 +77,21 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
 <script>
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?output=csv";
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
 Papa.parse(csvUrl, {
   download: true,
   header: true,
   skipEmptyLines: true,
   complete: function(results) {
-    console.log("DEBUG Headers:", Object.keys(results.data[0] || {}));
-    console.log("DEBUG First row:", results.data[0]);
-
     if (!results.data.length) {
-      alert("CSV loaded but no data found!");
+      alert("No data found in AttendanceSummary sheet!");
       return;
     }
 
-    // Use first row’s keys exactly
+    console.log("DEBUG Headers:", Object.keys(results.data[0]));
+    console.log("DEBUG First row:", results.data[0]);
+
     const keys = Object.keys(results.data[0]);
 
     // Build table header dynamically
