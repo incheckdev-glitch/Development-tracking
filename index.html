@@ -7,6 +7,7 @@
 
   <!-- CSS Libraries -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
 
@@ -26,7 +27,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
-    :root {
+    /* THEME VARIABLES */
+    body {
       --bg: #f4f6f9;
       --text: #1f2a37;
       --card: #ffffff;
@@ -35,8 +37,11 @@
       --accent: #00c9a7;
       --soft-red: #fcebea;
       --soft-yellow: #fff8e5;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
     }
-    .dark-mode:root, .dark-mode body {
+    body.dark-mode {
       --bg: #181a1f;
       --text: #e5e7eb;
       --card: #1f232b;
@@ -46,11 +51,8 @@
       --soft-red: #402b2b;
       --soft-yellow: #3a3424;
     }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-    }
+
+    /* SIDEBAR */
     .sidebar {
       min-height: 100vh;
       background: #15171c;
@@ -60,6 +62,8 @@
     .sidebar h4 { color: var(--accent); font-weight: 700; }
     .sidebar .nav-link { color: #b8bccc; border-radius: 6px; }
     .sidebar .nav-link:hover { color: #fff; background: #2c2f38; }
+
+    /* CARDS */
     .card { background: var(--card); border-radius: 16px; border: none; }
     .kpi-card { color: #fff; }
     .kpi-blue { background: linear-gradient(135deg, #007bff, #00c6ff); }
@@ -67,14 +71,21 @@
     .kpi-orange { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
     .kpi-purple { background: linear-gradient(135deg, #6f42c1, #b47bff); }
     .kpi-red { background: linear-gradient(135deg, #dc3545, #ff6b6b); }
+
+    /* FILTERS */
     .filter-bar { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 20px; }
+
+    /* TABLE */
     .table-soft-danger { background-color: var(--soft-red) !important; }
     .table-soft-warning { background-color: var(--soft-yellow) !important; }
+
+    /* GANTT */
     .gantt-container { overflow-x: auto; padding-bottom: 10px; border-radius: 12px; background: var(--card); }
     .gantt-row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .gantt-label { width: 160px; flex-shrink: 0; color: var(--muted); }
     .gantt-track { position: relative; height: 26px; flex-grow: 1; background: rgba(13,110,253,0.05); border-radius: 6px; }
     .gantt-bar { position: absolute; top: 3px; height: 20px; border-radius: 4px; background-color: #4dabf7; }
+
     .badge-space { gap: 6px; display: inline-flex; flex-wrap: wrap; }
     .form-hint { font-size: 0.8rem; color: var(--muted); }
     .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
@@ -113,42 +124,41 @@
           <!-- Filters -->
           <a id="filters" class="sr-only">Filters</a>
           <div class="filter-bar">
-            <div class="row g-3 align-items-end">
-              <div class="col-md-4">
-                <label class="form-label">Employee(s)</label>
-                <select id="employeeFilter" class="form-select" multiple></select>
-                <div class="form-hint">Hold CTRL/CMD to multi-select</div>
+            <div class="row g-3">
+              <div class="col-lg-3">
+                <label class="form-label"><i class="bi bi-people"></i> Employee(s)</label>
+                <select id="employeeFilter" class="form-select form-select-sm" multiple></select>
+                <div class="form-hint">CTRL/CMD for multi-select</div>
               </div>
-              <div class="col-md-2">
-                <label class="form-label">Start Date</label>
-                <input type="date" id="startDate" class="form-control">
+              <div class="col-lg-2">
+                <label class="form-label"><i class="bi bi-calendar-event"></i> Start</label>
+                <input type="date" id="startDate" class="form-control form-control-sm">
               </div>
-              <div class="col-md-2">
-                <label class="form-label">End Date</label>
-                <input type="date" id="endDate" class="form-control">
+              <div class="col-lg-2">
+                <label class="form-label"><i class="bi bi-calendar-check"></i> End</label>
+                <input type="date" id="endDate" class="form-control form-control-sm">
               </div>
-              <div class="col-md-2">
-                <label class="form-label">Min Hours</label>
-                <input type="number" step="0.1" id="minHours" class="form-control" placeholder="e.g. 6">
+              <div class="col-lg-2">
+                <label class="form-label"><i class="bi bi-hourglass-split"></i> Hours</label>
+                <div class="d-flex gap-1">
+                  <input type="number" step="0.1" id="minHours" class="form-control form-control-sm" placeholder="Min">
+                  <input type="number" step="0.1" id="maxHours" class="form-control form-control-sm" placeholder="Max">
+                </div>
               </div>
-              <div class="col-md-2">
-                <label class="form-label">Max Hours</label>
-                <input type="number" step="0.1" id="maxHours" class="form-control" placeholder="e.g. 8">
-              </div>
-              <div class="col-md-2 mt-3">
-                <label class="form-label">Shift</label>
-                <select id="shiftFilter" class="form-select">
+              <div class="col-lg-2">
+                <label class="form-label"><i class="bi bi-sunrise"></i> Shift</label>
+                <select id="shiftFilter" class="form-select form-select-sm">
                   <option value="">All</option>
-                  <option value="morning">Morning (&lt; 12:00)</option>
-                  <option value="afternoon">Afternoon (≥ 12:00)</option>
+                  <option value="morning">Morning (&lt;12:00)</option>
+                  <option value="afternoon">Afternoon (≥12:00)</option>
                 </select>
               </div>
-              <div class="col-md-2 mt-3">
-                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
+              <div class="col-lg-1 d-flex align-items-end">
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">Reset</button>
               </div>
-              <div class="col-md-4 mt-3">
-                <label class="form-label">Quick Search</label>
-                <input type="search" id="quickSearch" class="form-control" placeholder="e.g. Omar 2025-09-15">
+              <div class="col-lg-3">
+                <label class="form-label"><i class="bi bi-search"></i> Quick Search</label>
+                <input type="search" id="quickSearch" class="form-control form-control-sm" placeholder="e.g. Omar 2025-09-15">
               </div>
             </div>
           </div>
@@ -199,9 +209,6 @@
               </thead>
               <tbody></tbody>
             </table>
-            <div class="mt-2 text-end">
-              <button class="btn btn-primary" onclick="downloadFullReport()">📄 Download Report</button>
-            </div>
           </div>
         </div><!-- /reportArea -->
       </div>
@@ -210,327 +217,92 @@
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
+let CANON = [], dataTable = null;
 
-let RAW = [];
-let CANON = [];  // normalized rows
-let dataTable = null;
-let barChart, pieChart, lineChart;
-
-// THEME
+// Theme toggle
 document.getElementById("toggleThemeBtn").addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
-  const btn = document.getElementById("toggleThemeBtn");
-  btn.textContent = document.body.classList.contains("dark-mode") ? "☀️ Light Mode" : "🌙 Dark Mode";
-  localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
+  const isDark = document.body.classList.contains("dark-mode");
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+  document.getElementById("toggleThemeBtn").textContent = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
 });
-(function initTheme(){
-  const saved = localStorage.getItem("theme");
-  if (saved === "dark") {
-    document.body.classList.add("dark-mode");
-    document.getElementById("toggleThemeBtn").textContent = "☀️ Light Mode";
-  }
-})();
+(function(){ if(localStorage.getItem("theme")==="dark"){document.body.classList.add("dark-mode");document.getElementById("toggleThemeBtn").textContent="☀️ Light Mode";}})();
 
-// UTIL: Safe header normalization and mapping
+// Parse & normalize
 function normalizeHeaders(row) {
-  const o = {};
-  Object.entries(row).forEach(([k,v])=>{
-    if (!k) return;
-    const key = k.toString().replace(/\uFEFF/g,'').toLowerCase().trim().replace(/\s+/g,' ');
-    o[key] = (v ?? "").toString().trim();
-  });
-  return o;
+  const o={}; Object.entries(row).forEach(([k,v])=>{if(!k)return; const key=k.toLowerCase().trim();o[key]=v}); return o;
 }
-function parseDateTimeMDY24(s) {
-  if (!s) return null;
-  // Expect "M/D/YYYY HH:MM:SS" or "M/D/YYYY HH:MM"
-  const parts = s.split(' ');
-  if (parts.length < 2) return null;
-  const [mdy, hms] = parts;
-  const [m,d,y] = mdy.split('/').map(n=>parseInt(n,10));
-  const [hh,mm,ss] = hms.split(':').map(n=>parseInt(n||'0',10));
-  if (!y || !m || !d) return null;
-  return new Date(y, m-1, d, hh||0, mm||0, ss||0);
-}
-function toYMD(dt) {
-  if (!dt) return "";
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth()+1).padStart(2,'0');
-  const d = String(dt.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
-}
-function hoursBetween(a,b) {
-  if (!a || !b) return null;
-  return (b - a) / 36e5; // ms to hours
-}
-function mapRow(norm) {
-  // Try to resolve canonical fields by fuzzy keys
-  const get = (...aliases) => {
-    for (const a of aliases) if (a in norm && norm[a] !== "") return norm[a];
-    // fallback: scan contains
-    const found = Object.keys(norm).find(k => aliases.some(a => k.includes(a)));
-    return found ? norm[found] : "";
-  };
-  const month = get("month");
-  const dateRaw = get("date");
-  const emp = get("employee name","employee");
-  const sinRaw = get("sign in time","sign-in","signin");
-  const soutRaw = get("sign out time","sign-out","signout");
-  let th = get("total hours","hours");
-  // parse/compute
-  const sin = parseDateTimeMDY24(sinRaw);
-  const sout = parseDateTimeMDY24(soutRaw);
-  if ((!th || isNaN(parseFloat(th))) && sin && sout) th = hoursBetween(sin, sout)?.toFixed(2);
-  return {
-    month,
-    date: dateRaw,          // keep original (as sheet prints)
-    ymd: (sin || sout) ? toYMD(sin || sout) : (dateRaw || ""), // for sorting/grouping
-    employee: emp,
-    signIn: sinRaw,
-    signOut: soutRaw,
-    signInDT: sin,
-    signOutDT: sout,
-    totalHours: th ? parseFloat(th) : 0
-  };
-}
-function computeStatus(row) {
-  // Can be Late and/or Early Leave
-  let statuses = [];
-  if (row.signInDT && row.signOutDT) {
-    const d = row.signInDT || row.signOutDT;
-    const limitIn = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 8, 15, 0);
-    const limitOut = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 16, 30, 0);
-    if (row.signInDT > limitIn) statuses.push("Late");
-    if (row.signOutDT < limitOut) statuses.push("Early Leave");
-    if (statuses.length === 0) statuses.push("On Time");
-  } else {
-    statuses.push("Missing");
-  }
-  return statuses;
-}
+function parseDate(s){if(!s)return null; return new Date(s);}
+function hoursBetween(a,b){if(!a||!b)return null;return (b-a)/36e5;}
+function mapRow(r){const emp=r["employee name"]||r["employee"]||"";const sin=parseDate(r["sign in time"]);const sout=parseDate(r["sign out time"]);let th=parseFloat(r["total hours"]);if(isNaN(th)&&sin&&sout)th=hoursBetween(sin,sout);return{month:r["month"],date:r["date"],employee:emp,signIn:r["sign in time"],signOut:r["sign out time"],signInDT:sin,signOutDT:sout,totalHours:th||0};}
+function computeStatus(r){let s=[];if(r.signInDT&&r.signOutDT){const inLim=new Date(r.signInDT);inLim.setHours(8,15,0,0);const outLim=new Date(r.signOutDT);outLim.setHours(16,30,0,0);if(r.signInDT>inLim)s.push("Late");if(r.signOutDT<outLim)s.push("Early Leave");if(!s.length)s.push("On Time");}else{s.push("Missing");}return s;}
 
-// LOAD DATA (robust: fetch → Papa on text; falls back to Papa download)
-async function loadData() {
-  try {
-    const res = await fetch(CSV_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const csv = await res.text();
-    const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-    RAW = parsed.data || [];
-  } catch (e) {
-    // fallback to Papa.download
-    await new Promise(resolve => {
-      Papa.parse(CSV_URL, {
-        download: true, header: true, skipEmptyLines: true,
-        complete: (results)=>{ RAW = results.data || []; resolve(); },
-        error: ()=>{ RAW = []; resolve(); }
-      });
-    });
-  }
-  // Normalize & map
-  CANON = RAW.map(r => mapRow(normalizeHeaders(r)))
-             .filter(r => r.employee || r.date || r.signIn || r.signOut || r.totalHours); // drop empty
-  buildFilters(CANON);
-  applyFilters(); // initial render
-}
-
-// FILTERS
-function buildFilters(rows) {
-  const empSelect = document.getElementById("employeeFilter");
-  const employees = Array.from(new Set(rows.map(r => r.employee).filter(Boolean))).sort();
-  empSelect.innerHTML = employees.map(e=>`<option value="${e}">${e}</option>`).join("");
-}
-function getCriteria() {
-  const empSel = Array.from(document.getElementById("employeeFilter").selectedOptions).map(o=>o.value);
-  const start = document.getElementById("startDate").value;
-  const end = document.getElementById("endDate").value;
-  const minH = parseFloat(document.getElementById("minHours").value);
-  const maxH = parseFloat(document.getElementById("maxHours").value);
-  const shift = document.getElementById("shiftFilter").value; // "", "morning", "afternoon"
-  const q = document.getElementById("quickSearch").value?.toLowerCase().trim();
-  return { empSel, start, end, minH, maxH, shift, q };
-}
-function passesShift(row, shift) {
-  if (!shift) return true;
-  if (!row.signInDT) return false;
-  const hr = row.signInDT.getHours();
-  if (shift === "morning") return hr < 12;
-  if (shift === "afternoon") return hr >= 12;
-  return true;
-}
-function applyFilters() {
-  const { empSel, start, end, minH, maxH, shift, q } = getCriteria();
-  let filtered = CANON.filter(r => {
-    if (empSel.length && !empSel.includes(r.employee)) return false;
-    if (start) { const sd = new Date(start); if (r.signInDT && r.signInDT < sd) return false; if (!r.signInDT && r.date && new Date(r.date) < sd) return false; }
-    if (end) { const ed = new Date(end); if (r.signOutDT && r.signOutDT > new Date(ed.getFullYear(), ed.getMonth(), ed.getDate(), 23,59,59)) return false; if (!r.signOutDT && r.date && new Date(r.date) > ed) return false; }
-    if (!isNaN(minH) && r.totalHours < minH) return false;
-    if (!isNaN(maxH) && r.totalHours > maxH) return false;
-    if (!passesShift(r, shift)) return false;
-    if (q) {
-      const blob = `${r.month} ${r.date} ${r.employee} ${r.signIn} ${r.signOut} ${r.totalHours}`.toLowerCase();
-      if (!blob.includes(q)) return false;
-    }
-    return true;
-  });
-  renderAll(filtered);
-}
-function resetFilters() {
-  ["employeeFilter","startDate","endDate","minHours","maxHours","shiftFilter","quickSearch"].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el.tagName === "SELECT" && el.multiple) el.selectedIndex = -1; else el.value = "";
-  });
-  renderAll(CANON);
-}
-
-// RENDER
-function renderAll(data) {
-  renderKPIsCharts(data);
-  renderGantt(data);
-  renderTable(data);
-  // Hook up Bootstrap tooltips (for badges & bars)
-  const triggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  triggers.forEach(el => new bootstrap.Tooltip(el));
-}
-function renderKPIsCharts(data) {
-  let total = 0, count = 0, late = 0, early = 0;
-  const byDate = {}, byEmp = {};
-  data.forEach(r=>{
-    const th = r.totalHours || 0; if (th>0){ total += th; count++; }
-    if (r.ymd) byDate[r.ymd] = (byDate[r.ymd]||0) + th;
-    if (r.employee) byEmp[r.employee] = (byEmp[r.employee]||0) + th;
-    const st = computeStatus(r);
-    if (st.includes("Late")) late++;
-    if (st.includes("Early Leave")) early++;
-  });
-  document.getElementById("totalHours").textContent = total.toFixed(2);
-  document.getElementById("avgHours").textContent = count ? (total/count).toFixed(2) : "0";
-  document.getElementById("daysCount").textContent = Object.keys(byDate).length;
-  document.getElementById("lateCount").textContent = late;
-  document.getElementById("earlyCount").textContent = early;
-
-  // charts
-  [barChart, pieChart, lineChart].forEach(c=>c?.destroy());
-  const dLabels = Object.keys(byDate).sort();
-  const dValues = dLabels.map(d=>byDate[d]);
-  barChart = new Chart(document.getElementById("barChart"), {
-    type: "bar",
-    data: { labels: dLabels, datasets: [{ label: "Hours", data: dValues, backgroundColor: "#4dabf7" }] }
-  });
-  pieChart = new Chart(document.getElementById("pieChart"), {
-    type: "pie",
-    data: { labels: Object.keys(byEmp), datasets: [{ data: Object.values(byEmp), backgroundColor:["#4dabf7","#51cf66","#ffd43b","#ff6b6b","#845ef7","#63e6be","#ffa8a8"] }] }
-  });
-  lineChart = new Chart(document.getElementById("lineChart"), {
-    type: "line",
-    data: { labels: dLabels, datasets: [{ label: "Hours", data: dValues, fill:false, borderColor:"#4dabf7" }] }
-  });
-}
-function renderGantt(data) {
-  const c = document.getElementById("ganttContainer");
-  c.innerHTML = "";
-  // group by employee then date
-  const empMap = {};
-  data.forEach(r=>{
-    if (!r.employee) return;
-    if (!empMap[r.employee]) empMap[r.employee] = [];
-    if (r.signInDT && r.signOutDT) empMap[r.employee].push(r);
-  });
-  const scaleStart = 6;  // 06:00
-  const scaleEnd = 20;   // 20:00
-  const width = 960;     // px
-
-  Object.keys(empMap).sort().forEach(emp=>{
-    const row = document.createElement("div"); row.className = "gantt-row";
-    const lab = document.createElement("div"); lab.className = "gantt-label"; lab.textContent = emp;
-    const track = document.createElement("div"); track.className = "gantt-track";
-    empMap[emp].forEach(r=>{
-      const s = r.signInDT, e = r.signOutDT;
-      if (!s || !e) return;
-      const startH = s.getHours() + s.getMinutes()/60;
-      const endH = e.getHours() + e.getMinutes()/60;
-      const left = Math.max(0, (startH - scaleStart) / (scaleEnd - scaleStart)) * width;
-      const w = Math.max(2, (endH - startH) / (scaleEnd - scaleStart) * width);
-      const bar = document.createElement("div");
-      bar.className = "gantt-bar";
-      bar.style.left = `${left}px`;
-      bar.style.width = `${w}px`;
-      bar.setAttribute("data-bs-toggle","tooltip");
-      bar.setAttribute("title", `${emp} — ${r.date || r.ymd}: ${r.totalHours.toFixed(2)} h`);
-      track.appendChild(bar);
-    });
-    row.appendChild(lab); row.appendChild(track); c.appendChild(row);
-  });
-}
-function renderTable(data) {
-  if (dataTable) { dataTable.destroy(); dataTable = null; }
-  const tbody = document.querySelector("#attendanceTable tbody");
-  tbody.innerHTML = "";
-  if (!data.length) {
-    tbody.innerHTML = "<tr><td colspan='7'>No data</td></tr>";
-  } else {
-    data.forEach(r=>{
-      const st = computeStatus(r);
-      let badgeHTML = '<span class="badge bg-secondary me-1" data-bs-toggle="tooltip" title="One or both timestamps missing">Missing</span>';
-      if (st.includes("On Time")) badgeHTML = '<span class="badge bg-success me-1" data-bs-toggle="tooltip" title="Within 08:15 / 16:30">On Time</span>';
-      if (st.includes("Late")) badgeHTML = '<span class="badge bg-danger me-1" data-bs-toggle="tooltip" title="Sign In after 08:15">Late</span>' + (st.includes("Early Leave") ? ' ' : '');
-      if (st.includes("Early Leave")) badgeHTML += '<span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="Sign Out before 16:30">Early Leave</span>';
-
-      const cls = (r.totalHours>0 && r.totalHours<7) ? "table-soft-danger" : (r.totalHours>9 ? "table-soft-warning" : "");
-      const tr = document.createElement("tr"); if (cls) tr.classList.add(cls);
-      tr.innerHTML = `
-        <td>${r.month || ""}</td>
-        <td>${r.date || r.ymd || ""}</td>
-        <td>${r.employee || ""}</td>
-        <td>${r.signIn || ""}</td>
-        <td>${r.signOut || ""}</td>
-        <td>${isFinite(r.totalHours)? r.totalHours.toFixed(2) : ""}</td>
-        <td class="badge-space">${badgeHTML}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
-  dataTable = $('#attendanceTable').DataTable({
-    dom: 'Bfrtip',
-    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-    pageLength: 10
-  });
-  // Quick search ties into DataTables
-  document.getElementById("quickSearch").oninput = (e)=> dataTable.search(e.target.value).draw();
-}
-
-// REPORT
-function downloadFullReport() {
-  const node = document.getElementById("reportArea");
-  html2canvas(node, { backgroundColor: null, scale: 2 }).then(canvas => {
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = pdfMake.createPdf({
-      content: [
-        { text: "Attendance Report", style: "header" },
-        { image: imgData, width: 720 }
-      ],
-      styles: { header: { fontSize: 18, bold: true, margin: [0,0,0,12] } },
-      pageOrientation: "landscape",
-      pageMargins: [20,20,20,20]
-    });
-    pdf.download("AttendanceReport.pdf");
-  });
-}
-
-// EVENTS
-["employeeFilter","startDate","endDate","minHours","maxHours","shiftFilter"].forEach(id=>{
-  document.getElementById(id).addEventListener("change", applyFilters);
-});
+// Load
+async function loadData(){const res=await fetch(CSV_URL);const csv=await res.text();const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));applyFilters();}
 document.getElementById("refreshBtn").addEventListener("click", loadData);
 
-// INIT
-// Bootstrap tooltips init (safe if BS bundle present)
-window.addEventListener("load", ()=> {
-  try { const triggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); triggers.forEach(el=> new bootstrap.Tooltip(el)); } catch(e){}
-});
+// Filters
+function getCriteria(){return{empSel:Array.from(document.getElementById("employeeFilter").selectedOptions).map(o=>o.value),start:document.getElementById("startDate").value,end:document.getElementById("endDate").value,minH:parseFloat(document.getElementById("minHours").value),maxH:parseFloat(document.getElementById("maxHours").value),shift:document.getElementById("shiftFilter").value,q:document.getElementById("quickSearch").value.toLowerCase().trim()};}
+function applyFilters(){const c=getCriteria();let data=CANON.filter(r=>{if(c.empSel.length&&!c.empSel.includes(r.employee))return false;if(c.start&&r.signInDT&&r.signInDT<new Date(c.start))return false;if(c.end&&r.signOutDT&&r.signOutDT>new Date(c.end))return false;if(!isNaN(c.minH)&&r.totalHours<c.minH)return false;if(!isNaN(c.maxH)&&r.totalHours>c.maxH)return false;if(c.shift==="morning"&&r.signInDT&&r.signInDT.getHours()>=12)return false;if(c.shift==="afternoon"&&r.signInDT&&r.signInDT.getHours()<12)return false;if(c.q&&!`${r.employee} ${r.date}`.toLowerCase().includes(c.q))return false;return true});renderTable(data);}
+["employeeFilter","startDate","endDate","minHours","maxHours","shiftFilter","quickSearch"].forEach(id=>{document.getElementById(id).addEventListener("input",applyFilters);});
+function resetFilters(){["employeeFilter","startDate","endDate","minHours","maxHours","shiftFilter","quickSearch"].forEach(id=>document.getElementById(id).value="");applyFilters();}
+
+// Render
+function renderTable(data){
+  if(dataTable){dataTable.clear().destroy();}
+  const tbody=document.querySelector("#attendanceTable tbody");tbody.innerHTML="";
+  let sum=0,days=new Set(),late=0,early=0;data.forEach(r=>{
+    const st=computeStatus(r);
+    if(st.includes("Late"))late++;
+    if(st.includes("Early Leave"))early++;
+    if(r.totalHours)sum+=r.totalHours;
+    if(r.date)days.add(r.date);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.month}</td><td>${r.date}</td><td>${r.employee}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td><td>${r.totalHours.toFixed(2)}</td><td class="badge-space">${st.map(s=>`<span class="badge ${s==="Late"?"bg-danger":s==="Early Leave"?"bg-warning text-dark":s==="On Time"?"bg-success":"bg-secondary"}">${s}</span>`).join(" ")}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById("totalHours").textContent=sum.toFixed(2);
+  document.getElementById("avgHours").textContent=(days.size?sum/days.size:0).toFixed(2);
+  document.getElementById("daysCount").textContent=days.size;
+  document.getElementById("lateCount").textContent=late;
+  document.getElementById("earlyCount").textContent=early;
+
+  dataTable=$("#attendanceTable").DataTable({paging:true,searching:true,dom:"Bfrtip",buttons:["csv","excel","pdf","print"]});
+  renderCharts(data); renderGantt(data);
+}
+let barChart,pieChart,lineChart;
+function renderCharts(data){
+  if(barChart)barChart.destroy(); if(pieChart)pieChart.destroy(); if(lineChart)lineChart.destroy();
+  const grouped={}; data.forEach(r=>{if(r.date)grouped[r.date]=(grouped[r.date]||0)+r.totalHours;});
+  barChart=new Chart(document.getElementById("barChart"),{type:"bar",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),backgroundColor:"#0d6efd"}]}});
+  const per={}; data.forEach(r=>{if(r.employee)per[r.employee]=(per[r.employee]||0)+r.totalHours;});
+  pieChart=new Chart(document.getElementById("pieChart"),{type:"pie",data:{labels:Object.keys(per),datasets:[{data:Object.values(per),backgroundColor:["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107"]}]}});
+  lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),borderColor:"#28a745",fill:false}]}});
+}
+function renderGantt(data){
+  const c=document.getElementById("ganttContainer");c.innerHTML="";
+  const min=6,max=20,range=max-min;
+  data.forEach(r=>{
+    const row=document.createElement("div");row.className="gantt-row";
+    const label=document.createElement("div");label.className="gantt-label";label.textContent=`${r.employee} (${r.date})`;row.appendChild(label);
+    const track=document.createElement("div");track.className="gantt-track";
+    if(r.signInDT&&r.signOutDT){
+      const start=(r.signInDT.getHours()+r.signInDT.getMinutes()/60-min)/range*100;
+      const end=(r.signOutDT.getHours()+r.signOutDT.getMinutes()/60-min)/range*100;
+      const bar=document.createElement("div");bar.className="gantt-bar";bar.style.left=start+"%";bar.style.width=(end-start)+"%";track.appendChild(bar);
+    }
+    row.appendChild(track);c.appendChild(row);
+  });
+}
+
+// Report
+async function downloadFullReport(){
+  const el=document.getElementById("reportArea");
+  const canvas=await html2canvas(el,{scale:2,backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff"});
+  const img=canvas.toDataURL("image/png");const pdf=new pdfMake.createPdf({content:[{image:img,width:500}]});pdf.download("Attendance_Report.pdf");
+}
+
 loadData();
 </script>
-
-<!-- Bootstrap bundle for tooltips -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
