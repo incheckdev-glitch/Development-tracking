@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <!-- DataTables -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <!-- DataTables Buttons -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- PapaParse for CSV -->
@@ -65,7 +67,7 @@
       <!-- Attendance Table -->
       <div id="table" class="card shadow p-3">
         <h5>Attendance Log</h5>
-        <table id="attendanceTable" class="table table-striped">
+        <table id="attendanceTable" class="table table-striped" style="width:100%">
           <thead>
             <tr>
               <th>Month</th>
@@ -87,6 +89,13 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
 <script>
   const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?output=csv";
@@ -94,8 +103,20 @@
   Papa.parse(csvUrl, {
     download: true,
     header: true,
+    skipEmptyLines: true,
     complete: function(results) {
-      const data = results.data.filter(r => r["Employee Name"] && r["Date"]);
+      // normalize headers (trim spaces)
+      const data = results.data.map(r => {
+        return {
+          Month: r["Month"]?.trim(),
+          Date: r["Date"]?.trim(),
+          Employee: r["Employee Name"]?.trim(),
+          SignIn: r["Sign In Time"]?.trim(),
+          SignOut: r["Sign Out Time"]?.trim(),
+          Hours: parseFloat(r["Total Hours"]) || 0
+        };
+      }).filter(r => r.Employee && r.Date);
+
       const tableBody = document.querySelector("#attendanceTable tbody");
       tableBody.innerHTML = "";
       let totalHours = 0;
@@ -104,31 +125,24 @@
       const empTotals = {};
 
       data.forEach(row => {
-        const month = row["Month"];
-        const date = row["Date"];
-        const emp = row["Employee Name"];
-        const inTime = row["Sign In Time"];
-        const outTime = row["Sign Out Time"];
-        const hours = parseFloat(row["Total Hours"]) || 0;
-
-        if(hours > 0){ totalHours += hours; countHours++; }
-        dailyTotals[date] = (dailyTotals[date] || 0) + hours;
-        empTotals[emp] = (empTotals[emp] || 0) + hours;
+        if(row.Hours > 0){ totalHours += row.Hours; countHours++; }
+        dailyTotals[row.Date] = (dailyTotals[row.Date] || 0) + row.Hours;
+        empTotals[row.Employee] = (empTotals[row.Employee] || 0) + row.Hours;
 
         const tr = `<tr>
-          <td>${month}</td>
-          <td>${date}</td>
-          <td>${emp}</td>
-          <td>${inTime}</td>
-          <td>${outTime}</td>
-          <td>${hours || ""}</td>
+          <td>${row.Month}</td>
+          <td>${row.Date}</td>
+          <td>${row.Employee}</td>
+          <td>${row.SignIn}</td>
+          <td>${row.SignOut}</td>
+          <td>${row.Hours || ""}</td>
         </tr>`;
         tableBody.insertAdjacentHTML("beforeend", tr);
       });
 
       // KPIs
       const daysCount = Object.keys(dailyTotals).length;
-      const avgHours = (totalHours / countHours).toFixed(2);
+      const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
       document.getElementById("totalHours").textContent = totalHours.toFixed(2);
       document.getElementById("avgHours").textContent = avgHours;
       document.getElementById("daysCount").textContent = daysCount;
@@ -152,8 +166,11 @@
                 datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"blue" }] }
       });
 
-      // DataTable
-      $('#attendanceTable').DataTable();
+      // DataTable with export buttons
+      $('#attendanceTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+      });
     }
   });
 </script>
