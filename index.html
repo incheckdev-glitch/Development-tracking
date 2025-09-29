@@ -15,10 +15,15 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body { background: #f8f9fa; }
-    .sidebar { min-height: 100vh; background: #343a40; color: white; padding: 20px; }
+    .sidebar { min-height: 100vh; background: #212529; color: white; padding: 20px; }
     .sidebar h4 { color: #ffc107; }
     .card { border-radius: 15px; }
-    .filter-bar { margin-bottom: 20px; }
+    .filter-bar { 
+      position: sticky; top: 0; z-index: 1000; 
+      background: white; border-radius: 10px; 
+    }
+    .table-danger { background-color: #f8d7da !important; }
+    .table-warning { background-color: #fff3cd !important; }
   </style>
 </head>
 <body>
@@ -28,21 +33,21 @@
     <div class="col-md-2 sidebar">
       <h4>Dashboard</h4>
       <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link text-white" href="#summary">Summary</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="#charts">Charts</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="#table">Attendance Table</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#summary">📊 Summary</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#charts">📈 Charts</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#table">📋 Table</a></li>
       </ul>
     </div>
 
-    <!-- Main Content -->
+    <!-- Main -->
     <div class="col-md-10 p-4">
       <h2 class="mb-4">Employee Attendance (AttendanceSummary)</h2>
 
-      <!-- Filter Bar -->
+      <!-- Filters -->
       <div class="card shadow p-3 mb-4 filter-bar">
-        <div class="row g-3 align-items-center">
+        <div class="row g-3 align-items-end">
           <div class="col-md-3">
-            <label class="form-label">Filter by Employee</label>
+            <label class="form-label">Employee</label>
             <select id="employeeFilter" class="form-select">
               <option value="">All Employees</option>
             </select>
@@ -55,37 +60,29 @@
             <label class="form-label">End Date</label>
             <input type="date" id="endDate" class="form-control">
           </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-primary w-100" onclick="applyFilters()">Apply Filters</button>
-          </div>
-        </div>
-        <div class="row mt-3">
           <div class="col-md-3">
             <button class="btn btn-secondary w-100" onclick="resetFilters()">Reset</button>
-          </div>
-          <div class="col-md-3">
-            <button class="btn btn-success w-100" onclick="loadData()">🔄 Refresh Data</button>
           </div>
         </div>
       </div>
 
       <!-- Summary -->
       <div id="summary" class="row mb-4">
-        <div class="col-md-4"><div class="card shadow p-3"><h5>Total Hours</h5><h3 id="totalHours">Loading...</h3></div></div>
-        <div class="col-md-4"><div class="card shadow p-3"><h5>Average Hours/Day</h5><h3 id="avgHours">Loading...</h3></div></div>
-        <div class="col-md-4"><div class="card shadow p-3"><h5>Attendance Days</h5><h3 id="daysCount">Loading...</h3></div></div>
+        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
+        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Average Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
+        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
       </div>
 
       <!-- Charts -->
       <div id="charts" class="row mb-4">
-        <div class="col-md-6"><div class="card shadow p-3"><h5>Hours Worked per Day</h5><canvas id="barChart"></canvas></div></div>
-        <div class="col-md-6"><div class="card shadow p-3"><h5>Total Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
-        <div class="col-md-12 mt-4"><div class="card shadow p-3"><h5>Trend: Total Hours Over Time</h5><canvas id="lineChart"></canvas></div></div>
+        <div class="col-md-6"><div class="card shadow p-3"><h6>Hours Worked per Day</h6><canvas id="barChart"></canvas></div></div>
+        <div class="col-md-6"><div class="card shadow p-3"><h6>Total Hours by Employee</h6><canvas id="pieChart"></canvas></div></div>
+        <div class="col-md-12 mt-4"><div class="card shadow p-3"><h6>Trend Over Time</h6><canvas id="lineChart"></canvas></div></div>
       </div>
 
       <!-- Table -->
       <div id="table" class="card shadow p-3">
-        <h5>Attendance Log</h5>
+        <h6>Attendance Log</h6>
         <table id="attendanceTable" class="table table-striped" style="width:100%">
           <thead><tr id="headerRow"></tr></thead>
           <tbody></tbody>
@@ -121,14 +118,13 @@ function loadData() {
     skipEmptyLines: true,
     complete: function(results) {
       allData = results.data;
-      console.log("Loaded", allData.length, "rows");
-      populateFilters();
-      renderDashboard(allData);
+      populateEmployeeFilter();
+      applyFilters();
     }
   });
 }
 
-function populateFilters() {
+function populateEmployeeFilter() {
   const employeeSet = new Set(allData.map(r => r["Employee Name"] || r["Employee Name "] || "").filter(Boolean));
   const select = document.getElementById("employeeFilter");
   select.innerHTML = '<option value="">All Employees</option>';
@@ -159,7 +155,7 @@ function resetFilters() {
 }
 
 function renderDashboard(data) {
-  // Summary + Charts prep
+  // Reset table + headers
   const tableBody = document.querySelector("#attendanceTable tbody");
   const headerRow = document.getElementById("headerRow");
   tableBody.innerHTML = ""; headerRow.innerHTML = "";
@@ -182,7 +178,12 @@ function renderDashboard(data) {
       empTotals[emp] = (empTotals[emp] || 0) + hours;
     }
 
-    const tr = `<tr>${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
+    // Highlight rules
+    let rowClass = "";
+    if(hours > 0 && hours < 7) rowClass = "table-danger";
+    if(hours > 9) rowClass = "table-warning";
+
+    const tr = `<tr class="${rowClass}">${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
     tableBody.insertAdjacentHTML("beforeend", tr);
   });
 
@@ -193,22 +194,25 @@ function renderDashboard(data) {
   document.getElementById("avgHours").textContent = avgHours;
   document.getElementById("daysCount").textContent = daysCount;
 
-  // Destroy old charts if exist
+  // Charts refresh
   [barChart, pieChart, lineChart].forEach(ch => { if(ch) ch.destroy(); });
 
   barChart = new Chart(document.getElementById("barChart"), {
     type: "bar",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#007bff" }] }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#0d6efd" }] },
+    options: { animation: { duration: 800 } }
   });
 
   pieChart = new Chart(document.getElementById("pieChart"), {
     type: "pie",
-    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#007bff","#28a745","#ffc107","#dc3545","#6f42c1"] }] }
+    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#0d6efd","#198754","#ffc107","#dc3545","#6f42c1"] }] },
+    options: { animation: { duration: 800 } }
   });
 
   lineChart = new Chart(document.getElementById("lineChart"), {
     type: "line",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#007bff" }] }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#0d6efd" }] },
+    options: { animation: { duration: 800 } }
   });
 
   // DataTable refresh
@@ -220,7 +224,12 @@ function renderDashboard(data) {
   });
 }
 
-// Load on start
+// Auto reapply filters on change
+["employeeFilter","startDate","endDate"].forEach(id => {
+  document.getElementById(id).addEventListener("change", applyFilters);
+});
+
+// Load
 loadData();
 </script>
 </body>
