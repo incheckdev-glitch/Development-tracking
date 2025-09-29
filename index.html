@@ -8,17 +8,17 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <!-- DataTables -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-  <!-- DataTables Buttons -->
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body { background: #f5f6fa; }
-    .sidebar { height: 100vh; background: #343a40; color: white; padding: 20px; }
+    body { background: #f8f9fa; }
+    .sidebar { min-height: 100vh; background: #343a40; color: white; padding: 20px; }
     .sidebar h4 { color: #ffc107; }
     .card { border-radius: 15px; }
+    .filter-bar { margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -36,7 +36,38 @@
 
     <!-- Main Content -->
     <div class="col-md-10 p-4">
-      <h2 class="mb-4">Employee Attendance (AttendanceSummary Sheet)</h2>
+      <h2 class="mb-4">Employee Attendance (AttendanceSummary)</h2>
+
+      <!-- Filter Bar -->
+      <div class="card shadow p-3 mb-4 filter-bar">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-3">
+            <label class="form-label">Filter by Employee</label>
+            <select id="employeeFilter" class="form-select">
+              <option value="">All Employees</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Start Date</label>
+            <input type="date" id="startDate" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">End Date</label>
+            <input type="date" id="endDate" class="form-control">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="applyFilters()">Apply Filters</button>
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-md-3">
+            <button class="btn btn-secondary w-100" onclick="resetFilters()">Reset</button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-success w-100" onclick="loadData()">🔄 Refresh Data</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Summary -->
       <div id="summary" class="row mb-4">
@@ -79,75 +110,118 @@
 <script>
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
-Papa.parse(csvUrl, {
-  download: true,
-  header: true,
-  skipEmptyLines: true,
-  complete: function(results) {
-    if (!results.data.length) {
-      alert("No data found in AttendanceSummary sheet!");
-      return;
+let allData = [];
+let dataTable = null;
+let barChart, pieChart, lineChart;
+
+function loadData() {
+  Papa.parse(csvUrl, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      allData = results.data;
+      console.log("Loaded", allData.length, "rows");
+      populateFilters();
+      renderDashboard(allData);
+    }
+  });
+}
+
+function populateFilters() {
+  const employeeSet = new Set(allData.map(r => r["Employee Name"] || r["Employee Name "] || "").filter(Boolean));
+  const select = document.getElementById("employeeFilter");
+  select.innerHTML = '<option value="">All Employees</option>';
+  employeeSet.forEach(emp => select.insertAdjacentHTML("beforeend", `<option value="${emp}">${emp}</option>`));
+}
+
+function applyFilters() {
+  const empFilter = document.getElementById("employeeFilter").value;
+  const start = document.getElementById("startDate").value;
+  const end = document.getElementById("endDate").value;
+
+  let filtered = allData.filter(r => {
+    let ok = true;
+    if (empFilter && (r["Employee Name"] || r["Employee Name "]) !== empFilter) ok = false;
+    if (start && new Date(r["Date"]) < new Date(start)) ok = false;
+    if (end && new Date(r["Date"]) > new Date(end)) ok = false;
+    return ok;
+  });
+
+  renderDashboard(filtered);
+}
+
+function resetFilters() {
+  document.getElementById("employeeFilter").value = "";
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  renderDashboard(allData);
+}
+
+function renderDashboard(data) {
+  // Summary + Charts prep
+  const tableBody = document.querySelector("#attendanceTable tbody");
+  const headerRow = document.getElementById("headerRow");
+  tableBody.innerHTML = ""; headerRow.innerHTML = "";
+
+  if (!data.length) { tableBody.innerHTML = "<tr><td colspan='6'>No data</td></tr>"; return; }
+
+  const keys = Object.keys(data[0]);
+  keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+
+  let totalHours = 0, countHours = 0;
+  const dailyTotals = {}, empTotals = {};
+
+  data.forEach(row => {
+    const hours = parseFloat(row["Total Hours"] || 0) || 0;
+    if(hours > 0){ totalHours += hours; countHours++; }
+
+    if(row["Date"]) dailyTotals[row["Date"]] = (dailyTotals[row["Date"]] || 0) + hours;
+    if(row["Employee Name"] || row["Employee Name "]) {
+      let emp = row["Employee Name"] || row["Employee Name "];
+      empTotals[emp] = (empTotals[emp] || 0) + hours;
     }
 
-    console.log("DEBUG Headers:", Object.keys(results.data[0]));
-    console.log("DEBUG First row:", results.data[0]);
+    const tr = `<tr>${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
+    tableBody.insertAdjacentHTML("beforeend", tr);
+  });
 
-    const keys = Object.keys(results.data[0]);
+  // KPIs
+  const daysCount = Object.keys(dailyTotals).length;
+  const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
+  document.getElementById("totalHours").textContent = totalHours.toFixed(2);
+  document.getElementById("avgHours").textContent = avgHours;
+  document.getElementById("daysCount").textContent = daysCount;
 
-    // Build table header dynamically
-    const headerRow = document.getElementById("headerRow");
-    keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+  // Destroy old charts if exist
+  [barChart, pieChart, lineChart].forEach(ch => { if(ch) ch.destroy(); });
 
-    const tableBody = document.querySelector("#attendanceTable tbody");
-    let totalHours = 0;
-    let countHours = 0;
-    const dailyTotals = {};
-    const empTotals = {};
+  barChart = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#007bff" }] }
+  });
 
-    results.data.forEach(row => {
-      const hours = parseFloat(row["Total Hours"] || row["total hours"] || 0) || 0;
-      if(hours > 0){ totalHours += hours; countHours++; }
+  pieChart = new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#007bff","#28a745","#ffc107","#dc3545","#6f42c1"] }] }
+  });
 
-      if(row["Date"]) dailyTotals[row["Date"]] = (dailyTotals[row["Date"]] || 0) + hours;
-      if(row["Employee Name "] || row["Employee Name"]) {
-        let emp = row["Employee Name "] || row["Employee Name"];
-        empTotals[emp] = (empTotals[emp] || 0) + hours;
-      }
+  lineChart = new Chart(document.getElementById("lineChart"), {
+    type: "line",
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#007bff" }] }
+  });
 
-      const tr = `<tr>${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
-      tableBody.insertAdjacentHTML("beforeend", tr);
-    });
+  // DataTable refresh
+  if (dataTable) { dataTable.destroy(); }
+  dataTable = $('#attendanceTable').DataTable({
+    dom: 'Bfrtip',
+    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+    pageLength: 10
+  });
+}
 
-    // KPIs
-    const daysCount = Object.keys(dailyTotals).length;
-    const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
-    document.getElementById("totalHours").textContent = totalHours.toFixed(2);
-    document.getElementById("avgHours").textContent = avgHours;
-    document.getElementById("daysCount").textContent = daysCount;
-
-    // Charts
-    new Chart(document.getElementById("barChart"), {
-      type: "bar",
-      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals) }] }
-    });
-
-    new Chart(document.getElementById("pieChart"), {
-      type: "pie",
-      data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals) }] }
-    });
-
-    new Chart(document.getElementById("lineChart"), {
-      type: "line",
-      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"blue" }] }
-    });
-
-    // DataTable
-    $('#attendanceTable').DataTable({
-      dom: 'Bfrtip',
-      buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
-    });
-  }
-});
+// Load on start
+loadData();
 </script>
 </body>
 </html>
