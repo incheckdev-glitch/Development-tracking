@@ -24,6 +24,8 @@
     .kpi-blue { background: linear-gradient(135deg, #007bff, #00c6ff); }
     .kpi-green { background: linear-gradient(135deg, #28a745, #00e68a); }
     .kpi-orange { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
+    .kpi-purple { background: linear-gradient(135deg, #6f42c1, #b47bff); }
+    .kpi-red { background: linear-gradient(135deg, #dc3545, #ff6b6b); }
     .filter-bar { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
     .table-soft-danger { background-color: #fcebea !important; }
     .table-soft-warning { background-color: #fff8e5 !important; }
@@ -49,11 +51,12 @@
       <!-- Filters -->
       <div class="filter-bar">
         <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">Employee</label>
-            <select id="employeeFilter" class="form-select">
+          <div class="col-md-4">
+            <label class="form-label">Employee(s)</label>
+            <select id="employeeFilter" class="form-select" multiple>
               <option value="">All Employees</option>
             </select>
+            <small class="text-muted">Hold CTRL (Windows) or CMD (Mac) to select multiple</small>
           </div>
           <div class="col-md-3">
             <label class="form-label">Start Date</label>
@@ -63,7 +66,7 @@
             <label class="form-label">End Date</label>
             <input type="date" id="endDate" class="form-control">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
           </div>
         </div>
@@ -71,9 +74,11 @@
 
       <!-- Summary -->
       <div id="summary" class="row mb-4 text-center">
-        <div class="col-md-4"><div class="card kpi-card kpi-blue p-3"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
-        <div class="col-md-4"><div class="card kpi-card kpi-green p-3"><h6>Average Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
-        <div class="col-md-4"><div class="card kpi-card kpi-orange p-3"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-blue p-3"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-green p-3"><h6>Avg Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-orange p-3"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-purple p-3"><h6>Late Count</h6><h2 id="lateCount">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-red p-3"><h6>Early Leave</h6><h2 id="earlyCount">0</h2></div></div>
       </div>
 
       <!-- Charts -->
@@ -114,13 +119,19 @@ let allData = [];
 let dataTable = null;
 let barChart, pieChart, lineChart;
 
+function normalizeHeaders(row) {
+  const cleanRow = {};
+  Object.keys(row).forEach(k => { cleanRow[k.trim()] = row[k]; });
+  return cleanRow;
+}
+
 function loadData() {
   Papa.parse(csvUrl, {
     download: true,
     header: true,
     skipEmptyLines: true,
     complete: function(results) {
-      allData = results.data;
+      allData = results.data.map(r => normalizeHeaders(r));
       populateEmployeeFilter();
       applyFilters();
     }
@@ -128,20 +139,20 @@ function loadData() {
 }
 
 function populateEmployeeFilter() {
-  const employeeSet = new Set(allData.map(r => r["Employee Name"] || r["Employee Name "] || "").filter(Boolean));
+  const employeeSet = new Set(allData.map(r => r["Employee Name"]).filter(Boolean));
   const select = document.getElementById("employeeFilter");
-  select.innerHTML = '<option value="">All Employees</option>';
+  select.innerHTML = '';
   employeeSet.forEach(emp => select.insertAdjacentHTML("beforeend", `<option value="${emp}">${emp}</option>`));
 }
 
 function applyFilters() {
-  const empFilter = document.getElementById("employeeFilter").value;
+  const empFilter = Array.from(document.getElementById("employeeFilter").selectedOptions).map(o => o.value);
   const start = document.getElementById("startDate").value;
   const end = document.getElementById("endDate").value;
 
   let filtered = allData.filter(r => {
     let ok = true;
-    if (empFilter && (r["Employee Name"] || r["Employee Name "]) !== empFilter) ok = false;
+    if (empFilter.length && !empFilter.includes(r["Employee Name"])) ok = false;
     if (start && new Date(r["Date"]) < new Date(start)) ok = false;
     if (end && new Date(r["Date"]) > new Date(end)) ok = false;
     return ok;
@@ -158,8 +169,7 @@ function resetFilters() {
 }
 
 function renderDashboard(data) {
-  // KPIs + Charts
-  let totalHours = 0, countHours = 0;
+  let totalHours = 0, countHours = 0, lateCount = 0, earlyCount = 0;
   const dailyTotals = {}, empTotals = {};
 
   data.forEach(row => {
@@ -167,20 +177,17 @@ function renderDashboard(data) {
     if(hours > 0){ totalHours += hours; countHours++; }
 
     if(row["Date"]) dailyTotals[row["Date"]] = (dailyTotals[row["Date"]] || 0) + hours;
-    if(row["Employee Name"] || row["Employee Name "]) {
-      let emp = row["Employee Name"] || row["Employee Name "];
-      empTotals[emp] = (empTotals[emp] || 0) + hours;
-    }
+    if(row["Employee Name"]) empTotals[row["Employee Name"]] = (empTotals[row["Employee Name"]] || 0) + hours;
   });
 
   // KPIs
-  const daysCount = Object.keys(dailyTotals).length;
-  const avgHours = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
   document.getElementById("totalHours").textContent = totalHours.toFixed(2);
-  document.getElementById("avgHours").textContent = avgHours;
-  document.getElementById("daysCount").textContent = daysCount;
+  document.getElementById("avgHours").textContent = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
+  document.getElementById("daysCount").textContent = Object.keys(dailyTotals).length;
+  document.getElementById("lateCount").textContent = lateCount;
+  document.getElementById("earlyCount").textContent = earlyCount;
 
-  // Charts refresh
+  // Charts
   [barChart, pieChart, lineChart].forEach(ch => { if(ch) ch.destroy(); });
 
   barChart = new Chart(document.getElementById("barChart"), {
@@ -198,28 +205,56 @@ function renderDashboard(data) {
     data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#4dabf7" }] }
   });
 
-  // ✅ Rebuild DataTable with filtered rows
+  // ✅ Rebuild DataTable
   if (dataTable) { dataTable.destroy(); }
   const tableBody = document.querySelector("#attendanceTable tbody");
   const headerRow = document.getElementById("headerRow");
   tableBody.innerHTML = ""; headerRow.innerHTML = "";
 
   if (!data.length) { 
-    tableBody.innerHTML = "<tr><td colspan='6'>No data</td></tr>"; 
+    tableBody.innerHTML = "<tr><td colspan='7'>No data</td></tr>"; 
     return; 
   }
 
   const keys = Object.keys(data[0]);
   keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+  headerRow.insertAdjacentHTML("beforeend", "<th>Status</th>");
 
   data.forEach(row => {
     const hours = parseFloat(row["Total Hours"] || 0) || 0;
     let rowClass = "";
     if(hours > 0 && hours < 7) rowClass = "table-soft-danger";
     if(hours > 9) rowClass = "table-soft-warning";
-    const tr = `<tr class="${rowClass}">${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
+
+    // Status detection
+    let status = '<span class="badge bg-secondary">Missing</span>';
+    if (row["Sign In Time"] && row["Sign Out Time"]) {
+      const signIn = new Date(row["Sign In Time"]);
+      const signOut = new Date(row["Sign Out Time"]);
+      const signInLimit = new Date(signIn); signInLimit.setHours(8,15,0,0);
+      const signOutLimit = new Date(signOut); signOutLimit.setHours(16,30,0,0);
+
+      if (signIn > signInLimit) {
+        status = '<span class="badge bg-danger">Late</span>';
+        lateCount++;
+      } else if (signOut < signOutLimit) {
+        status = '<span class="badge bg-warning text-dark">Early Leave</span>';
+        earlyCount++;
+      } else {
+        status = '<span class="badge bg-success">On Time</span>';
+      }
+    }
+
+    const tr = `<tr class="${rowClass}">
+      ${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}
+      <td>${status}</td>
+    </tr>`;
     tableBody.insertAdjacentHTML("beforeend", tr);
   });
+
+  // Update KPI counts
+  document.getElementById("lateCount").textContent = lateCount;
+  document.getElementById("earlyCount").textContent = earlyCount;
 
   dataTable = $('#attendanceTable').DataTable({
     dom: 'Bfrtip',
@@ -228,12 +263,10 @@ function renderDashboard(data) {
   });
 }
 
-// Auto reapply filters
 ["employeeFilter","startDate","endDate"].forEach(id => {
   document.getElementById(id).addEventListener("change", applyFilters);
 });
 
-// Load
 loadData();
 </script>
 </body>
