@@ -105,17 +105,20 @@
     header: true,
     skipEmptyLines: true,
     complete: function(results) {
-      // Normalize keys (remove spaces)
+      // Normalize headers and values
       const cleanedData = results.data.map(row => {
         const normalized = {};
-        Object.keys(row).forEach(key => {
-          const cleanKey = key.trim();
-          normalized[cleanKey] = row[key].trim();
-        });
+        for (let key in row) {
+          if (!key) continue;
+          const cleanKey = key.trim().toLowerCase(); // normalize key
+          normalized[cleanKey] = (row[key] || "").trim();
+        }
         return normalized;
       });
 
-      const data = cleanedData.filter(r => r["Employee Name"] && r["Date"]);
+      console.log("DEBUG First Row:", cleanedData[0]); // <-- see headers
+
+      const data = cleanedData.filter(r => r["employee name"] && r["date"]);
       const tableBody = document.querySelector("#attendanceTable tbody");
       tableBody.innerHTML = "";
       let totalHours = 0;
@@ -124,12 +127,12 @@
       const empTotals = {};
 
       data.forEach(row => {
-        const month = row["Month"];
-        const date = row["Date"];
-        const emp = row["Employee Name"];
-        const inTime = row["Sign In Time"];
-        const outTime = row["Sign Out Time"];
-        const hours = parseFloat(row["Total Hours"]) || 0;
+        const month = row["month"];
+        const date = row["date"];
+        const emp = row["employee name"];
+        const inTime = row["sign in time"];
+        const outTime = row["sign out time"];
+        const hours = parseFloat(row["total hours"]) || 0;
 
         if(hours > 0){ totalHours += hours; countHours++; }
         dailyTotals[date] = (dailyTotals[date] || 0) + hours;
@@ -182,4 +185,3 @@
 </script>
 </body>
 </html>
-
