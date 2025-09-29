@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Employee Attendance Dashboard</title>
+  <title>Attendance Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Bootstrap -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
@@ -14,13 +14,19 @@
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body { background: #f8f9fa; }
-    .sidebar { min-height: 100vh; background: #212529; color: white; padding: 20px; }
-    .sidebar h4 { color: #ffc107; }
+    body { background: #f4f6f9; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .sidebar { min-height: 100vh; background: #1e1f26; color: #fff; padding: 20px; }
+    .sidebar h4 { color: #00c9a7; font-weight: bold; }
+    .sidebar .nav-link { color: #bbb; }
+    .sidebar .nav-link:hover { color: #fff; background: #2c2f38; border-radius: 5px; }
     .card { border-radius: 15px; }
-    .filter-bar { position: sticky; top: 0; z-index: 1000; background: white; border-radius: 10px; }
-    .table-danger { background-color: #f8d7da !important; }
-    .table-warning { background-color: #fff3cd !important; }
+    .kpi-card { color: white; border: none; }
+    .kpi-blue { background: linear-gradient(135deg, #007bff, #00c6ff); }
+    .kpi-green { background: linear-gradient(135deg, #28a745, #00e68a); }
+    .kpi-orange { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
+    .filter-bar { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    .table-soft-danger { background-color: #fcebea !important; }
+    .table-soft-warning { background-color: #fff8e5 !important; }
   </style>
 </head>
 <body>
@@ -28,20 +34,20 @@
   <div class="row">
     <!-- Sidebar -->
     <div class="col-md-2 sidebar">
-      <h4>Dashboard</h4>
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link text-white" href="#summary">📊 Summary</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="#charts">📈 Charts</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="#table">📋 Table</a></li>
+      <h4>📊 Dashboard</h4>
+      <ul class="nav flex-column mt-3">
+        <li class="nav-item"><a class="nav-link" href="#summary">Summary</a></li>
+        <li class="nav-item"><a class="nav-link" href="#charts">Charts</a></li>
+        <li class="nav-item"><a class="nav-link" href="#table">Table</a></li>
       </ul>
     </div>
 
     <!-- Main -->
     <div class="col-md-10 p-4">
-      <h2 class="mb-4">Employee Attendance (AttendanceSummary)</h2>
+      <h2 class="mb-4">Employee Attendance</h2>
 
       <!-- Filters -->
-      <div class="card shadow p-3 mb-4 filter-bar">
+      <div class="filter-bar">
         <div class="row g-3 align-items-end">
           <div class="col-md-3">
             <label class="form-label">Employee</label>
@@ -58,16 +64,16 @@
             <input type="date" id="endDate" class="form-control">
           </div>
           <div class="col-md-3">
-            <button class="btn btn-secondary w-100" onclick="resetFilters()">Reset</button>
+            <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
           </div>
         </div>
       </div>
 
       <!-- Summary -->
-      <div id="summary" class="row mb-4">
-        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
-        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Average Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
-        <div class="col-md-4"><div class="card shadow p-3 text-center"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
+      <div id="summary" class="row mb-4 text-center">
+        <div class="col-md-4"><div class="card kpi-card kpi-blue p-3"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
+        <div class="col-md-4"><div class="card kpi-card kpi-green p-3"><h6>Average Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
+        <div class="col-md-4"><div class="card kpi-card kpi-orange p-3"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
       </div>
 
       <!-- Charts -->
@@ -80,7 +86,7 @@
       <!-- Table -->
       <div id="table" class="card shadow p-3">
         <h6>Attendance Log</h6>
-        <table id="attendanceTable" class="table table-striped" style="width:100%">
+        <table id="attendanceTable" class="table table-striped table-hover" style="width:100%">
           <thead><tr id="headerRow"></tr></thead>
           <tbody></tbody>
         </table>
@@ -179,17 +185,17 @@ function renderDashboard(data) {
 
   barChart = new Chart(document.getElementById("barChart"), {
     type: "bar",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#0d6efd" }] }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#4dabf7" }] }
   });
 
   pieChart = new Chart(document.getElementById("pieChart"), {
     type: "pie",
-    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#0d6efd","#198754","#ffc107","#dc3545","#6f42c1"] }] }
+    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#4dabf7","#51cf66","#ffd43b","#ff6b6b","#845ef7"] }] }
   });
 
   lineChart = new Chart(document.getElementById("lineChart"), {
     type: "line",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#0d6efd" }] }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#4dabf7" }] }
   });
 
   // ✅ Rebuild DataTable with filtered rows
@@ -209,8 +215,8 @@ function renderDashboard(data) {
   data.forEach(row => {
     const hours = parseFloat(row["Total Hours"] || 0) || 0;
     let rowClass = "";
-    if(hours > 0 && hours < 7) rowClass = "table-danger";
-    if(hours > 9) rowClass = "table-warning";
+    if(hours > 0 && hours < 7) rowClass = "table-soft-danger";
+    if(hours > 9) rowClass = "table-soft-warning";
     const tr = `<tr class="${rowClass}">${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
     tableBody.insertAdjacentHTML("beforeend", tr);
   });
