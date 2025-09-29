@@ -105,18 +105,17 @@
     header: true,
     skipEmptyLines: true,
     complete: function(results) {
-      // normalize headers (trim spaces)
-      const data = results.data.map(r => {
-        return {
-          Month: r["Month"]?.trim(),
-          Date: r["Date"]?.trim(),
-          Employee: r["Employee Name"]?.trim(),
-          SignIn: r["Sign In Time"]?.trim(),
-          SignOut: r["Sign Out Time"]?.trim(),
-          Hours: parseFloat(r["Total Hours"]) || 0
-        };
-      }).filter(r => r.Employee && r.Date);
+      // Normalize keys (remove spaces)
+      const cleanedData = results.data.map(row => {
+        const normalized = {};
+        Object.keys(row).forEach(key => {
+          const cleanKey = key.trim();
+          normalized[cleanKey] = row[key].trim();
+        });
+        return normalized;
+      });
 
+      const data = cleanedData.filter(r => r["Employee Name"] && r["Date"]);
       const tableBody = document.querySelector("#attendanceTable tbody");
       tableBody.innerHTML = "";
       let totalHours = 0;
@@ -125,17 +124,24 @@
       const empTotals = {};
 
       data.forEach(row => {
-        if(row.Hours > 0){ totalHours += row.Hours; countHours++; }
-        dailyTotals[row.Date] = (dailyTotals[row.Date] || 0) + row.Hours;
-        empTotals[row.Employee] = (empTotals[row.Employee] || 0) + row.Hours;
+        const month = row["Month"];
+        const date = row["Date"];
+        const emp = row["Employee Name"];
+        const inTime = row["Sign In Time"];
+        const outTime = row["Sign Out Time"];
+        const hours = parseFloat(row["Total Hours"]) || 0;
+
+        if(hours > 0){ totalHours += hours; countHours++; }
+        dailyTotals[date] = (dailyTotals[date] || 0) + hours;
+        empTotals[emp] = (empTotals[emp] || 0) + hours;
 
         const tr = `<tr>
-          <td>${row.Month}</td>
-          <td>${row.Date}</td>
-          <td>${row.Employee}</td>
-          <td>${row.SignIn}</td>
-          <td>${row.SignOut}</td>
-          <td>${row.Hours || ""}</td>
+          <td>${month}</td>
+          <td>${date}</td>
+          <td>${emp}</td>
+          <td>${inTime}</td>
+          <td>${outTime}</td>
+          <td>${hours || ""}</td>
         </tr>`;
         tableBody.insertAdjacentHTML("beforeend", tr);
       });
@@ -176,3 +182,4 @@
 </script>
 </body>
 </html>
+
