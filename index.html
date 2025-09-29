@@ -18,10 +18,7 @@
     .sidebar { min-height: 100vh; background: #212529; color: white; padding: 20px; }
     .sidebar h4 { color: #ffc107; }
     .card { border-radius: 15px; }
-    .filter-bar { 
-      position: sticky; top: 0; z-index: 1000; 
-      background: white; border-radius: 10px; 
-    }
+    .filter-bar { position: sticky; top: 0; z-index: 1000; background: white; border-radius: 10px; }
     .table-danger { background-color: #f8d7da !important; }
     .table-warning { background-color: #fff3cd !important; }
   </style>
@@ -155,16 +152,7 @@ function resetFilters() {
 }
 
 function renderDashboard(data) {
-  // Reset table + headers
-  const tableBody = document.querySelector("#attendanceTable tbody");
-  const headerRow = document.getElementById("headerRow");
-  tableBody.innerHTML = ""; headerRow.innerHTML = "";
-
-  if (!data.length) { tableBody.innerHTML = "<tr><td colspan='6'>No data</td></tr>"; return; }
-
-  const keys = Object.keys(data[0]);
-  keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
-
+  // KPIs + Charts
   let totalHours = 0, countHours = 0;
   const dailyTotals = {}, empTotals = {};
 
@@ -177,14 +165,6 @@ function renderDashboard(data) {
       let emp = row["Employee Name"] || row["Employee Name "];
       empTotals[emp] = (empTotals[emp] || 0) + hours;
     }
-
-    // Highlight rules
-    let rowClass = "";
-    if(hours > 0 && hours < 7) rowClass = "table-danger";
-    if(hours > 9) rowClass = "table-warning";
-
-    const tr = `<tr class="${rowClass}">${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
-    tableBody.insertAdjacentHTML("beforeend", tr);
   });
 
   // KPIs
@@ -199,24 +179,42 @@ function renderDashboard(data) {
 
   barChart = new Chart(document.getElementById("barChart"), {
     type: "bar",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#0d6efd" }] },
-    options: { animation: { duration: 800 } }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#0d6efd" }] }
   });
 
   pieChart = new Chart(document.getElementById("pieChart"), {
     type: "pie",
-    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#0d6efd","#198754","#ffc107","#dc3545","#6f42c1"] }] },
-    options: { animation: { duration: 800 } }
+    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#0d6efd","#198754","#ffc107","#dc3545","#6f42c1"] }] }
   });
 
   lineChart = new Chart(document.getElementById("lineChart"), {
     type: "line",
-    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#0d6efd" }] },
-    options: { animation: { duration: 800 } }
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#0d6efd" }] }
   });
 
-  // DataTable refresh
+  // ✅ Rebuild DataTable with filtered rows
   if (dataTable) { dataTable.destroy(); }
+  const tableBody = document.querySelector("#attendanceTable tbody");
+  const headerRow = document.getElementById("headerRow");
+  tableBody.innerHTML = ""; headerRow.innerHTML = "";
+
+  if (!data.length) { 
+    tableBody.innerHTML = "<tr><td colspan='6'>No data</td></tr>"; 
+    return; 
+  }
+
+  const keys = Object.keys(data[0]);
+  keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+
+  data.forEach(row => {
+    const hours = parseFloat(row["Total Hours"] || 0) || 0;
+    let rowClass = "";
+    if(hours > 0 && hours < 7) rowClass = "table-danger";
+    if(hours > 9) rowClass = "table-warning";
+    const tr = `<tr class="${rowClass}">${keys.map(k => `<td>${row[k] || ""}</td>`).join("")}</tr>`;
+    tableBody.insertAdjacentHTML("beforeend", tr);
+  });
+
   dataTable = $('#attendanceTable').DataTable({
     dom: 'Bfrtip',
     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
@@ -224,7 +222,7 @@ function renderDashboard(data) {
   });
 }
 
-// Auto reapply filters on change
+// Auto reapply filters
 ["employeeFilter","startDate","endDate"].forEach(id => {
   document.getElementById(id).addEventListener("change", applyFilters);
 });
