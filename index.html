@@ -25,9 +25,6 @@
   <!-- Select2 -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <!-- noUiSlider -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
   <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
@@ -38,7 +35,6 @@
     .badge-space { gap:4px; display:flex; flex-wrap:wrap; }
     .select2-container--default .select2-selection--multiple { background: #fff; border: 1px solid #ced4da; }
     body.dark-mode .select2-container--default .select2-selection--multiple { background:#2a2d34; border-color:#444; color:#eee; }
-    .noUi-target { margin-top:8px; }
   </style>
 </head>
 <body>
@@ -58,20 +54,15 @@
         <label class="form-label">Employee</label>
         <select id="employeeFilter" multiple></select>
       </div>
-      <div class="col-lg-2">
+      <div class="col-lg-3">
         <label class="form-label">Start Date</label>
         <input type="date" id="startDate" class="form-control">
       </div>
-      <div class="col-lg-2">
+      <div class="col-lg-3">
         <label class="form-label">End Date</label>
         <input type="date" id="endDate" class="form-control">
       </div>
       <div class="col-lg-3">
-        <label class="form-label">Hour Range</label>
-        <div id="hourSlider"></div>
-        <div class="form-text">Between <span id="hourMinLabel">0</span>h – <span id="hourMaxLabel">12</span>h</div>
-      </div>
-      <div class="col-lg-2">
         <label class="form-label">Quick Search</label>
         <input type="text" id="quickSearch" class="form-control" placeholder="Search...">
       </div>
@@ -144,8 +135,12 @@ function computeStatus(r){
 
 // Criteria
 function getCriteria(){
-  let [minH,maxH]=hourSlider.noUiSlider.get().map(parseFloat);
-  return{employees:$("#employeeFilter").val()||[],start:document.getElementById("startDate").value,end:document.getElementById("endDate").value,minH,maxH,q:document.getElementById("quickSearch").value.toLowerCase()};
+  return{
+    employees:$("#employeeFilter").val()||[],
+    start:document.getElementById("startDate").value,
+    end:document.getElementById("endDate").value,
+    q:document.getElementById("quickSearch").value.toLowerCase()
+  };
 }
 
 // Filter
@@ -155,7 +150,6 @@ function applyFilters(){
     if(c.employees.length && !c.employees.includes(r.employee))return false;
     if(c.start && r.date< c.start)return false;
     if(c.end && r.date>c.end)return false;
-    if(r.totalHours<c.minH||r.totalHours>c.maxH)return false;
     if(c.q&&!`${r.employee} ${r.date}`.toLowerCase().includes(c.q))return false;
     return true;
   });
@@ -167,7 +161,6 @@ function resetFilters(){
   $("#employeeFilter").val(null).trigger("change");
   document.getElementById("startDate").value="";
   document.getElementById("endDate").value="";
-  hourSlider.noUiSlider.set([0,12]);
   document.getElementById("quickSearch").value="";
   applyFilters();
 }
@@ -233,11 +226,6 @@ async function loadData(){
   CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));
   populateEmployeeFilter();applyFilters();
 }
-
-// Slider
-let hourSlider=document.getElementById("hourSlider");
-noUiSlider.create(hourSlider,{start:[0,12],connect:true,step:0.25,range:{min:0,max:12}});
-hourSlider.noUiSlider.on("update",(values)=>{document.getElementById("hourMinLabel").textContent=parseFloat(values[0]).toFixed(2);document.getElementById("hourMaxLabel").textContent=parseFloat(values[1]).toFixed(2);});
 
 loadData();
 </script>
