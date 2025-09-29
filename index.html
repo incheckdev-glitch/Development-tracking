@@ -1,456 +1,302 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Attendance Analytics Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- CSS Libraries -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
-
-  <!-- JS Libraries -->
+  <meta charset="UTF-8">
+  <title>Attendance Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <!-- jsPDF & html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- vis.js Timeline -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.0/vis-timeline-graph2d.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.0/vis-timeline-graph2d.min.js"></script>
 
   <style>
-    body {
-      background: #f4f6f9;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-    }
-    .sidebar {
-      min-height: 100vh;
-      background: #1e1f26;
-      color: #fff;
-      padding: 20px;
-    }
-    .sidebar h4 {
-      color: #00c9a7;
-      font-weight: bold;
-    }
-    .sidebar .nav-link {
-      color: #bbb;
-    }
-    .sidebar .nav-link:hover {
-      color: #fff;
-      background: #2c2f38;
-      border-radius: 5px;
-    }
-    .card {
-      border-radius: 15px;
-    }
-    .kpi-card {
-      color: white;
-      border: none;
-    }
-    .kpi-blue {
-      background: linear-gradient(135deg, #007bff, #00c6ff);
-    }
-    .kpi-green {
-      background: linear-gradient(135deg, #28a745, #00e68a);
-    }
-    .kpi-orange {
-      background: linear-gradient(135deg, #ff7e5f, #feb47b);
-    }
-    .kpi-purple {
-      background: linear-gradient(135deg, #6f42c1, #b47bff);
-    }
-    .kpi-red {
-      background: linear-gradient(135deg, #dc3545, #ff6b6b);
-    }
-    .filter-bar {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-      margin-bottom: 25px;
-    }
-    .table-soft-danger {
-      background-color: #fcebea !important;
-    }
-    .table-soft-warning {
-      background-color: #fff8e5 !important;
-    }
-    .gantt-container {
-      overflow-x: auto;
-      padding-bottom: 10px;
-    }
-    .gantt-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    .gantt-label {
-      width: 120px;
-      flex-shrink: 0;
-    }
-    .gantt-bar {
-      height: 24px;
-      border-radius: 4px;
-      background-color: #4dabf7;
-      position: relative;
-    }
-    .dark-mode {
-      background: #181a1f;
-      color: #ddd;
-    }
-    .dark-mode .sidebar {
-      background: #121217;
-    }
-    .dark-mode .sidebar .nav-link {
-      color: #aaa;
-    }
-    .dark-mode .sidebar .nav-link:hover {
-      background: #2a2c35;
-    }
+    body { background: #f4f6f9; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .sidebar { min-height: 100vh; background: #1e1f26; color: #fff; padding: 20px; }
+    .sidebar h4 { color: #00c9a7; }
+    .sidebar .nav-link { color: #bbb; }
+    .sidebar .nav-link:hover { color: #fff; background: #2c2f38; border-radius: 5px; }
+    .card { border-radius: 15px; }
+    .kpi-card { color: white; border: none; }
+    .kpi-blue { background: linear-gradient(135deg, #007bff, #00c6ff); }
+    .kpi-green { background: linear-gradient(135deg, #28a745, #00e68a); }
+    .kpi-orange { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
+    .kpi-purple { background: linear-gradient(135deg, #6f42c1, #b47bff); }
+    .kpi-red { background: linear-gradient(135deg, #dc3545, #ff6b6b); }
+    .filter-bar { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    .table-soft-danger { background-color: #fcebea !important; }
+    .table-soft-warning { background-color: #fff8e5 !important; }
+    /* Dark mode */
+    body.dark { background: #121212; color: #e0e0e0; }
+    body.dark .card, body.dark .filter-bar { background: #1e1e1e; color: #e0e0e0; }
+    body.dark .sidebar { background: #000; }
   </style>
 </head>
-
 <body>
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar -->
-      <div class="col-md-2 sidebar">
-        <h4>📊 Attendance Analytics</h4>
-        <ul class="nav flex-column mt-3">
-          <li class="nav-item"><a class="nav-link" href="#summary">Summary</a></li>
-          <li class="nav-item"><a class="nav-link" href="#charts">Charts</a></li>
-          <li class="nav-item"><a class="nav-link" href="#gantt">Timeline</a></li>
-          <li class="nav-item"><a class="nav-link" href="#table">Table</a></li>
-        </ul>
-        <div class="mt-4">
-          <button id="toggleThemeBtn" class="btn btn-outline-light btn-sm">🌙 Dark Mode</button>
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar d-flex flex-column">
+      <h4>📊 Dashboard</h4>
+      <ul class="nav flex-column mt-3">
+        <li class="nav-item"><a class="nav-link" href="#summary">Summary</a></li>
+        <li class="nav-item"><a class="nav-link" href="#charts">Charts</a></li>
+        <li class="nav-item"><a class="nav-link" href="#timeline">Timeline</a></li>
+        <li class="nav-item"><a class="nav-link" href="#table">Table</a></li>
+      </ul>
+      <hr>
+      <button class="btn btn-outline-light mt-auto" onclick="toggleDarkMode()">🌙/☀️</button>
+    </div>
+
+    <!-- Main -->
+    <div class="col-md-10 p-4">
+      <h2 class="mb-4">Employee Attendance</h2>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Employee(s)</label>
+            <select id="employeeFilter" class="form-select" multiple></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Start Date</label>
+            <input type="date" id="startDate" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">End Date</label>
+            <input type="date" id="endDate" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Hour Range</label>
+            <input type="text" id="hourRange" readonly class="form-control-plaintext">
+            <input type="range" id="minHours" min="0" max="12" value="0" step="0.25" oninput="updateHourLabel()">
+            <input type="range" id="maxHours" min="0" max="12" value="12" step="0.25" oninput="updateHourLabel()">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Shift</label>
+            <select id="shiftFilter" class="form-select">
+              <option value="">All</option>
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+            </select>
+          </div>
+          <div class="col-md-1">
+            <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
+          </div>
         </div>
       </div>
 
-      <!-- Main -->
-      <div class="col-md-10 p-4">
-        <h2 class="mb-4">Employee Attendance Dashboard</h2>
+      <!-- Summary -->
+      <div id="summary" class="row mb-4 text-center">
+        <div class="col-md-2"><div class="card kpi-card kpi-blue p-3"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-green p-3"><h6>Avg Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-orange p-3"><h6>Attendance Days</h6><h2 id="daysCount">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-purple p-3"><h6>Late Count</h6><h2 id="lateCount">0</h2></div></div>
+        <div class="col-md-2"><div class="card kpi-card kpi-red p-3"><h6>Early Leave</h6><h2 id="earlyCount">0</h2></div></div>
+        <div class="col-md-2"><button class="btn btn-primary mt-3" onclick="downloadReport()">📥 Download Report</button></div>
+      </div>
 
-        <!-- Filter Panel -->
-        <div class="filter-bar">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label">Employee(s)</label>
-              <select id="employeeFilter" class="form-select" multiple>
-                <!-- Options dynamic -->
-              </select>
-              <small class="text-muted">CTRL/CMD to select multiple</small>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Min Hours</label>
-              <input type="number" step="0.1" id="minHours" class="form-control" placeholder="e.g. 6" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Max Hours</label>
-              <input type="number" step="0.1" id="maxHours" class="form-control" placeholder="e.g. 8" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Shift</label>
-              <select id="shiftFilter" class="form-select">
-                <option value="">All</option>
-                <option value="morning">Morning (<12:00)</option>
-                <option value="afternoon">Afternoon (≥12:00)</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
-            </div>
-          </div>
-        </div>
+      <!-- Charts -->
+      <div id="charts" class="row mb-4">
+        <div class="col-md-6"><div class="card shadow p-3"><h6>Hours Worked per Day</h6><canvas id="barChart"></canvas></div></div>
+        <div class="col-md-6"><div class="card shadow p-3"><h6>Total Hours by Employee</h6><canvas id="pieChart"></canvas></div></div>
+        <div class="col-md-12 mt-4"><div class="card shadow p-3"><h6>Trend Over Time</h6><canvas id="lineChart"></canvas></div></div>
+      </div>
 
-        <!-- KPIs -->
-        <div id="summary" class="row mb-4 text-center">
-          <div class="col-md-2"><div class="card kpi-card kpi-blue p-3"><h6>Total Hours</h6><h2 id="totalHours">0</h2></div></div>
-          <div class="col-md-2"><div class="card kpi-card kpi-green p-3"><h6>Avg Hours/Day</h6><h2 id="avgHours">0</h2></div></div>
-          <div class="col-md-2"><div class="card kpi-card kpi-orange p-3"><h6>Days Count</h6><h2 id="daysCount">0</h2></div></div>
-          <div class="col-md-2"><div class="card kpi-card kpi-purple p-3"><h6>Late Count</h6><h2 id="lateCount">0</h2></div></div>
-          <div class="col-md-2"><div class="card kpi-card kpi-red p-3"><h6>Early Leaves</h6><h2 id="earlyCount">0</h2></div></div>
-        </div>
+      <!-- Timeline -->
+      <div id="timeline" class="card shadow p-3 mb-4">
+        <h6>Attendance Timeline</h6>
+        <div id="timelineView" style="height:300px;"></div>
+      </div>
 
-        <!-- Charts -->
-        <div id="charts" class="row mb-4">
-          <div class="col-md-6"><div class="card shadow p-3"><h6>Daily Total Hours</h6><canvas id="barChart"></canvas></div></div>
-          <div class="col-md-6"><div class="card shadow p-3"><h6>Hours by Employee</h6><canvas id="pieChart"></canvas></div></div>
-          <div class="col-md-12 mt-4"><div class="card shadow p-3"><h6>Trend Over Time</h6><canvas id="lineChart"></canvas></div></div>
-        </div>
-
-        <!-- Timeline / Gantt -->
-        <div id="gantt" class="mb-4">
-          <h5>Work Hours Timeline</h5>
-          <div class="gantt-container" id="ganttContainer">
-            <!-- Rows will be appended -->
-          </div>
-        </div>
-
-        <!-- Table -->
-        <div id="table" class="card shadow p-3">
-          <h5>Attendance Log</h5>
-          <table id="attendanceTable" class="table table-striped table-hover" style="width:100%">
-            <thead><tr id="headerRow"></tr></thead>
-            <tbody></tbody>
-          </table>
-          <div class="mt-2 text-end">
-            <button class="btn btn-primary" onclick="downloadFullReport()">Download Report</button>
-          </div>
-        </div>
+      <!-- Table -->
+      <div id="table" class="card shadow p-3">
+        <h6>Attendance Log</h6>
+        <input type="search" id="quickSearch" class="form-control mb-2" placeholder="Quick search...">
+        <table id="attendanceTable" class="table table-striped table-hover" style="width:100%">
+          <thead><tr id="headerRow"></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
 <script>
-  const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
+// === CONFIG ===
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
-  let allData = [];
-  let dataTable = null;
-  let barChart, pieChart, lineChart;
+let allData = [];
+let dataTable = null;
+let barChart, pieChart, lineChart, timeline;
 
-  // Theme toggle
-  document.getElementById("toggleThemeBtn").addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-    const btn = document.getElementById("toggleThemeBtn");
-    btn.textContent = document.body.classList.contains("dark-mode") ? "☀️ Light Mode" : "🌙 Dark Mode";
-  });
-
-  function normalizeHeaders(row) {
-    const clean = {};
-    Object.keys(row).forEach(k => clean[k.trim()] = row[k]);
-    return clean;
-  }
-
-  function loadData() {
-    Papa.parse(csvUrl, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: function(results) {
-        allData = results.data.map(r => normalizeHeaders(r));
-        populateEmployeeFilter();
-        applyFilters();
-      }
-    });
-  }
-
-  function populateEmployeeFilter() {
-    const empSet = new Set(allData.map(r => r["Employee Name"]).filter(Boolean));
-    const sel = document.getElementById("employeeFilter");
-    sel.innerHTML = "";
-    empSet.forEach(emp => sel.insertAdjacentHTML("beforeend", `<option value="${emp}">${emp}</option>`));
-  }
-
-  function getFilterCriteria() {
-    const selOpts = Array.from(document.getElementById("employeeFilter").selectedOptions).map(o => o.value);
-    const minH = parseFloat(document.getElementById("minHours").value);
-    const maxH = parseFloat(document.getElementById("maxHours").value);
-    const shift = document.getElementById("shiftFilter").value;
-    return { empSel: selOpts, minH, maxH, shift };
-  }
-
-  function applyFilters() {
-    const { empSel, minH, maxH, shift } = getFilterCriteria();
-    let filtered = allData.filter(r => {
-      let ok = true;
-      const hours = parseFloat(r["Total Hours"] || 0) || 0;
-      if (empSel.length && !empSel.includes(r["Employee Name"])) ok = false;
-      if (!isNaN(minH) && hours < minH) ok = false;
-      if (!isNaN(maxH) && hours > maxH) ok = false;
-      if (shift) {
-        if (r["Sign In Time"]) {
-          const dt = new Date(r["Sign In Time"]);
-          const hr = dt.getHours();
-          if (shift === "morning" && hr >= 12) ok = false;
-          if (shift === "afternoon" && hr < 12) ok = false;
-        }
-      }
-      return ok;
-    });
-    renderDashboard(filtered);
-  }
-
-  function resetFilters() {
-    document.getElementById("employeeFilter").value = "";
-    document.getElementById("minHours").value = "";
-    document.getElementById("maxHours").value = "";
-    document.getElementById("shiftFilter").value = "";
-    renderDashboard(allData);
-  }
-
-  function renderDashboard(data) {
-    // Compute KPIs & charts
-    let totalHours = 0, countHours = 0, lateCount = 0, earlyCount = 0;
-    const dailyTotals = {}, empTotals = {};
-
-    data.forEach(r => {
-      const h = parseFloat(r["Total Hours"] || 0) || 0;
-      if (h > 0) { totalHours += h; countHours++; }
-      if (r["Date"]) dailyTotals[r["Date"]] = (dailyTotals[r["Date"]]||0) + h;
-      if (r["Employee Name"]) empTotals[r["Employee Name"]] = (empTotals[r["Employee Name"]]||0) + h;
-    });
-
-    document.getElementById("totalHours").textContent = totalHours.toFixed(2);
-    document.getElementById("avgHours").textContent = countHours ? (totalHours / countHours).toFixed(2) : "0";
-    document.getElementById("daysCount").textContent = Object.keys(dailyTotals).length;
-    document.getElementById("lateCount").textContent = lateCount;
-    document.getElementById("earlyCount").textContent = earlyCount;
-
-    // Charts
-    [barChart, pieChart, lineChart].forEach(c => c?.destroy());
-    barChart = new Chart(document.getElementById("barChart"), {
-      type: "bar",
-      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), backgroundColor:"#4dabf7" }] }
-    });
-    pieChart = new Chart(document.getElementById("pieChart"), {
-      type: "pie",
-      data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#4dabf7","#51cf66","#ffd43b","#ff6b6b","#845ef7"] }] }
-    });
-    lineChart = new Chart(document.getElementById("lineChart"), {
-      type: "line",
-      data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#4dabf7" }] }
-    });
-
-    // Build Gantt / Timeline
-    renderGantt(data);
-
-    // Build Table
-    if (dataTable) { dataTable.destroy(); }
-    const tbody = document.querySelector("#attendanceTable tbody");
-    const headerRow = document.getElementById("headerRow");
-    tbody.innerHTML = ""; headerRow.innerHTML = "";
-
-    if (!data.length) {
-      tbody.innerHTML = "<tr><td colspan='8'>No data</td></tr>";
-      return;
+// === LOAD DATA ===
+function loadData() {
+  Papa.parse(csvUrl, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      allData = results.data;
+      populateEmployeeFilter();
+      applyFilters();
     }
+  });
+}
 
-    const keys = Object.keys(data[0]);
-    keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
-    headerRow.insertAdjacentHTML("beforeend", "<th>Status</th>");
+function populateEmployeeFilter() {
+  const employeeSet = new Set(allData.map(r => r["Employee Name"]).filter(Boolean));
+  const select = document.getElementById("employeeFilter");
+  select.innerHTML = '';
+  employeeSet.forEach(emp => select.insertAdjacentHTML("beforeend", `<option value="${emp}">${emp}</option>`));
+}
 
-    data.forEach(r => {
-      const h = parseFloat(r["Total Hours"] || 0) || 0;
-      let rowClass = "";
-      if (h > 0 && h < 7) rowClass = "table-soft-danger";
-      if (h > 9) rowClass = "table-soft-warning";
+// === FILTERING ===
+function updateHourLabel() {
+  document.getElementById("hourRange").value = 
+    document.getElementById("minHours").value + " - " + document.getElementById("maxHours").value + "h";
+}
+updateHourLabel();
 
-      // Determine status
-      let statusHTML = '<span class="badge bg-secondary">Missing</span>';
-      if (r["Sign In Time"] && r["Sign Out Time"]) {
-        const sin = new Date(r["Sign In Time"]);
-        const sout = new Date(r["Sign Out Time"]);
-        const limIn = new Date(sin); limIn.setHours(8,15,0,0);
-        const limOut = new Date(sout); limOut.setHours(16,30,0,0);
-        if (sin > limIn) { statusHTML = '<span class="badge bg-danger">Late</span>'; lateCount++; }
-        else if (sout < limOut) { statusHTML = '<span class="badge bg-warning text-dark">Early Leave</span>'; earlyCount++; }
-        else { statusHTML = '<span class="badge bg-success">On Time</span>'; }
-      }
+function applyFilters() {
+  const empFilter = Array.from(document.getElementById("employeeFilter").selectedOptions).map(o => o.value);
+  const start = document.getElementById("startDate").value;
+  const end = document.getElementById("endDate").value;
+  const minHours = parseFloat(document.getElementById("minHours").value);
+  const maxHours = parseFloat(document.getElementById("maxHours").value);
+  const shift = document.getElementById("shiftFilter").value;
 
-      const rowHtml = `<tr class="${rowClass}">
-        ${keys.map(k => `<td>${r[k] || ""}</td>`).join("")}
-        <td>${statusHTML}</td>
-      </tr>`;
-      tbody.insertAdjacentHTML("beforeend", rowHtml);
-    });
-
-    // Update KPI counters now that we know lateCount & earlyCount
-    document.getElementById("lateCount").textContent = lateCount;
-    document.getElementById("earlyCount").textContent = earlyCount;
-
-    dataTable = $("#attendanceTable").DataTable({
-      dom: 'Bfrtip',
-      buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-      pageLength: 10
-    });
-  }
-
-  function renderGantt(data) {
-    const container = document.getElementById("ganttContainer");
-    container.innerHTML = "";
-    // Group by employee
-    const byEmp = {};
-    data.forEach(r => {
-      if (!byEmp[r["Employee Name"]]) byEmp[r["Employee Name"]] = [];
-      if (r["Sign In Time"] && r["Sign Out Time"]) {
-        byEmp[r["Employee Name"]].push({
-          in: new Date(r["Sign In Time"]),
-          out: new Date(r["Sign Out Time"]),
-          date: r["Date"]
-        });
-      }
-    });
-
-    Object.keys(byEmp).forEach(emp => {
-      const row = document.createElement("div");
-      row.classList.add("gantt-row");
-      const label = document.createElement("div");
-      label.classList.add("gantt-label");
-      label.textContent = emp;
-      row.appendChild(label);
-
-      const barContainer = document.createElement("div");
-      barContainer.style.position = "relative";
-      barContainer.style.flexGrow = 1;
-      barContainer.style.height = "24px";
-
-      byEmp[emp].forEach(seg => {
-        const start = seg.in;
-        const end = seg.out;
-        const dayStart = new Date(start);
-        dayStart.setHours(0,0,0,0);
-        const minutesFromMid = (start - dayStart) / (1000 * 60);
-        const durMinutes = (end - start) / (1000 * 60);
-
-        const totalWidth = 800;  // scale width in px
-        const bar = document.createElement("div");
-        bar.classList.add("gantt-bar");
-        bar.style.left = (minutesFromMid / (24*60) * totalWidth) + "px";
-        bar.style.width = (durMinutes / (24*60) * totalWidth) + "px";
-        bar.title = `${emp} — ${seg.date}: ${((end - start)/(1000*3600)).toFixed(2)} h`;
-        barContainer.appendChild(bar);
-      });
-
-      row.appendChild(barContainer);
-      container.appendChild(row);
-    });
-  }
-
-  function downloadFullReport() {
-    // Capture summary, charts, table snapshot
-    html2canvas(document.querySelector("body")).then(canvas => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new pdfMake.createPdf({
-        content: [
-          { text: "Attendance Report", style: "header" },
-          { image: imgData, width: 500 }
-        ],
-        styles: {
-          header: { fontSize: 18, bold: true, margin: [0,0,0,10] }
-        },
-        pageOrientation: "landscape"
-      });
-      pdf.download("AttendanceReport.pdf");
-    });
-  }
-
-  // Event listeners
-  ["employeeFilter", "minHours", "maxHours", "shiftFilter"].forEach(id => {
-    document.getElementById(id).addEventListener("change", applyFilters);
+  let filtered = allData.filter(r => {
+    let ok = true;
+    if (empFilter.length && !empFilter.includes(r["Employee Name"])) ok = false;
+    if (start && new Date(r["Date"]) < new Date(start)) ok = false;
+    if (end && new Date(r["Date"]) > new Date(end)) ok = false;
+    if (r["Total Hours"]) {
+      const h = parseFloat(r["Total Hours"]);
+      if (h < minHours || h > maxHours) ok = false;
+    }
+    if (shift && r["Sign In Time"]) {
+      const signIn = new Date(r["Sign In Time"]);
+      if (shift=="morning" && signIn.getHours()>=12) ok = false;
+      if (shift=="afternoon" && signIn.getHours()<12) ok = false;
+    }
+    return ok;
   });
 
-  // Initial load
-  loadData();
-</script>
-</body>
-</html>
+  renderDashboard(filtered);
+}
+
+function resetFilters() {
+  document.getElementById("employeeFilter").value = "";
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  document.getElementById("minHours").value = 0;
+  document.getElementById("maxHours").value = 12;
+  document.getElementById("shiftFilter").value = "";
+  updateHourLabel();
+  renderDashboard(allData);
+}
+
+// === DASHBOARD ===
+function renderDashboard(data) {
+  let totalHours = 0, countHours = 0, lateCount = 0, earlyCount = 0;
+  const dailyTotals = {}, empTotals = {}, timelineItems = [];
+
+  data.forEach(row => {
+    const hours = parseFloat(row["Total Hours"] || 0) || 0;
+    if(hours > 0){ totalHours += hours; countHours++; }
+    if(row["Date"]) dailyTotals[row["Date"]] = (dailyTotals[row["Date"]] || 0) + hours;
+    if(row["Employee Name"]) empTotals[row["Employee Name"]] = (empTotals[row["Employee Name"]] || 0) + hours;
+
+    if (row["Sign In Time"] && row["Sign Out Time"]) {
+      timelineItems.push({
+        id: row["Employee Name"]+row["Date"],
+        content: row["Employee Name"],
+        start: row["Sign In Time"],
+        end: row["Sign Out Time"]
+      });
+    }
+  });
+
+  // KPIs
+  document.getElementById("totalHours").textContent = totalHours.toFixed(2);
+  document.getElementById("avgHours").textContent = countHours > 0 ? (totalHours / countHours).toFixed(2) : 0;
+  document.getElementById("daysCount").textContent = Object.keys(dailyTotals).length;
+
+  // Charts
+  [barChart, pieChart, lineChart].forEach(ch => { if(ch) ch.destroy(); });
+
+  barChart = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Total Hours", data: Object.values(dailyTotals), backgroundColor:"#4dabf7" }] }
+  });
+
+  pieChart = new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: { labels: Object.keys(empTotals), datasets: [{ data: Object.values(empTotals), backgroundColor:["#4dabf7","#51cf66","#ffd43b","#ff6b6b","#845ef7"] }] }
+  });
+
+  lineChart = new Chart(document.getElementById("lineChart"), {
+    type: "line",
+    data: { labels: Object.keys(dailyTotals), datasets: [{ label: "Hours", data: Object.values(dailyTotals), fill:false, borderColor:"#4dabf7" }] }
+  });
+
+  // Timeline
+  if (timeline) timeline.destroy();
+  timeline = new vis.Timeline(document.getElementById("timelineView"), new vis.DataSet(timelineItems), {
+    stack: true, showCurrentTime: false, zoomMin: 1000*60*60, zoomMax: 1000*60*60*24
+  });
+
+  // Table
+  if (dataTable) { dataTable.destroy(); }
+  const tableBody = document.querySelector("#attendanceTable tbody");
+  const headerRow = document.getElementById("headerRow");
+  tableBody.innerHTML = ""; headerRow.innerHTML = "";
+
+  if (!data.length) { 
+    tableBody.innerHTML = "<tr><td colspan='7'>No data</td></tr>"; 
+    return; 
+  }
+
+  const keys = Object.keys(data[0]);
+  keys.forEach(k => headerRow.insertAdjacentHTML("beforeend", `<th>${k}</th>`));
+  headerRow.insertAdjacentHTML("beforeend", "<th>Status</th>");
+
+  data.forEach(row => {
+    const hours = parseFloat(row["Total Hours"] || 0) || 0;
+    let rowClass = "";
+    if(hours > 0 && hours < 7) rowClass = "table-soft-danger";
+    if(hours > 9) rowClass = "table-soft-warning";
+
+    // Status
+    let status = '<span class="badge bg-secondary">Missing</span>';
+    if (row["Sign In Time"] && row["Sign Out Time"]) {
+      const signIn = new Date(row["Sign In Time"]);
+      const signOut = new Date(row["Sign Out Time"]);
+      const signInLimit = new Date(signIn); signInLimit.setHours(8,15,0,0);
+      const signOutLimit = new Date(signOut); signOutLimit.setHours(16,30,0,0);
+      if (signIn > signInLimit) { status = '<span class="badge bg-danger"
