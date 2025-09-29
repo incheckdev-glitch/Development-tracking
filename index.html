@@ -4,197 +4,230 @@
   <meta charset="UTF-8">
   <title>Attendance Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- DataTables -->
-  <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
-  <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" rel="stylesheet">
-
-  <style>
-    body.dark-mode {
-      background-color: #181a1f;
-      color: #eaeaea;
-    }
-    .card { border-radius: 1rem; }
-    .btn-toggle { cursor: pointer; }
-  </style>
-</head>
-<body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-dark bg-dark sticky-top">
-    <div class="container-fluid">
-      <span class="navbar-brand mb-0 h1">Attendance Dashboard</span>
-      <button id="darkToggle" class="btn btn-outline-light btn-sm">
-        <i class="bi bi-moon"></i> Dark Mode
-      </button>
-    </div>
-  </nav>
-
-  <div class="container-fluid mt-3">
-
-    <!-- Filters -->
-    <div class="card shadow-sm p-3 mb-4">
-      <div class="row g-3 align-items-end">
-        <div class="col-md-3">
-          <label class="form-label">Employee</label>
-          <select id="employeeFilter" class="form-select" multiple></select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Start Date</label>
-          <input type="date" id="startDate" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">End Date</label>
-          <input type="date" id="endDate" class="form-control">
-        </div>
-        <div class="col-md-2">
-          <button id="applyFilters" class="btn btn-primary w-100">
-            <i class="bi bi-funnel"></i> Apply
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-2"><div class="card p-3 text-center"><h5>Total Hours</h5><p id="totalHours">0</p></div></div>
-      <div class="col-md-2"><div class="card p-3 text-center"><h5>Avg Hours</h5><p id="avgHours">0</p></div></div>
-      <div class="col-md-2"><div class="card p-3 text-center"><h5>Days Count</h5><p id="daysCount">0</p></div></div>
-      <div class="col-md-2"><div class="card p-3 text-center"><h5>Late</h5><p id="lateCount">0</p></div></div>
-      <div class="col-md-2"><div class="card p-3 text-center"><h5>Early Leave</h5><p id="earlyCount">0</p></div></div>
-    </div>
-
-    <!-- Charts -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-4"><canvas id="barChart"></canvas></div>
-      <div class="col-md-4"><canvas id="pieChart"></canvas></div>
-      <div class="col-md-4"><canvas id="lineChart"></canvas></div>
-    </div>
-
-    <!-- Attendance Table -->
-    <div class="card shadow-sm p-3 mb-5">
-      <h5>Attendance Log</h5>
-      <table id="attendanceTable" class="display nowrap" style="width:100%"></table>
-    </div>
-  </div>
-
-  <!-- Scripts -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <!-- Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body.dark-mode { background:#181a1f; color:#eee; }
+    .card { transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.1); }
+    .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding:10px; }
+    .badge-space { gap:4px; display:flex; flex-wrap:wrap; }
+    .select2-container--default .select2-selection--multiple { background: #fff; border: 1px solid #ced4da; }
+    body.dark-mode .select2-container--default .select2-selection--multiple { background:#2a2d34; border-color:#444; color:#eee; }
+  </style>
+</head>
+<body>
+<div class="container-fluid p-4" id="reportArea">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>📊 Attendance Dashboard</h2>
+    <div>
+      <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
+      <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
+    </div>
+  </div>
 
-  <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
-    let CANON=[],DT;
+  <!-- Filters -->
+  <div class="card shadow filter-bar mb-4">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-lg-3">
+        <label class="form-label">Employee</label>
+        <select id="employeeFilter" multiple></select>
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" id="startDate" class="form-control">
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">End Date</label>
+        <input type="date" id="endDate" class="form-control">
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">Quick Search</label>
+        <input type="text" id="quickSearch" class="form-control" placeholder="Search...">
+      </div>
+      <div class="col-12 text-end mt-3">
+        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+        <button class="btn btn-warning" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
+  </div>
 
-    function computeStatus(r){
-      let res=[];
-      if(r.signIn){
-        const h=new Date(r.signIn).getHours(),m=new Date(r.signIn).getMinutes();
-        if(h>8||(h===8&&m>15))res.push("Late");
-      }
-      if(r.signOut){
-        const h=new Date(r.signOut).getHours(),m=new Date(r.signOut).getMinutes();
-        if(h<16||(h===16&&m<30))res.push("Early Leave");
-      }
-      if(!res.length)res.push("On Time");
-      return res;
-    }
+  <!-- KPIs -->
+  <div class="row mb-4 text-center">
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Days Count</h5><h3 id="daysCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Late Count</h5><h3 id="lateCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Early Leaves</h5><h3 id="earlyCount">0</h3></div></div></div>
+  </div>
 
-    async function loadData(){
-      const csv=await fetch(CSV_URL).then(r=>r.text());
-      const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
-      CANON=parsed.data.map(r=>({
-        month:r["Month"],date:r["Date"],employee:r["Employee Name"],
-        signIn:r["Sign In Time"],signOut:r["Sign Out Time"],
-        totalHours:parseFloat(r["Total Hours"])||0
-      }));
-      populateEmployeeFilter();
-      applyFilters();
-    }
+  <!-- Table -->
+  <div class="card shadow mb-4">
+    <div class="card-body">
+      <table id="attendanceTable" class="display nowrap table table-striped" style="width:100%"></table>
+    </div>
+  </div>
 
-    function populateEmployeeFilter(){
-      const sel=document.getElementById("employeeFilter");
-      sel.innerHTML="";
-      [...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort()
-        .forEach(e=>{let o=document.createElement("option");o.value=o.textContent=e;sel.appendChild(o);});
-    }
+  <!-- Charts -->
+  <div class="row">
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours per Day</h5><canvas id="barChart"></canvas></div></div>
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
+  </div>
+</div>
 
-    function getCriteria(){
-      return {
-        employees:$("#employeeFilter").val()||[],
-        start:document.getElementById("startDate").value,
-        end:document.getElementById("endDate").value
-      };
-    }
+<script>
+const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
+let CANON=[],DT;
 
-    function applyFilters(){
-      const c=getCriteria();
-      const data=CANON.filter(r=>{
-        if(c.employees.length && !c.employees.includes(r.employee)) return false;
-        if(c.start && r.date < c.start) return false;
-        if(c.end && r.date > c.end) return false;
-        return true;
-      });
-      renderTable(data);
-    }
+// Dark mode toggle
+function toggleDark(){document.body.classList.toggle("dark-mode");}
 
-    function renderTable(data){
-      const tableData=data.map(r=>{
-        const st=computeStatus(r);
-        const badge=st.map(s=>`<span class="badge ${s==="Late"?"bg-danger":s==="Early Leave"?"bg-warning text-dark":s==="On Time"?"bg-success":"bg-secondary"}">${s}</span>`).join(" ");
-        return [r.month,r.date,r.employee,r.signIn||"",r.signOut||"",r.totalHours.toFixed(2),badge];
-      });
-      if(!DT){
-        DT=$("#attendanceTable").DataTable({
-          data:tableData,
-          columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],
-          dom:'Bfrtip',buttons:['csv','excel','pdf','print'],pageLength:10,order:[[1,'asc']]
-        });
-      } else {
-        DT.clear().rows.add(tableData).draw();
-      }
+// Normalize headers
+function normalizeHeaders(r){const obj={};for(let k in r){obj[k.trim().toLowerCase()]=r[k];}return obj;}
 
-      let sum=0,days=new Set(),late=0,early=0;
-      data.forEach(r=>{
-        const st=computeStatus(r);
-        if(st.includes("Late"))late++;
-        if(st.includes("Early Leave"))early++;
-        if(r.totalHours)sum+=r.totalHours;
-        if(r.date)days.add(r.date);
-      });
-      document.getElementById("totalHours").textContent=sum.toFixed(2);
-      document.getElementById("avgHours").textContent=(days.size?sum/days.size:0).toFixed(2);
-      document.getElementById("daysCount").textContent=days.size;
-      document.getElementById("lateCount").textContent=late;
-      document.getElementById("earlyCount").textContent=early;
+// Map row
+function mapRow(r){
+  const signIn=r["sign in time"],signOut=r["sign out time"];
+  let signInDT=signIn?new Date(signIn):null,signOutDT=signOut?new Date(signOut):null;
+  let totalHours=(signInDT&&signOutDT)?(signOutDT-signInDT)/36e5:0;
+  return{month:r["month"],date:r["date"],employee:r["employee name"],signIn,signOut,totalHours,signInDT,signOutDT};
+}
 
-      renderCharts(data);
-    }
+// Populate employee dropdown
+function populateEmployeeFilter(){
+  const sel=document.getElementById("employeeFilter");
+  sel.innerHTML="";
+  const employees=[...new Set(CANON.map(r=>r.employee?.trim()).filter(Boolean))].sort();
+  employees.forEach(emp=>{
+    const opt=document.createElement("option");opt.value=emp;opt.textContent=emp;sel.appendChild(opt);
+  });
+  $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
+}
 
-    let barChart,pieChart,lineChart;
-    function renderCharts(data){
-      if(barChart)barChart.destroy(); if(pieChart)pieChart.destroy(); if(lineChart)lineChart.destroy();
-      const grouped={}; data.forEach(r=>{if(r.date)grouped[r.date]=(grouped[r.date]||0)+r.totalHours;});
-      barChart=new Chart(document.getElementById("barChart"),{type:"bar",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),backgroundColor:"#0d6efd"}]}});
-      const per={}; data.forEach(r=>{if(r.employee)per[r.employee]=(per[r.employee]||0)+r.totalHours;});
-      pieChart=new Chart(document.getElementById("pieChart"),{type:"pie",data:{labels:Object.keys(per),datasets:[{data:Object.values(per),backgroundColor:["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107"]}]}});
-      lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),borderColor:"#28a745",fill:false}]}});
-    }
+// Status check
+function computeStatus(r){
+  const status=[];if(r.signInDT&& (r.signInDT.getHours()*60+r.signInDT.getMinutes())> (8*60+15))status.push("Late");
+  if(r.signOutDT&&(r.signOutDT.getHours()*60+r.signOutDT.getMinutes())<(16*60+30))status.push("Early Leave");
+  if(!status.length)status.push("On Time");return status;
+}
 
-    document.getElementById("applyFilters").addEventListener("click",applyFilters);
-    document.getElementById("darkToggle").addEventListener("click",()=>{
-      document.body.classList.toggle("dark-mode");
+// Criteria
+function getCriteria(){
+  return{
+    employees:$("#employeeFilter").val()||[],
+    start:document.getElementById("startDate").value,
+    end:document.getElementById("endDate").value,
+    q:document.getElementById("quickSearch").value.toLowerCase()
+  };
+}
+
+// Filter
+function applyFilters(){
+  const c=getCriteria();
+  const filtered=CANON.filter(r=>{
+    if(c.employees.length && !c.employees.includes(r.employee))return false;
+    if(c.start && r.date< c.start)return false;
+    if(c.end && r.date>c.end)return false;
+    if(c.q&&!`${r.employee} ${r.date}`.toLowerCase().includes(c.q))return false;
+    return true;
+  });
+  renderTable(filtered);
+}
+
+// Reset
+function resetFilters(){
+  $("#employeeFilter").val(null).trigger("change");
+  document.getElementById("startDate").value="";
+  document.getElementById("endDate").value="";
+  document.getElementById("quickSearch").value="";
+  applyFilters();
+}
+
+// Table render
+function renderTable(data){
+  const tableData=data.map(r=>{
+    const st=computeStatus(r);
+    const badge=st.map(s=>`<span class="badge ${s==="Late"?"bg-danger":s==="Early Leave"?"bg-warning text-dark":s==="On Time"?"bg-success":"bg-secondary"}">${s}</span>`).join(" ");
+    return[r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"", (isFinite(r.totalHours)?r.totalHours.toFixed(2):""),badge];
+  });
+
+  if(!DT){
+    DT=$("#attendanceTable").DataTable({
+      data:tableData,
+      columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],
+      dom:'Bfrtip',buttons:['csv','excel','pdf','print'],pageLength:10,order:[[1,'asc']]
     });
+  }else{
+    DT.clear().rows.add(tableData).draw();
+  }
 
-    loadData();
-  </script>
+  // Update KPIs
+  let sum=0,days=new Set(),late=0,early=0;
+  data.forEach(r=>{
+    const st=computeStatus(r);
+    if(st.includes("Late"))late++;if(st.includes("Early Leave"))early++;
+    if(r.totalHours)sum+=r.totalHours;if(r.date)days.add(r.date);
+  });
+  document.getElementById("totalHours").textContent=sum.toFixed(2);
+  document.getElementById("avgHours").textContent=(days.size?sum/days.size:0).toFixed(2);
+  document.getElementById("daysCount").textContent=days.size;
+  document.getElementById("lateCount").textContent=late;
+  document.getElementById("earlyCount").textContent=early;
+
+  renderCharts(data);
+}
+
+// Charts
+let barChart,pieChart,lineChart;
+function renderCharts(data){
+  if(barChart)barChart.destroy();if(pieChart)pieChart.destroy();if(lineChart)lineChart.destroy();
+  const grouped={};data.forEach(r=>{if(r.date)grouped[r.date]=(grouped[r.date]||0)+r.totalHours;});
+  barChart=new Chart(document.getElementById("barChart"),{type:"bar",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),backgroundColor:"#0d6efd"}]}});
+  const per={};data.forEach(r=>{if(r.employee)per[r.employee]=(per[r.employee]||0)+r.totalHours;});
+  pieChart=new Chart(document.getElementById("pieChart"),{type:"pie",data:{labels:Object.keys(per),datasets:[{data:Object.values(per),backgroundColor:["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107"]}]}});
+  lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),borderColor:"#28a745",fill:false}]}});
+}
+
+// Report download
+async function downloadFullReport(){
+  const el=document.getElementById("reportArea");
+  const canvas=await html2canvas(el,{scale:2,backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff"});
+  const img=canvas.toDataURL("image/png");
+  const pdf=new pdfMake.createPdf({content:[{image:img,width:500}]});
+  pdf.download("Attendance_Report.pdf");
+}
+
+// Load
+async function loadData(){
+  const res=await fetch(CSV_URL);const csv=await res.text();
+  const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
+  CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));
+  populateEmployeeFilter();applyFilters();
+}
+
+loadData();
+</script>
 </body>
 </html>
