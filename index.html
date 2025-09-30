@@ -5,13 +5,13 @@
   <title>Attendance Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- ========== CSS LIBS ========== -->
+  <!-- CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-  <!-- ========== JS LIBS ========== -->
+  <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -24,18 +24,18 @@
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <!-- ========== PAGE STYLE ========== -->
   <style>
     body.dark-mode { background:#181a1f; color:#eee; }
     .card { transition:all 0.3s ease; }
     .card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.1); }
     .filter-bar { position:sticky; top:0; z-index:10; background:inherit; padding:10px; }
-    .holiday-row { background-color:#ffeeba !important; }
-    .weekend-row { background-color:#f0f0f0 !important; }
+    .holiday-row { background:#ffeeba!important; }
+    .weekend-row { background:#f0f0f0!important; }
   </style>
 </head>
 <body>
 <div class="container-fluid p-4" id="reportArea">
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>📊 Attendance Dashboard</h2>
     <div>
@@ -45,138 +45,139 @@
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="card shadow filter-bar mb-4">
-    <div class="card-body row g-3 align-items-end">
-      <div class="col-lg-3"><label class="form-label">Employee</label><select id="employeeFilter" multiple></select></div>
-      <div class="col-lg-3"><label class="form-label">Start Date</label><input type="date" id="startDate" class="form-control" /></div>
-      <div class="col-lg-3"><label class="form-label">End Date</label><input type="date" id="endDate" class="form-control" /></div>
-      <div class="col-lg-3"><label class="form-label">Quick Search</label><input type="text" id="quickSearch" class="form-control" placeholder="Search..." /></div>
-      <div class="col-12 text-end mt-3">
-        <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
-        <button class="btn btn-warning" onclick="resetFilters()">Reset</button>
-      </div>
-    </div>
+  <!-- KPI Cards -->
+  <div class="row mb-4 text-center">
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Days</h5><h3 id="daysCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Late</h5><h3 id="lateCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Early</h5><h3 id="earlyCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
   </div>
 
-  <!-- KPI + Holiday + Leave + Balance Cards -->
+  <!-- Leave & Holiday Summary -->
   <div class="row mb-4 text-center">
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Days Count</h5><h3 id="daysCount">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Late Count</h5><h3 id="lateCount">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Early Leaves</h5><h3 id="earlyCount">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
-  </div>
-  <div class="row mb-4 text-center">
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Holidays</h5><h3 id="holidayCount">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>AL Used</h5><h3 id="alUsed">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>SL Used</h5><h3 id="slUsed">0</h3></div></div></div>
-    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>UL Used</h5><h3 id="ulUsed">0</h3></div></div></div>
-    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Balance Summary</h5><div id="balanceSummary" style="font-size:14px; line-height:1.4;"></div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Annual Leave</h5><h3 id="alCount">0</h3></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Sick Leave</h5><h3 id="slCount">0</h3></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Unpaid Leave</h5><h3 id="ulCount">0</h3></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><h5>Holidays</h5><h3 id="holidayCount">0</h3></div></div></div>
   </div>
 
-  <!-- Attendance Table -->
-  <div class="card shadow mb-4"><div class="card-body">
+  <!-- Table -->
+  <div class="card mb-4"><div class="card-body">
     <table id="attendanceTable" class="display nowrap table table-striped" style="width:100%"></table>
   </div></div>
 
-  <!-- Charts -->
-  <div class="row">
-    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours per Day</h5><canvas id="barChart"></canvas></div></div>
-    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
-    <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
-  </div>
-
-  <!-- Settings -->
-  <div class="card shadow my-4"><div class="card-body row g-3">
-    <h5>⚙️ Settings</h5>
-    <div class="col-md-3"><label class="form-label">Late After</label><input type="time" id="lateThreshold" class="form-control" /></div>
-    <div class="col-md-3"><label class="form-label">Early Leave Before</label><input type="time" id="earlyThreshold" class="form-control" /></div>
-    <div class="col-md-3"><label class="form-label">Half-day Max Hours</label><input type="number" id="halfDayHours" class="form-control" /></div>
-    <div class="col-md-3"><label class="form-label">Overtime Min Hours</label><input type="number" id="overtimeHours" class="form-control" /></div>
-  </div></div>
-
-  <!-- Holiday Manager -->
-  <div class="card shadow mb-4"><div class="card-body">
-    <h5>📅 Holiday Manager</h5>
-    <div class="input-group mb-3">
-      <input type="date" id="holidayDate" class="form-control" />
-      <input type="text" id="holidayName" class="form-control" placeholder="Holiday Name" />
-      <button class="btn btn-primary" onclick="addHoliday()">Add</button>
-    </div>
-    <ul id="holidayList" class="list-group"></ul>
-  </div></div>
-
-  <!-- Leave Manager -->
-  <div class="card shadow mb-4"><div class="card-body">
-    <h5>🏖️ Leave Manager</h5>
-    <div class="input-group mb-3">
-      <input type="date" id="leaveDate" class="form-control" />
-      <input type="text" id="leaveEmployee" class="form-control" placeholder="Employee" />
-      <select id="leaveType" class="form-select"><option>AL</option><option>SL</option><option>UL</option></select>
-      <button class="btn btn-primary" onclick="addLeave()">Add</button>
-    </div>
-    <ul id="leaveList" class="list-group"></ul>
+  <!-- Balances -->
+  <div class="card mb-4"><div class="card-body">
+    <h5>Employee Balances</h5>
+    <table class="table table-bordered" id="balanceTable">
+      <thead><tr><th>Employee</th><th>AL</th><th>SL</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </div></div>
 </div>
 
-<!-- ========== APP SCRIPT ========== -->
 <script>
+const CSV_SUMMARY="https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 const API_URL="https://script.google.com/macros/s/AKfycbwJQUkt5YlHZZk5fwKBU-p3ltTgkPpyj_KpSKayGX6Aqqp-wjO54dKi8RlNrzGCMwIw1A/exec";
 const API_TOKEN="a9fj32klsdfj0932LKJSDF90wef9";
-const CSV_SUMMARY="https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
-let HOLIDAYS=[], LEAVES=[], BALANCES=[], SETTINGS={};
-let CANON=[];
-let table,barChartHandle,pieChartHandle,lineChartHandle;
+let CANON=[], table, HOLIDAYS=[], LEAVES=[], BALANCES=[];
 
 // Helpers
-function normalizeDate(d){if(!d) return "";const parts=d.split(/[\/\-]/);if(parts.length===3){let [m,dd,y]=parts;if(y.length===2) y="20"+y;return `${y}-${m.padStart(2,"0")}-${dd.padStart(2,"0")}`;}return d;}
+function normalizeDate(d){if(!d) return "";const s=String(d).trim();if(s.includes("/")){const [m,dd,y]=s.split("/");return `${y}-${m.padStart(2,"0")}-${dd.padStart(2,"0")}`;}return s;}
 function parseTime(dateStr,timeStr){if(!dateStr||!timeStr) return null;return new Date(`${dateStr}T${timeStr}`);}
 function toggleDark(){document.body.classList.toggle("dark-mode");}
-
-// Status compute
-function computeStatus(r){let s=[];if(r.signInDT&&SETTINGS.lateThreshold){const t=new Date(r.date+"T"+SETTINGS.lateThreshold);if(r.signInDT>t) s.push("Late");}
-if(r.signOutDT&&SETTINGS.earlyThreshold){const t=new Date(r.date+"T"+SETTINGS.earlyThreshold);if(r.signOutDT<t) s.push("Early Leave");}
-if(r.totalHours&&SETTINGS.halfDayHours&&r.totalHours<SETTINGS.halfDayHours) s.push("Half Day");
-if(r.totalHours&&SETTINGS.overtimeHours&&r.totalHours>SETTINGS.overtimeHours) s.push("Overtime");
-if(!r.signIn) s.push("Absent");return s;}
-
-// Holiday + Leave UI
-function renderHolidays(){document.getElementById("holidayCount").textContent=HOLIDAYS.length;const ul=document.getElementById("holidayList");ul.innerHTML="";HOLIDAYS.forEach((h,i)=>{const li=document.createElement("li");li.className="list-group-item d-flex justify-content-between align-items-center";li.innerHTML=`${h.date} - ${h.name}<button class="btn btn-sm btn-danger">X</button>`;li.querySelector("button").onclick=()=>{HOLIDAYS.splice(i,1);renderHolidays();};ul.appendChild(li);});}
-function renderLeaves(){let al=0,sl=0,ul=0;LEAVES.forEach(l=>{if(l.type==="AL") al++;else if(l.type==="SL") sl++;else if(l.type==="UL") ul++;});document.getElementById("alUsed").textContent=al;document.getElementById("slUsed").textContent=sl;document.getElementById("ulUsed").textContent=ul;
-const ul=document.getElementById("leaveList");ul.innerHTML="";LEAVES.forEach((l,i)=>{const li=document.createElement("li");li.className="list-group-item d-flex justify-content-between align-items-center";li.innerHTML=`${l.date} - ${l.employee} (${l.type})<button class="btn btn-sm btn-danger">X</button>`;li.querySelector("button").onclick=()=>{LEAVES.splice(i,1);renderLeaves();};ul.appendChild(li);});}
-function renderBalances(){const div=document.getElementById("balanceSummary");div.innerHTML="";BALANCES.forEach(b=>{const usedAL=LEAVES.filter(l=>l.employee===b.employee&&l.type==="AL").length;const usedSL=LEAVES.filter(l=>l.employee===b.employee&&l.type==="SL").length;div.innerHTML+=`<div><b>${b.employee}</b>: AL ${usedAL}/${b.al}, SL ${usedSL}/${b.sl}</div>`;});}
-function addHoliday(){const d=document.getElementById("holidayDate").value;const n=document.getElementById("holidayName").value;if(d&&n){HOLIDAYS.push({date:d,name:n});renderHolidays();}}
-function addLeave(){const d=document.getElementById("leaveDate").value;const e=document.getElementById("leaveEmployee").value;const t=document.getElementById("leaveType").value;if(d&&e){LEAVES.push({date:d,employee:e,type:t});renderLeaves();renderBalances();}}
-
-// Load + Save server
-async function loadFromServer(){try{const r=await fetch(`${API_URL}?token=${API_TOKEN}`);const j=await r.json();if(j.ok){HOLIDAYS=j.holidays;LEAVES=j.leaves;BALANCES=j.balances;SETTINGS={};j.settings.forEach(s=>SETTINGS[s.key]=s.value);renderHolidays();renderLeaves();renderBalances();}}catch(e){console.error(e);}}
-async function saveToServer(){try{const body={holidays:HOLIDAYS,leaves:LEAVES,balances:BALANCES,settings:Object.entries(SETTINGS).map(([k,v])=>({key:k,value:v}))};const r=await fetch(`${API_URL}?token=${API_TOKEN}`,{method:"POST",body:JSON.stringify(body),headers:{"Content-Type":"application/json"}});const j=await r.json();if(!j.ok) throw new Error(j.error);alert("✅ Saved to Google Sheets");}catch(e){alert("❌ Save failed");console.error(e);}}
-
-// Table + KPIs
-function renderTable(data){if(table){table.destroy();document.getElementById("attendanceTable").innerHTML="";}
-const rows=data.map(r=>{const st=computeStatus(r);const badge=st.map(s=>`<span class="badge bg-secondary">${s}</span>`).join(" ");return [r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"", (r.totalHours?r.totalHours.toFixed(2):"0.00"),badge];});
-table=$("#attendanceTable").DataTable({data:rows,columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Hours"},{title:"Status"}],dom:"Bfrtip",buttons:["copy","csv","excel","print"],scrollX:true});
-let total=0,days=0,late=0,early=0,abs=0;data.forEach(r=>{if(!r.date) return;const st=computeStatus(r);if(!st.includes("Absent")){total+=r.totalHours||0;days++;}if(st.includes("Late")) late++;if(st.includes("Early Leave")) early++;if(st.includes("Absent")) abs++;});
-document.getElementById("totalHours").textContent=total.toFixed(1);document.getElementById("daysCount").textContent=days;document.getElementById("avgHours").textContent=days?(total/days).toFixed(1):0;document.getElementById("lateCount").textContent=late;document.getElementById("earlyCount").textContent=early;document.getElementById("absentCount").textContent=abs;
-if(barChartHandle) barChartHandle.destroy();if(pieChartHandle) pieChartHandle.destroy();if(lineChartHandle) lineChartHandle.destroy();
-const ctx1=document.getElementById("barChart");barChartHandle=new Chart(ctx1,{type:"bar",data:{labels:data.map(r=>r.date),datasets:[{label:"Hours",data:data.map(r=>r.totalHours)}]}});
-const ctx2=document.getElementById("pieChart");const empHours={};data.forEach(r=>{if(r.employee) empHours[r.employee]=(empHours[r.employee]||0)+(r.totalHours||0);});pieChartHandle=new Chart(ctx2,{type:"pie",data:{labels:Object.keys(empHours),datasets:[{data:Object.values(empHours)}]}});
-const ctx3=document.getElementById("lineChart");lineChartHandle=new Chart(ctx3,{type:"line",data:{labels:data.map(r=>r.date),datasets:[{label:"Hours",data:data.map(r=>r.totalHours)}]}});
+function computeStatus(r){
+  const status=[];
+  if(LEAVES.some(l=>l.date===r.date && l.employee===r.employee)){const t=LEAVES.find(l=>l.date===r.date&&l.employee===r.employee).type;status.push(t);return status;}
+  if(!r.signIn && !r.signOut) status.push("Absent");
+  return status.length?status:["On Time"];
 }
 
-// Filter
-function applyFilters(){const s=document.getElementById("startDate").value;const e=document.getElementById("endDate").value;const emp=$("#employeeFilter").val();const q=document.getElementById("quickSearch").value.toLowerCase();let f=CANON;if(s) f=f.filter(r=>r.date>=s);if(e) f=f.filter(r=>r.date<=e);if(emp&&emp.length) f=f.filter(r=>emp.includes(r.employee));if(q) f=f.filter(r=>(r.employee||"").toLowerCase().includes(q));renderTable(f);}
-function resetFilters(){document.getElementById("startDate").value="";document.getElementById("endDate").value="";$("#employeeFilter").val(null).trigger("change");document.getElementById("quickSearch").value="";applyFilters();}
+// Load Data
+async function loadData(){
+  // 1) Attendance
+  const res=await fetch(CSV_SUMMARY);const raw=Papa.parse(await res.text(),{header:true}).data;
+  CANON = raw.map(row=>{
+    const r={};for(const k in row){if(!k) continue;r[k.trim()]=row[k];}
+    const d=normalizeDate(r["Date"]);
+    return {
+      month:r["Month"]||"",date:d,employee:r["Employee Name"]||"",
+      signIn:r["Sign In Time"]||"",signOut:r["Sign Out Time"]||"",
+      signInDT:parseTime(d,r["Sign In Time"]),signOutDT:parseTime(d,r["Sign Out Time"]),
+      totalHours:parseFloat(r["Total Hours"]||0)
+    };
+  }).filter(r=>r.employee && r.date);
 
-// Load CSV
-async function loadData(){await loadFromServer();const res=await fetch(CSV_SUMMARY);const csv=Papa.parse(await res.text(),{header:true}).data;CANON=csv.map(r=>{const d=normalizeDate(r["Date"]);const sin=parseTime(d,r["Sign In Time"]);const sout=parseTime(d,r["Sign Out Time"]);return {month:r["Month"]||"",date:d,employee:r["Employee Name"]||"",signIn:r["Sign In Time"]||"",signOut:r["Sign Out Time"]||"",signInDT:sin,signOutDT:sout,totalHours:parseFloat(r["Total Hours"]||0)};}).filter(r=>r.employee&&r.date);populateEmployeeFilter();applyFilters();}
-function populateEmployeeFilter(){const sel=document.getElementById("employeeFilter");sel.innerHTML="";[...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort().forEach(emp=>{const o=document.createElement("option");o.value=emp;o.textContent=emp;sel.appendChild(o);});$("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});}
+  // 2) Holidays / Leaves / Balances
+  const apiRes=await fetch(`${API_URL}?token=${API_TOKEN}`);
+  const j=await apiRes.json();
+  if(j.ok){HOLIDAYS=j.holidays;LEAVES=j.leaves;BALANCES=j.balances;}else{console.warn("API error",j);}
+
+  renderTable(CANON);
+  renderBalances();
+}
+
+// Render Attendance Table
+function renderTable(data){
+  if(table){table.destroy();document.getElementById("attendanceTable").innerHTML="";}
+  const rows=data.map(r=>{
+    const st=computeStatus(r);
+    return [r.month,r.date,r.employee,r.signIn,r.signOut,(r.totalHours?r.totalHours.toFixed(2):"0.00"),st.join(",")];
+  });
+  table=$("#attendanceTable").DataTable({
+    data:rows,
+    columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Hours"},{title:"Status"}],
+    dom:"Bfrtip",buttons:["copy","csv","excel","print"],scrollX:true,
+    createdRow:(row,rowData)=>{if(rowData[6].includes("Holiday")) $(row).addClass("holiday-row");}
+  });
+
+  // KPIs
+  let total=0,days=0,late=0,early=0,abs=0,al=0,sl=0,ul=0;
+  data.forEach(r=>{
+    const st=computeStatus(r);
+    if(st.includes("Absent")) abs++;
+    if(st.includes("Annual Leave")) al++;
+    if(st.includes("Sick Leave")) sl++;
+    if(st.includes("Unpaid Leave")) ul++;
+    if(!st.includes("Absent")&&!st.includes("Annual Leave")&&!st.includes("Sick Leave")&&!st.includes("Unpaid Leave")){
+      total+=r.totalHours||0;days++;
+    }
+  });
+  document.getElementById("totalHours").textContent=total.toFixed(1);
+  document.getElementById("daysCount").textContent=days;
+  document.getElementById("avgHours").textContent=days?(total/days).toFixed(1):0;
+  document.getElementById("absentCount").textContent=abs;
+  document.getElementById("alCount").textContent=al;
+  document.getElementById("slCount").textContent=sl;
+  document.getElementById("ulCount").textContent=ul;
+  document.getElementById("holidayCount").textContent=HOLIDAYS.length;
+}
+
+// Render Balances
+function renderBalances(){
+  const tb=document.querySelector("#balanceTable tbody");tb.innerHTML="";
+  BALANCES.forEach(b=>{
+    tb.innerHTML+=`<tr><td>${b.employee}</td><td>${b.al}</td><td>${b.sl}</td></tr>`;
+  });
+}
 
 // PDF
-async function downloadFullReport(){const el=document.getElementById("reportArea");const canvas=await html2canvas(el,{scale:2});const img=canvas.toDataURL("image/png");pdfMake.createPdf({content:[{image:img,width:500}]}).download("Attendance_Report.pdf");}
+async function downloadFullReport(){
+  const el=document.getElementById("reportArea");
+  const canvas=await html2canvas(el,{scale:2});
+  const img=canvas.toDataURL("image/png");
+  pdfMake.createPdf({content:[{image:img,width:500}]}).download("Attendance_Report.pdf");
+}
+
+// Save
+async function saveToServer(){
+  const body={holidays:HOLIDAYS,leaves:LEAVES,balances:BALANCES,settings:[]};
+  const res=await fetch(`${API_URL}?token=${API_TOKEN}`,{method:"POST",body:JSON.stringify(body)});
+  alert("Saved: "+await res.text());
+}
 
 // Start
 loadData();
