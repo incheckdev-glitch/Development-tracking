@@ -220,8 +220,20 @@ function computeStatus(r){
 
 // ========= RENDER =========
 function renderTable(data){
-  const rows=data.map(r=>{const st=computeStatus(r);const badge=st.map(s=>`<span class="badge bg-secondary">${s}</span>`).join(" ");
-    return [r.month,r.date,r.employee,r.signIn,r.signOut,(r.totalHours||0).toFixed(2),badge];});
+ const rows=data.map(r=>{
+  const st=computeStatus(r);
+  const badge=st.map(s=>`<span class="badge bg-secondary">${s}</span>`).join(" ");
+  return [
+    r.month || "",
+    r.date || "",
+    r.employee || "",
+    r.signIn || "",
+    r.signOut || "",
+    (r.totalHours ? r.totalHours.toFixed(2) : "0.00"),
+    badge || ""
+  ];
+});
+
   if(!DT){DT=$("#attendanceTable").DataTable({data:rows,columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Hours"},{title:"Status"}],dom:"Bfrtip",buttons:["csv","excel","pdf","print"],order:[[1,"asc"]]});}
   else{DT.clear().rows.add(rows).draw();}
   // KPIs
