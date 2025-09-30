@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Attendance Dashboard — Lebanon Time</title>
+  <title>Attendance Dashboard — Lebanon Time (Shared)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- CSS LIBS -->
+  <!-- ===== CSS LIBS ===== -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"/>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
-  <!-- JS LIBS -->
+  <!-- ===== JS LIBS ===== -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -35,21 +35,22 @@
     .leave-row { background-color: #e7f0ff !important; }
     .dt-buttons .dt-button { margin-right: 6px; }
     .neg { color:#dc3545; font-weight:600; } /* negative remaining */
+    .select2-container--default .select2-selection--multiple { min-height: 38px; }
   </style>
 </head>
 
 <body>
   <div class="container-fluid p-4" id="reportArea">
-    <!-- HEADER -->
+    <!-- ===== HEADER ===== -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>📊 Attendance Dashboard — Lebanon Time</h2>
+      <h2>📊 Attendance Dashboard — Lebanon Time (Shared)</h2>
       <div>
         <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
         <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
       </div>
     </div>
 
-    <!-- FILTERS -->
+    <!-- ===== FILTERS ===== -->
     <div class="card shadow filter-bar mb-4">
       <div class="card-body row g-3 align-items-end">
         <div class="col-lg-3">
@@ -75,7 +76,7 @@
       </div>
     </div>
 
-    <!-- KPIs (main) -->
+    <!-- ===== KPIs (main) ===== -->
     <div class="row mb-4 text-center">
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
@@ -85,7 +86,7 @@
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
     </div>
 
-    <!-- KPIs (leaves & holidays) -->
+    <!-- ===== KPIs (leaves & holidays) ===== -->
     <div class="row mb-4 text-center">
       <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Holidays (days)</h5><h3 id="holidayCount">0</h3></div></div></div>
       <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Annual Leave (AL)</h5><h3 id="alCount">0</h3></div></div></div>
@@ -93,21 +94,21 @@
       <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Unpaid Leave (UL)</h5><h3 id="ulCount">0</h3></div></div></div>
     </div>
 
-    <!-- TABLE -->
+    <!-- ===== TABLE ===== -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <table id="attendanceTable" class="display nowrap table table-striped" style="width: 100%"></table>
       </div>
     </div>
 
-    <!-- CHARTS -->
+    <!-- ===== CHARTS ===== -->
     <div class="row">
       <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours per Day</h5><canvas id="barChart"></canvas></div></div>
       <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
       <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
     </div>
 
-    <!-- SETTINGS -->
+    <!-- ===== SETTINGS ===== -->
     <div class="card shadow my-4">
       <div class="card-body row g-3">
         <h5>⚙️ Settings</h5>
@@ -115,10 +116,13 @@
         <div class="col-md-3"><label class="form-label">Early Leave Before (HH:MM)</label><input type="time" id="earlyThreshold" class="form-control" /></div>
         <div class="col-md-3"><label class="form-label">Half-day Max Hours</label><input type="number" id="halfDayHours" class="form-control" /></div>
         <div class="col-md-3"><label class="form-label">Overtime Min Hours</label><input type="number" id="overtimeHours" class="form-control" /></div>
+        <div class="col-12 text-end">
+          <button class="btn btn-primary mt-2" onclick="saveSettings()">Save Settings</button>
+        </div>
       </div>
     </div>
 
-    <!-- HOLIDAY MANAGER -->
+    <!-- ===== HOLIDAY MANAGER ===== -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <h5>📅 Holiday Manager</h5>
@@ -131,7 +135,7 @@
       </div>
     </div>
 
-    <!-- LEAVE MANAGER -->
+    <!-- ===== LEAVE MANAGER ===== -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <h5>📝 Leave Manager</h5>
@@ -151,14 +155,14 @@
       </div>
     </div>
 
-    <!-- LEAVE BALANCES (per employee) -->
+    <!-- ===== LEAVE BALANCES ===== -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <h5>📒 Leave Balances (per employee)</h5>
         <p class="text-muted small mb-3">
           Set <b>Annual Leave (AL)</b> and <b>Sick Leave (SL)</b> entitlements for each employee.
-          <b>Used</b> is calculated from Leave Manager assignments. <b>Remaining</b> = Entitled − Used.
-          All saved locally in your browser.
+          <b>Used</b> counts AL/SL days added in Leave Manager. <b>Remaining</b> = Entitled − Used.
+          Data is saved to your Google Sheet (shared across devices).
         </p>
         <div class="table-responsive">
           <table class="table table-sm align-middle" id="leaveBalancesTable">
@@ -184,20 +188,79 @@
     </div>
   </div>
 
-  <!-- APP SCRIPT -->
+  <!-- ===== APP SCRIPT ===== -->
   <script>
+    /********** CONFIG **********/
     const { DateTime } = luxon;
     const LEBANON_TZ = "Asia/Beirut";
+
+    // Attendance CSV (unchanged: public CSV from your Sheet, separate tab)
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
+    // Your backend (Apps Script Web App)
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwpXeKmDATcZJ7kpX96p-sObp-atqcrz-N95TaBBZUlWUy8DeVieu1Rtc6nklLRCF9iFg/exec";
+    const BACKEND_TOKEN = "a9fj32klsdfj0932LKJSDF90wef9";
+
+    /********** STATE **********/
     let CANON = [];
     let DT = null, barChartHandle = null, pieChartHandle = null, lineChartHandle = null;
 
-    let customHolidays = JSON.parse(localStorage.getItem("holidays") || "[]");
-    let customLeaves   = JSON.parse(localStorage.getItem("leaves")   || "[]"); // {date, employee, type: AL|SL|UL}
-    let leaveBalances  = JSON.parse(localStorage.getItem("leaveBalances") || "{}"); // { [employee]: {al: number, sl: number} }
+    // Shared data (synced with backend)
+    let customHolidays = [];         // [{date, name}]
+    let customLeaves   = [];         // [{date, employee, type: 'AL'|'SL'|'UL'}]
+    let leaveBalances  = {};         // { [employee]: { al: number, sl: number } }
 
-    /* ===== UI ===== */
+    /********** BACKEND HELPERS **********/
+    async function backendGetAll() {
+      const url = `${BACKEND_URL}?token=${encodeURIComponent(BACKEND_TOKEN)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Backend fetch failed");
+      // Normalize
+      customHolidays = (data.holidays || []).map(h => ({ date: String(h.date || h.Date || "").trim(), name: String(h.name || h.Name || "").trim() })).filter(h => h.date);
+      customLeaves = (data.leaves || []).map(l => ({
+        date: String(l.date || l.Date || "").trim(),
+        employee: String(l.employee || l.Employee || "").trim(),
+        type: String(l.type || l.Type || "").trim()
+      })).filter(l => l.date && l.employee && l.type);
+      leaveBalances = {};
+      (data.balances || []).forEach(b => {
+        const emp = String(b.employee || b.Employee || "").trim();
+        if (!emp) return;
+        leaveBalances[emp] = { al: Number(b.al ?? b.AL ?? 0), sl: Number(b.sl ?? b.SL ?? 0) };
+      });
+      const s = {};
+      (data.settings || []).forEach(x => { s[String(x.key || x.Key || "")] = String(x.value || x.Value || ""); });
+      if (s.late)  document.getElementById('lateThreshold').value  = s.late;
+      if (s.early) document.getElementById('earlyThreshold').value = s.early;
+      if (s.half)  document.getElementById('halfDayHours').value   = s.half;
+      if (s.over)  document.getElementById('overtimeHours').value  = s.over;
+    }
+
+    async function backendSaveAll() {
+      const holidaysRows = (customHolidays || []).map(h => ({ date: h.date, name: h.name || "" }));
+      const leavesRows   = (customLeaves   || []).map(l => ({ date: l.date, employee: l.employee, type: l.type }));
+      const balancesRows = Object.keys(leaveBalances || {}).map(emp => ({
+        employee: emp, al: Number(leaveBalances[emp].al || 0), sl: Number(leaveBalances[emp].sl || 0)
+      }));
+      const settingsRows = [
+        { key: 'late',  value: document.getElementById('lateThreshold').value || '08:15' },
+        { key: 'early', value: document.getElementById('earlyThreshold').value || '16:30' },
+        { key: 'half',  value: document.getElementById('halfDayHours').value || '4' },
+        { key: 'over',  value: document.getElementById('overtimeHours').value || '9' },
+      ];
+      const url = `${BACKEND_URL}?token=${encodeURIComponent(BACKEND_TOKEN)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ holidays: holidaysRows, leaves: leavesRows, balances: balancesRows, settings: settingsRows })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Backend save failed");
+      return true;
+    }
+
+    /********** UI **********/
     function toggleDark(){ document.body.classList.toggle("dark-mode"); refreshChartsTheme(); }
     function refreshChartsTheme() {
       const dark = document.body.classList.contains("dark-mode");
@@ -216,7 +279,7 @@
       });
     }
 
-    /* ===== Helpers ===== */
+    /********** HELPERS **********/
     function normalizeHeaders(row){
       const out = {};
       for (let k in row) out[k.trim().toLowerCase()] = row[k] ? String(row[k]).trim() : "";
@@ -225,9 +288,9 @@
     function normalizeDate(d){
       if(!d) return "";
       const s = String(d).trim();
-      const m = /^(\\d{1,2})[\\/\\.\\-](\\d{1,2})[\\/\\.\\-](\\d{4})$/.exec(s);
+      const m = /^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/.exec(s);
       if (m) { const [_, dd, mm, yyyy] = m; return `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; }
-      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
       const dt = new Date(s);
       return isNaN(dt) ? "" : dt.toISOString().slice(0,10);
     }
@@ -235,11 +298,11 @@
       if (!value) return null;
       const s = String(value).trim();
       if (!s || s === "-" || s.toLowerCase() === "null") return null;
-      if (/^\\d{1,2}:\\d{2}\\s?(AM|PM)$/i.test(s)) {
+      if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(s)) {
         const dt = DateTime.fromFormat(`${dateISO} ${s}`, "yyyy-MM-dd h:mm a", { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
       }
-      if (/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(s)) {
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
         const t = s.length === 5 ? s + ":00" : s;
         const dt = DateTime.fromISO(`${dateISO}T${t}`, { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
@@ -250,7 +313,7 @@
       return isNaN(nd) ? null : nd;
     }
     function isWeekend(dateISO){
-      const d = new Date(`${dateISO}T00:00:00Z`); // stable
+      const d = new Date(`${dateISO}T00:00:00Z`);
       const dow = d.getUTCDay(); // 0 Sun, 6 Sat
       return dow === 0 || dow === 6;
     }
@@ -259,71 +322,32 @@
           || stArr.includes("AL") || stArr.includes("SL") || stArr.includes("UL");
     }
 
-    /* ===== Map CSV row (robust header matching) ===== */
+    /********** MAP CSV ROW **********/
     function mapRow(raw){
       const r = normalizeHeaders(raw);
-
-      const dateISO = normalizeDate(
-        r["date"] || r["day"] || r["attendance date"] || r["work date"] || r["punch date"] || ""
-      );
-
-      const employee =
-        r["employee name"] || r["employee"] || r["name"] || r["full name"] || r["employee fullname"] || r["staff"] || r["worker"] || "";
-
-      const signInRaw =
-        r["sign in time"] || r["sign in"] || r["signin"] || r["time in"] || r["checkin"] || r["in"] || r["punch in"] || r["first in"] || r["start time"] || "";
-
-      const signOutRaw =
-        r["sign out time"] || r["sign out"] || r["signout"] || r["time out"] || r["checkout"] || r["out"] || r["punch out"] || r["last out"] || r["end time"] || "";
-
+      const dateISO = normalizeDate(r["date"] || r["day"] || r["attendance date"] || r["work date"] || r["punch date"] || "");
+      const employee = r["employee name"] || r["employee"] || r["name"] || r["full name"] || r["employee fullname"] || r["staff"] || r["worker"] || "";
+      const signInRaw = r["sign in time"] || r["sign in"] || r["signin"] || r["time in"] || r["checkin"] || r["in"] || r["punch in"] || r["first in"] || r["start time"] || "";
+      const signOutRaw = r["sign out time"] || r["sign out"] || r["signout"] || r["time out"] || r["checkout"] || r["out"] || r["punch out"] || r["last out"] || r["end time"] || "";
       const inDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
       let outDT  = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
       if (inDT && outDT && outDT < inDT) outDT = new Date(outDT.getTime() + 24*60*60*1000); // overnight
-
       const totalHours = inDT && outDT ? (outDT - inDT) / 36e5 : 0;
-
-      return {
-        month: r["month"] || (dateISO ? dateISO.slice(0,7) : ""),
-        date: dateISO,
-        employee,
-        signIn: signInRaw || "",
-        signOut: signOutRaw || "",
-        signInDT: inDT,
-        signOutDT: outDT,
-        totalHours
-      };
+      return { month: r["month"] || (dateISO ? dateISO.slice(0,7) : ""), date: dateISO, employee, signIn: signInRaw || "", signOut: signOutRaw || "", signInDT: inDT, signOutDT: outDT, totalHours };
     }
 
-    /* ===== Settings ===== */
-    function saveSettings(){
-      const settings = {
-        late: document.getElementById("lateThreshold").value || "08:15",
-        early: document.getElementById("earlyThreshold").value || "16:30",
-        half:  document.getElementById("halfDayHours").value || 4,
-        over:  document.getElementById("overtimeHours").value || 9
-      };
-      localStorage.setItem("settings", JSON.stringify(settings));
+    /********** SETTINGS **********/
+    async function saveSettings(){
+      // Save via backendSaveAll (it picks settings from inputs)
+      await backendSaveAll();
       applyFilters();
     }
-    function loadSettings(){
-      const s = JSON.parse(localStorage.getItem("settings") || "{}");
-      document.getElementById("lateThreshold").value  = s.late  || "08:15";
-      document.getElementById("earlyThreshold").value = s.early || "16:30";
-      document.getElementById("halfDayHours").value   = s.half  ?? 4;
-      document.getElementById("overtimeHours").value  = s.over  ?? 9;
-      ["lateThreshold","earlyThreshold","halfDayHours","overtimeHours"].forEach(id=>{
-        const el = document.getElementById(id);
-        el.addEventListener("change", saveSettings);
-        el.addEventListener("input", saveSettings);
-      });
-    }
 
-    /* ===== Holiday Manager ===== */
+    /********** HOLIDAY MANAGER **********/
     function renderHolidayList(){
       const list = document.getElementById("holidayList");
       list.innerHTML = "";
-      customHolidays.sort((a,b)=>a.date.localeCompare(b.date));
-      customHolidays.forEach((h,i)=>{
+      (customHolidays || []).sort((a,b)=>a.date.localeCompare(b.date)).forEach((h,i)=>{
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
         li.innerHTML = `
@@ -332,29 +356,29 @@
         `;
         list.appendChild(li);
       });
-      localStorage.setItem("holidays", JSON.stringify(customHolidays));
     }
-    function addHoliday(){
+    async function addHoliday(){
       const date = document.getElementById("holidayDate").value;
       const name = document.getElementById("holidayName").value;
       if (!date) return alert("Please choose a date");
-      if (customHolidays.some(h => h.date === date)) return alert("Holiday already exists");
+      if ((customHolidays || []).some(h => h.date === date)) return alert("Holiday already exists");
       customHolidays.push({ date, name });
       renderHolidayList();
+      await backendSaveAll();
       applyFilters();
     }
-    function removeHoliday(idx){
+    async function removeHoliday(idx){
       customHolidays.splice(idx,1);
       renderHolidayList();
+      await backendSaveAll();
       applyFilters();
     }
 
-    /* ===== Leave Manager (employee-specific) ===== */
+    /********** LEAVE MANAGER **********/
     function renderLeaveList(){
       const list = document.getElementById("leaveList");
       list.innerHTML = "";
-      customLeaves.sort((a,b)=> a.date===b.date ? a.employee.localeCompare(b.employee) : a.date.localeCompare(b.date));
-      customLeaves.forEach((l,i)=>{
+      (customLeaves || []).sort((a,b)=> a.date===b.date ? a.employee.localeCompare(b.employee) : a.date.localeCompare(b.date)).forEach((l,i)=>{
         const label = l.type==="AL"?"Annual Leave": l.type==="SL"?"Sick Leave": "Unpaid Leave";
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
@@ -364,37 +388,38 @@
         `;
         list.appendChild(li);
       });
-      localStorage.setItem("leaves", JSON.stringify(customLeaves));
     }
-    function addLeave(){
+    async function addLeave(){
       const date = document.getElementById("leaveDate").value;
       const emp  = (document.getElementById("leaveEmployee").value || "").trim();
       const type = document.getElementById("leaveType").value;
       if (!date || !emp) return alert("Please choose date and employee");
-      if (customLeaves.some(l => l.date===date && l.employee===emp)) return alert("A leave already exists for this employee/day");
+      if ((customLeaves || []).some(l => l.date===date && l.employee===emp)) return alert("A leave already exists for this employee/day");
       customLeaves.push({ date, employee: emp, type });
       renderLeaveList();
-      renderLeaveBalances(); // update used & remaining
+      renderLeaveBalances();
+      await backendSaveAll();
       applyFilters();
     }
-    function removeLeave(i){
+    async function removeLeave(i){
       customLeaves.splice(i,1);
       renderLeaveList();
       renderLeaveBalances();
+      await backendSaveAll();
       applyFilters();
     }
 
-    /* ===== Leave Balances (entitlements) ===== */
+    /********** LEAVE BALANCES **********/
     function getALUsedMap(){
       const used = {};
-      customLeaves.forEach(l=>{
+      (customLeaves || []).forEach(l=>{
         if (l.type === "AL") used[l.employee] = (used[l.employee] || 0) + 1;
       });
       return used;
     }
     function getSLUsedMap(){
       const used = {};
-      customLeaves.forEach(l=>{
+      (customLeaves || []).forEach(l=>{
         if (l.type === "SL") used[l.employee] = (used[l.employee] || 0) + 1;
       });
       return used;
@@ -402,11 +427,9 @@
     function renderLeaveBalances(){
       const tbody = document.querySelector("#leaveBalancesTable tbody");
       if (!tbody) return;
-
       const employees = [...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort();
       const alUsedMap = getALUsedMap();
       const slUsedMap = getSLUsedMap();
-
       tbody.innerHTML = employees.map(emp=>{
         const ent = leaveBalances[emp] || { al: 0, sl: 0 };
         const alEnt = Number(ent.al) || 0;
@@ -415,7 +438,6 @@
         const slUsed = Number(slUsedMap[emp] || 0);
         const alRem = alEnt - alUsed;
         const slRem = slEnt - slUsed;
-
         return `
           <tr>
             <td>${emp}</td>
@@ -429,40 +451,39 @@
         `;
       }).join("");
     }
-    function saveLeaveBalances(){
-      // read inputs
+    async function saveLeaveBalances(){
+      // read inputs into leaveBalances
       const inputs = document.querySelectorAll('#leaveBalancesTable input[data-emp][data-kind]');
       inputs.forEach(inp=>{
         const emp = inp.getAttribute('data-emp');
-        const kind = inp.getAttribute('data-kind'); // 'al' or 'sl'
+        const kind = inp.getAttribute('data-kind'); // 'al' | 'sl'
         const val = Number(inp.value || 0);
         if (!leaveBalances[emp]) leaveBalances[emp] = { al: 0, sl: 0 };
         leaveBalances[emp][kind] = val;
       });
-      localStorage.setItem("leaveBalances", JSON.stringify(leaveBalances));
-      renderLeaveBalances(); // refresh remaining
+      await backendSaveAll();
+      renderLeaveBalances();
     }
-    function resetLeaveBalances(){
+    async function resetLeaveBalances(){
       if (!confirm("Reset all leave entitlements for all employees?")) return;
       leaveBalances = {};
-      localStorage.removeItem("leaveBalances");
+      await backendSaveAll();
       renderLeaveBalances();
     }
 
-    /* ===== Status Rules (leave override included) ===== */
+    /********** STATUS / GRID **********/
     function computeStatus(row){
-      // Leave override takes precedence
-      const leave = customLeaves.find(l => l.date === row.date && l.employee === row.employee);
+      // Leave override
+      const leave = (customLeaves || []).find(l => l.date === row.date && l.employee === row.employee);
       if (leave) return [leave.type]; // AL/SL/UL
 
-      // Synthetic rows (Holiday/Weekend/Absent) carry a fixed status array
-      if (row.status) return row.status;
+      if (row.status) return row.status; // Holiday/Weekend/Absent synthetic
 
-      const s = JSON.parse(localStorage.getItem("settings") || "{}");
-      const late = (s.late || "08:15").split(":").map(Number);
-      const early = (s.early || "16:30").split(":").map(Number);
-      const half = parseFloat(s.half ?? 4);
-      const over = parseFloat(s.over ?? 9);
+      // Thresholds
+      const late = (document.getElementById("lateThreshold").value || "08:15").split(":").map(Number);
+      const early = (document.getElementById("earlyThreshold").value || "16:30").split(":").map(Number);
+      const half = parseFloat(document.getElementById("halfDayHours").value || 4);
+      const over = parseFloat(document.getElementById("overtimeHours").value || 9);
 
       if (!row.signInDT && !row.signOutDT) return ["Absent"];
       if ((row.signInDT && !row.signOutDT) || (!row.signInDT && row.signOutDT)) return ["Needs Correction"];
@@ -475,12 +496,10 @@
       if (outMin !== null && outMin < (early[0]*60 + early[1])) status.push("Early Leave");
       if (row.totalHours > 0 && row.totalHours < half) status.push("Half-day");
       if (row.totalHours >= over) status.push("Overtime");
-
       if (!status.length) status.push("On Time");
       return status;
     }
 
-    /* ===== Full grid (add weekends/holidays/absent) ===== */
     function generateFullRows(data){
       const employees = [...new Set(data.map((r)=>r.employee).filter(Boolean))];
       const datesSorted = data.map((r)=>r.date).filter(Boolean).sort();
@@ -507,7 +526,7 @@
           if (index.has(key)) {
             full.push(index.get(key));
           } else {
-            if (customHolidays.some((h) => h.date === day)) {
+            if ((customHolidays || []).some((h) => h.date === day)) {
               full.push({month: day.slice(0,7), date: day, employee: emp, signIn:"", signOut:"", signInDT:null, signOutDT:null, totalHours:0, status:["Holiday"]});
             } else if (isWeekend(day)) {
               full.push({month: day.slice(0,7), date: day, employee: emp, signIn:"", signOut:"", signInDT:null, signOutDT:null, totalHours:0, status:["Weekend"]});
@@ -521,7 +540,7 @@
       return full;
     }
 
-    /* ===== Filters ===== */
+    /********** FILTERS **********/
     function getCriteria(){
       return {
         employees: $("#employeeFilter").val() || [],
@@ -549,7 +568,7 @@
       applyFilters();
     }
 
-    /* ===== Table + KPIs ===== */
+    /********** TABLE + KPIs **********/
     function renderTable(data){
       const rows = data.map((r)=>{
         const st = computeStatus(r);
@@ -610,7 +629,6 @@
 
       // KPIs — exclude Weekend/Holiday/Absent/AL/SL/UL for avg and day count
       let sum = 0, late = 0, early = 0, absent = 0, workingDays = 0;
-      // New counters
       let al = 0, sl = 0, ul = 0;
       const holidayDates = new Set();
 
@@ -626,7 +644,7 @@
         if (st.includes("AL")) al++;
         if (st.includes("SL")) sl++;
         if (st.includes("UL")) ul++;
-        if (st.includes("Holiday") && r.date) holidayDates.add(r.date); // unique days
+        if (st.includes("Holiday") && r.date) holidayDates.add(r.date);
       });
 
       document.getElementById("totalHours").textContent = sum.toFixed(2);
@@ -636,7 +654,6 @@
       document.getElementById("earlyCount").textContent = early;
       document.getElementById("absentCount").textContent = absent;
 
-      // New: leave & holiday KPI outputs
       document.getElementById("alCount").textContent = al;
       document.getElementById("slCount").textContent = sl;
       document.getElementById("ulCount").textContent = ul;
@@ -645,7 +662,7 @@
       renderCharts(data);
     }
 
-    /* ===== Charts (exclude non-working & leave) ===== */
+    /********** CHARTS **********/
     function renderCharts(data){
       if (barChartHandle) barChartHandle.destroy();
       if (pieChartHandle) pieChartHandle.destroy();
@@ -692,7 +709,7 @@
       refreshChartsTheme();
     }
 
-    /* ===== Populate Selects (filter + leave employee list) ===== */
+    /********** SELECTS **********/
     function populateEmployeeLists(){
       const employees = [...new Set(CANON.map(r => r.employee).filter(Boolean))].sort();
 
@@ -707,7 +724,7 @@
       $("#leaveEmployee").select2({ placeholder: "Choose employee...", allowClear: true, width: "100%" });
     }
 
-    /* ===== PDF Snapshot ===== */
+    /********** PDF SNAPSHOT **********/
     async function downloadFullReport(){
       const el = document.getElementById("reportArea");
       const canvas = await html2canvas(el, {
@@ -718,33 +735,46 @@
       pdfMake.createPdf({ content: [{ image: img, width: 500 }] }).download("Attendance_Report.pdf");
     }
 
-    /* ===== Load ===== */
+    /********** LOAD SEQUENCE **********/
     async function loadData(){
-      loadSettings();
-      renderHolidayList();
-      renderLeaveList();
+      try {
+        // 1) Load shared data (holidays, leaves, balances, settings)
+        await backendGetAll();
 
-      const res = await fetch(CSV_URL, { cache: "no-store" });
-      const csv = await res.text();
+        // 2) Fetch attendance CSV
+        const res = await fetch(CSV_URL, { cache: "no-store" });
+        const csv = await res.text();
 
-      const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-      console.log("Parsed headers:", Object.keys(parsed.data[0] || {}));
-      console.log("First row:", parsed.data[0]);
+        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+        console.log("Parsed headers:", Object.keys(parsed.data[0] || {}));
+        console.log("First row:", parsed.data[0]);
 
-      const baseRows = parsed.data
-        .map((raw) => mapRow(raw))
-        .filter((r) => r.employee && r.date);
+        const baseRows = parsed.data
+          .map((raw) => mapRow(raw))
+          .filter((r) => r.employee && r.date);
 
-      if (baseRows.length === 0) {
-        console.warn("No usable rows after mapping. Check your column names shown in the console and adjust mapping in mapRow().");
+        if (baseRows.length === 0) {
+          console.warn("No usable rows after mapping. Check CSV column names in console; adjust mapRow() if needed.");
+        }
+
+        // 3) Build full grid (adds Holiday/Weekend/Absent rows)
+        CANON = generateFullRows(baseRows);
+
+        // 4) Populate select lists and dependent UI
+        populateEmployeeLists();
+        renderHolidayList();
+        renderLeaveList();
+        renderLeaveBalances();
+
+        // 5) Render table + KPIs
+        applyFilters();
+      } catch (err) {
+        console.error("Load error:", err);
+        alert("Failed to load data. Check console for details.");
       }
-
-      CANON = generateFullRows(baseRows);
-      populateEmployeeLists();
-      renderLeaveBalances();
-      applyFilters();
     }
 
+    // Kickoff
     loadData();
   </script>
 </body>
