@@ -300,60 +300,62 @@
 
     // Map a CSV row into canonical structure (Lebanon time based)
     // Flexible header detection for date/employee/signin/signout
-    function mapRow(raw) {
-      const r = normalizeHeaders(raw);
+   function mapRow(raw) {
+  const r = normalizeHeaders(raw);
 
-      const dateISO = normalizeDate(
-        r["date"] || r["day"] || r["attendance date"] || r["work date"] || ""
-      );
+  const dateISO = normalizeDate(r["date"] || r["day"] || r["attendance date"] || r["work date"] || "");
 
-      const signInRaw =
-        r["sign in"] ||
-        r["sign in time"] ||
-        r["signin"] ||
-        r["time in"] ||
-        r["checkin"] ||
-        r["in"] ||
-        "";
+  const signInRaw =
+    r["sign in"] ||
+    r["sign in time"] ||
+    r["signin"] ||
+    r["time in"] ||
+    r["checkin"] ||
+    r["in"] ||
+    r["sign in time"] ||   // ✅ match your CSV exactly
+    "";
 
-      const signOutRaw =
-        r["sign out"] ||
-        r["sign out time"] ||
-        r["signout"] ||
-        r["time out"] ||
-        r["checkout"] ||
-        r["out"] ||
-        "";
+  const signOutRaw =
+    r["sign out"] ||
+    r["sign out time"] ||
+    r["signout"] ||
+    r["time out"] ||
+    r["checkout"] ||
+    r["out"] ||
+    r["sign out time"] ||   // ✅ match your CSV exactly
+    "";
 
-      const employee =
-        r["employee"] ||
-        r["employee name"] ||
-        r["name"] ||
-        r["staff"] ||
-        r["worker"] ||
-        "";
+  const employee =
+    r["employee"] ||
+    r["employee name"] ||
+    r["name"] ||
+    r["staff"] ||
+    r["worker"] ||
+    r["employee name"] ||   // ✅ match your CSV exactly
+    "";
 
-      const inDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
-      let outDT = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
+  const inDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
+  let outDT = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
 
-      // Over-midnight handling (e.g., 21:00 → 05:00 next day)
-      if (inDT && outDT && outDT < inDT) {
-        outDT = new Date(outDT.getTime() + 24 * 60 * 60 * 1000);
-      }
+  // Overnight fix
+  if (inDT && outDT && outDT < inDT) {
+    outDT = new Date(outDT.getTime() + 24 * 60 * 60 * 1000);
+  }
 
-      const totalHours = inDT && outDT ? (outDT - inDT) / 36e5 : 0;
+  const totalHours = inDT && outDT ? (outDT - inDT) / 36e5 : 0;
 
-      return {
-        month: dateISO ? dateISO.slice(0, 7) : (r["month"] || ""),
-        date: dateISO,
-        employee,
-        signIn: signInRaw || "",
-        signOut: signOutRaw || "",
-        signInDT: inDT,
-        signOutDT: outDT,
-        totalHours
-      };
-    }
+  return {
+    month: r["month"] || (dateISO ? dateISO.slice(0, 7) : ""),
+    date: dateISO,
+    employee,
+    signIn: signInRaw,
+    signOut: signOutRaw,
+    signInDT: inDT,
+    signOutDT: outDT,
+    totalHours
+  };
+}
+
 
     // Format a JS Date to HH:mm in Lebanon time
     function formatLebanonTime(dt) {
