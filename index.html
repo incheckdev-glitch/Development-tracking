@@ -34,6 +34,7 @@
     .weekend-row { background-color: #f0f0f0 !important; }
     .leave-row { background-color: #e7f0ff !important; }
     .dt-buttons .dt-button { margin-right: 6px; }
+    .neg { color:#dc3545; font-weight:600; } /* negative remaining */
   </style>
 </head>
 
@@ -74,7 +75,7 @@
       </div>
     </div>
 
-    <!-- KPIs -->
+    <!-- KPIs (main) -->
     <div class="row mb-4 text-center">
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
@@ -82,6 +83,14 @@
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Late Count</h5><h3 id="lateCount">0</h3></div></div></div>
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Early Leaves</h5><h3 id="earlyCount">0</h3></div></div></div>
       <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
+    </div>
+
+    <!-- KPIs (leaves & holidays) -->
+    <div class="row mb-4 text-center">
+      <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Holidays (days)</h5><h3 id="holidayCount">0</h3></div></div></div>
+      <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Annual Leave (AL)</h5><h3 id="alCount">0</h3></div></div></div>
+      <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Sick Leave (SL)</h5><h3 id="slCount">0</h3></div></div></div>
+      <div class="col-md-3"><div class="card shadow"><div class="card-body"><h5>Unpaid Leave (UL)</h5><h3 id="ulCount">0</h3></div></div></div>
     </div>
 
     <!-- TABLE -->
@@ -127,12 +136,8 @@
       <div class="card-body">
         <h5>📝 Leave Manager</h5>
         <div class="row g-2 mb-3">
-          <div class="col-md-3">
-            <input type="date" id="leaveDate" class="form-control"/>
-          </div>
-          <div class="col-md-4">
-            <select id="leaveEmployee" class="form-select"></select>
-          </div>
+          <div class="col-md-3"><input type="date" id="leaveDate" class="form-control"/></div>
+          <div class="col-md-4"><select id="leaveEmployee" class="form-select"></select></div>
           <div class="col-md-3">
             <select id="leaveType" class="form-select">
               <option value="AL">Annual Leave (AL)</option>
@@ -140,11 +145,41 @@
               <option value="UL">Unpaid Leave (UL)</option>
             </select>
           </div>
-          <div class="col-md-2">
-            <button class="btn btn-primary w-100" onclick="addLeave()">Add Leave</button>
-          </div>
+          <div class="col-md-2"><button class="btn btn-primary w-100" onclick="addLeave()">Add Leave</button></div>
         </div>
         <ul id="leaveList" class="list-group"></ul>
+      </div>
+    </div>
+
+    <!-- LEAVE BALANCES (per employee) -->
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <h5>📒 Leave Balances (per employee)</h5>
+        <p class="text-muted small mb-3">
+          Set <b>Annual Leave (AL)</b> and <b>Sick Leave (SL)</b> entitlements for each employee.
+          <b>Used</b> is calculated from Leave Manager assignments. <b>Remaining</b> = Entitled − Used.
+          All saved locally in your browser.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle" id="leaveBalancesTable">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>AL Entitled</th>
+                <th>AL Used</th>
+                <th>AL Remaining</th>
+                <th>SL Entitled</th>
+                <th>SL Used</th>
+                <th>SL Remaining</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="text-end">
+          <button class="btn btn-outline-secondary me-2" onclick="resetLeaveBalances()">Reset Balances</button>
+          <button class="btn btn-primary" onclick="saveLeaveBalances()">Save Balances</button>
+        </div>
       </div>
     </div>
   </div>
@@ -160,6 +195,7 @@
 
     let customHolidays = JSON.parse(localStorage.getItem("holidays") || "[]");
     let customLeaves   = JSON.parse(localStorage.getItem("leaves")   || "[]"); // {date, employee, type: AL|SL|UL}
+    let leaveBalances  = JSON.parse(localStorage.getItem("leaveBalances") || "{}"); // { [employee]: {al: number, sl: number} }
 
     /* ===== UI ===== */
     function toggleDark(){ document.body.classList.toggle("dark-mode"); refreshChartsTheme(); }
@@ -189,9 +225,9 @@
     function normalizeDate(d){
       if(!d) return "";
       const s = String(d).trim();
-      const m = /^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/.exec(s);
+      const m = /^(\\d{1,2})[\\/\\.\\-](\\d{1,2})[\\/\\.\\-](\\d{4})$/.exec(s);
       if (m) { const [_, dd, mm, yyyy] = m; return `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;
       const dt = new Date(s);
       return isNaN(dt) ? "" : dt.toISOString().slice(0,10);
     }
@@ -199,11 +235,11 @@
       if (!value) return null;
       const s = String(value).trim();
       if (!s || s === "-" || s.toLowerCase() === "null") return null;
-      if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(s)) {
+      if (/^\\d{1,2}:\\d{2}\\s?(AM|PM)$/i.test(s)) {
         const dt = DateTime.fromFormat(`${dateISO} ${s}`, "yyyy-MM-dd h:mm a", { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
       }
-      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+      if (/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(s)) {
         const t = s.length === 5 ? s + ":00" : s;
         const dt = DateTime.fromISO(`${dateISO}T${t}`, { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
@@ -338,12 +374,79 @@
       if (customLeaves.some(l => l.date===date && l.employee===emp)) return alert("A leave already exists for this employee/day");
       customLeaves.push({ date, employee: emp, type });
       renderLeaveList();
+      renderLeaveBalances(); // update used & remaining
       applyFilters();
     }
     function removeLeave(i){
       customLeaves.splice(i,1);
       renderLeaveList();
+      renderLeaveBalances();
       applyFilters();
+    }
+
+    /* ===== Leave Balances (entitlements) ===== */
+    function getALUsedMap(){
+      const used = {};
+      customLeaves.forEach(l=>{
+        if (l.type === "AL") used[l.employee] = (used[l.employee] || 0) + 1;
+      });
+      return used;
+    }
+    function getSLUsedMap(){
+      const used = {};
+      customLeaves.forEach(l=>{
+        if (l.type === "SL") used[l.employee] = (used[l.employee] || 0) + 1;
+      });
+      return used;
+    }
+    function renderLeaveBalances(){
+      const tbody = document.querySelector("#leaveBalancesTable tbody");
+      if (!tbody) return;
+
+      const employees = [...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort();
+      const alUsedMap = getALUsedMap();
+      const slUsedMap = getSLUsedMap();
+
+      tbody.innerHTML = employees.map(emp=>{
+        const ent = leaveBalances[emp] || { al: 0, sl: 0 };
+        const alEnt = Number(ent.al) || 0;
+        const slEnt = Number(ent.sl) || 0;
+        const alUsed = Number(alUsedMap[emp] || 0);
+        const slUsed = Number(slUsedMap[emp] || 0);
+        const alRem = alEnt - alUsed;
+        const slRem = slEnt - slUsed;
+
+        return `
+          <tr>
+            <td>${emp}</td>
+            <td><input type="number" min="0" class="form-control form-control-sm" data-emp="${emp}" data-kind="al" value="${alEnt}"></td>
+            <td>${alUsed}</td>
+            <td class="${alRem < 0 ? 'neg' : ''}">${alRem}</td>
+            <td><input type="number" min="0" class="form-control form-control-sm" data-emp="${emp}" data-kind="sl" value="${slEnt}"></td>
+            <td>${slUsed}</td>
+            <td class="${slRem < 0 ? 'neg' : ''}">${slRem}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+    function saveLeaveBalances(){
+      // read inputs
+      const inputs = document.querySelectorAll('#leaveBalancesTable input[data-emp][data-kind]');
+      inputs.forEach(inp=>{
+        const emp = inp.getAttribute('data-emp');
+        const kind = inp.getAttribute('data-kind'); // 'al' or 'sl'
+        const val = Number(inp.value || 0);
+        if (!leaveBalances[emp]) leaveBalances[emp] = { al: 0, sl: 0 };
+        leaveBalances[emp][kind] = val;
+      });
+      localStorage.setItem("leaveBalances", JSON.stringify(leaveBalances));
+      renderLeaveBalances(); // refresh remaining
+    }
+    function resetLeaveBalances(){
+      if (!confirm("Reset all leave entitlements for all employees?")) return;
+      leaveBalances = {};
+      localStorage.removeItem("leaveBalances");
+      renderLeaveBalances();
     }
 
     /* ===== Status Rules (leave override included) ===== */
@@ -507,13 +610,23 @@
 
       // KPIs — exclude Weekend/Holiday/Absent/AL/SL/UL for avg and day count
       let sum = 0, late = 0, early = 0, absent = 0, workingDays = 0;
+      // New counters
+      let al = 0, sl = 0, ul = 0;
+      const holidayDates = new Set();
+
       data.forEach((r)=>{
         const st = computeStatus(r);
         if (st.includes("Late")) late++;
         if (st.includes("Early Leave")) early++;
         if (st.includes("Absent")) absent++;
         if (r.totalHours) sum += r.totalHours;
+
         if (!isNonWorkingStatus(st)) workingDays++;
+
+        if (st.includes("AL")) al++;
+        if (st.includes("SL")) sl++;
+        if (st.includes("UL")) ul++;
+        if (st.includes("Holiday") && r.date) holidayDates.add(r.date); // unique days
       });
 
       document.getElementById("totalHours").textContent = sum.toFixed(2);
@@ -522,6 +635,12 @@
       document.getElementById("lateCount").textContent = late;
       document.getElementById("earlyCount").textContent = early;
       document.getElementById("absentCount").textContent = absent;
+
+      // New: leave & holiday KPI outputs
+      document.getElementById("alCount").textContent = al;
+      document.getElementById("slCount").textContent = sl;
+      document.getElementById("ulCount").textContent = ul;
+      document.getElementById("holidayCount").textContent = holidayDates.size;
 
       renderCharts(data);
     }
@@ -617,11 +736,12 @@
         .filter((r) => r.employee && r.date);
 
       if (baseRows.length === 0) {
-        console.warn("No usable rows after mapping. Check your column names in the console logs above and adjust mapping in mapRow().");
+        console.warn("No usable rows after mapping. Check your column names shown in the console and adjust mapping in mapRow().");
       }
 
       CANON = generateFullRows(baseRows);
       populateEmployeeLists();
+      renderLeaveBalances();
       applyFilters();
     }
 
