@@ -32,7 +32,7 @@
     .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding: 10px; }
     .holiday-row { background-color: #ffeeba !important; }
     .weekend-row { background-color: #f0f0f0 !important; }
-    .leave-row { background-color: #e7f0ff !important; } /* highlight AL/SL/UL rows */
+    .leave-row { background-color: #e7f0ff !important; }
     .dt-buttons .dt-button { margin-right: 6px; }
   </style>
 </head>
@@ -189,9 +189,9 @@
     function normalizeDate(d){
       if(!d) return "";
       const s = String(d).trim();
-      const m = /^(\\d{1,2})[\\/\\.-](\\d{1,2})[\\/\\.-](\\d{4})$/.exec(s);
+      const m = /^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/.exec(s);
       if (m) { const [_, dd, mm, yyyy] = m; return `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; }
-      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
       const dt = new Date(s);
       return isNaN(dt) ? "" : dt.toISOString().slice(0,10);
     }
@@ -199,11 +199,11 @@
       if (!value) return null;
       const s = String(value).trim();
       if (!s || s === "-" || s.toLowerCase() === "null") return null;
-      if (/^\\d{1,2}:\\d{2}\\s?(AM|PM)$/i.test(s)) {
+      if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(s)) {
         const dt = DateTime.fromFormat(`${dateISO} ${s}`, "yyyy-MM-dd h:mm a", { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
       }
-      if (/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(s)) {
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
         const t = s.length === 5 ? s + ":00" : s;
         const dt = DateTime.fromISO(`${dateISO}T${t}`, { zone: LEBANON_TZ });
         return dt.isValid ? dt.toJSDate() : null;
@@ -223,18 +223,39 @@
           || stArr.includes("AL") || stArr.includes("SL") || stArr.includes("UL");
     }
 
-    /* ===== Map CSV row ===== */
+    /* ===== Map CSV row (robust header matching) ===== */
     function mapRow(raw){
       const r = normalizeHeaders(raw);
-      const dateISO = normalizeDate(r["date"] || r["day"] || r["attendance date"] || r["work date"] || "");
-      const employee = r["employee name"] || r["employee"] || r["name"] || r["staff"] || r["worker"] || "";
-      const inRaw  = r["sign in time"]  || r["sign in"]  || r["time in"]  || r["checkin"]  || r["in"]  || "";
-      const outRaw = r["sign out time"] || r["sign out"] || r["time out"] || r["checkout"] || r["out"] || "";
-      const inDT = dateISO ? parsePunchWithDate(dateISO, inRaw) : null;
-      let outDT  = dateISO ? parsePunchWithDate(dateISO, outRaw) : null;
+
+      const dateISO = normalizeDate(
+        r["date"] || r["day"] || r["attendance date"] || r["work date"] || r["punch date"] || ""
+      );
+
+      const employee =
+        r["employee name"] || r["employee"] || r["name"] || r["full name"] || r["employee fullname"] || r["staff"] || r["worker"] || "";
+
+      const signInRaw =
+        r["sign in time"] || r["sign in"] || r["signin"] || r["time in"] || r["checkin"] || r["in"] || r["punch in"] || r["first in"] || r["start time"] || "";
+
+      const signOutRaw =
+        r["sign out time"] || r["sign out"] || r["signout"] || r["time out"] || r["checkout"] || r["out"] || r["punch out"] || r["last out"] || r["end time"] || "";
+
+      const inDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
+      let outDT  = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
       if (inDT && outDT && outDT < inDT) outDT = new Date(outDT.getTime() + 24*60*60*1000); // overnight
+
       const totalHours = inDT && outDT ? (outDT - inDT) / 36e5 : 0;
-      return { month: r["month"] || (dateISO ? dateISO.slice(0,7) : ""), date: dateISO, employee, signIn: inRaw, signOut: outRaw, signInDT: inDT, signOutDT: outDT, totalHours };
+
+      return {
+        month: r["month"] || (dateISO ? dateISO.slice(0,7) : ""),
+        date: dateISO,
+        employee,
+        signIn: signInRaw || "",
+        signOut: signOutRaw || "",
+        signInDT: inDT,
+        signOutDT: outDT,
+        totalHours
+      };
     }
 
     /* ===== Settings ===== */
@@ -269,10 +290,10 @@
       customHolidays.forEach((h,i)=>{
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
-        li.innerHTML = \`
-          <span>\${h.date}\${h.name ? " - " + h.name : ""}</span>
-          <button class="btn btn-sm btn-danger" onclick="removeHoliday(\${i})">Remove</button>
-        \`;
+        li.innerHTML = `
+          <span>${h.date}${h.name ? " - " + h.name : ""}</span>
+          <button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>
+        `;
         list.appendChild(li);
       });
       localStorage.setItem("holidays", JSON.stringify(customHolidays));
@@ -292,20 +313,19 @@
       applyFilters();
     }
 
-    /* ===== Leave Manager ===== */
+    /* ===== Leave Manager (employee-specific) ===== */
     function renderLeaveList(){
       const list = document.getElementById("leaveList");
       list.innerHTML = "";
-      // sort by date then employee
       customLeaves.sort((a,b)=> a.date===b.date ? a.employee.localeCompare(b.employee) : a.date.localeCompare(b.date));
       customLeaves.forEach((l,i)=>{
+        const label = l.type==="AL"?"Annual Leave": l.type==="SL"?"Sick Leave": "Unpaid Leave";
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
-        const typeLabel = l.type==="AL"?"Annual Leave": l.type==="SL"?"Sick Leave": "Unpaid Leave";
-        li.innerHTML = \`
-          <span>\${l.date} — \${l.employee} (\${typeLabel})</span>
-          <button class="btn btn-sm btn-danger" onclick="removeLeave(\${i})">Remove</button>
-        \`;
+        li.innerHTML = `
+          <span>${l.date} — ${l.employee} (${label})</span>
+          <button class="btn btn-sm btn-danger" onclick="removeLeave(${i})">Remove</button>
+        `;
         list.appendChild(li);
       });
       localStorage.setItem("leaves", JSON.stringify(customLeaves));
@@ -326,9 +346,9 @@
       applyFilters();
     }
 
-    /* ===== Status Rules (with leave override) ===== */
+    /* ===== Status Rules (leave override included) ===== */
     function computeStatus(row){
-      // Leave override (AL/SL/UL) takes precedence over synthetic statuses
+      // Leave override takes precedence
       const leave = customLeaves.find(l => l.date === row.date && l.employee === row.employee);
       if (leave) return [leave.type]; // AL/SL/UL
 
@@ -341,7 +361,6 @@
       const half = parseFloat(s.half ?? 4);
       const over = parseFloat(s.over ?? 9);
 
-      // Absent / Needs Correction logic
       if (!row.signInDT && !row.signOutDT) return ["Absent"];
       if ((row.signInDT && !row.signOutDT) || (!row.signInDT && row.signOutDT)) return ["Needs Correction"];
 
@@ -554,7 +573,7 @@
       refreshChartsTheme();
     }
 
-    /* ===== Populate Selects ===== */
+    /* ===== Populate Selects (filter + leave employee list) ===== */
     function populateEmployeeLists(){
       const employees = [...new Set(CANON.map(r => r.employee).filter(Boolean))].sort();
 
@@ -596,6 +615,10 @@
       const baseRows = parsed.data
         .map((raw) => mapRow(raw))
         .filter((r) => r.employee && r.date);
+
+      if (baseRows.length === 0) {
+        console.warn("No usable rows after mapping. Check your column names in the console logs above and adjust mapping in mapRow().");
+      }
 
       CANON = generateFullRows(baseRows);
       populateEmployeeLists();
