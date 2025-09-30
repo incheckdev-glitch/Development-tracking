@@ -99,10 +99,10 @@
   <div class="card shadow my-4">
     <div class="card-body row g-3">
       <h5>⚙️ Settings</h5>
-      <div class="col-md-3"><label class="form-label">Late After (HH:MM)</label><input type="time" id="lateThreshold" class="form-control" value="08:15"></div>
-      <div class="col-md-3"><label class="form-label">Early Leave Before (HH:MM)</label><input type="time" id="earlyThreshold" class="form-control" value="16:30"></div>
-      <div class="col-md-3"><label class="form-label">Half-day Max Hours</label><input type="number" id="halfDayHours" class="form-control" value="4"></div>
-      <div class="col-md-3"><label class="form-label">Overtime Min Hours</label><input type="number" id="overtimeHours" class="form-control" value="9"></div>
+      <div class="col-md-3"><label class="form-label">Late After (HH:MM)</label><input type="time" id="lateThreshold" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">Early Leave Before (HH:MM)</label><input type="time" id="earlyThreshold" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">Half-day Max Hours</label><input type="number" id="halfDayHours" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">Overtime Min Hours</label><input type="number" id="overtimeHours" class="form-control"></div>
     </div>
   </div>
 
@@ -141,6 +141,29 @@ function mapRow(r){
   return{month:r["month"]||"",date:normalizeDate(r["date"]||""),employee:r["employee"]||r["employee name"]||"",signIn,signOut,totalHours,signInDT,signOutDT};
 }
 
+// Settings persistence
+function saveSettings(){
+  const settings = {
+    late: document.getElementById("lateThreshold").value,
+    early: document.getElementById("earlyThreshold").value,
+    halfDay: document.getElementById("halfDayHours").value,
+    overtime: document.getElementById("overtimeHours").value
+  };
+  localStorage.setItem("settings", JSON.stringify(settings));
+}
+function loadSettings(){
+  const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+  document.getElementById("lateThreshold").value = settings.late || "08:15";
+  document.getElementById("earlyThreshold").value = settings.early || "16:30";
+  document.getElementById("halfDayHours").value = settings.halfDay || 4;
+  document.getElementById("overtimeHours").value = settings.overtime || 9;
+}
+["lateThreshold","earlyThreshold","halfDayHours","overtimeHours"].forEach(id=>{
+  document.addEventListener("DOMContentLoaded", ()=>{
+    document.getElementById(id).addEventListener("change", saveSettings);
+  });
+});
+
 // Generate absent rows
 function generateAbsentRows(data){
   const employees=[...new Set(data.map(r=>r.employee).filter(Boolean))];
@@ -161,14 +184,6 @@ function generateAbsentRows(data){
   return fullRows;
 }
 
-// Employee filter
-function populateEmployeeFilter(){
-  const sel=document.getElementById("employeeFilter"); sel.innerHTML="";
-  const employees=[...new Set(CANON.map(r=>r.employee?.trim()).filter(Boolean))].sort();
-  employees.forEach(emp=>{const opt=document.createElement("option");opt.value=emp;opt.textContent=emp;sel.appendChild(opt);});
-  $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
-}
-
 // Status
 function computeStatus(r){
   const status=[]; if(!r.date) return ["Unknown"];
@@ -179,11 +194,8 @@ function computeStatus(r){
   const day=new Date(r.date).getDay();
   if(day===0||day===6) return ["Weekend"];
   if(customHolidays.some(h=>h.date===r.date)) return ["Holiday"];
-  // Absent
   if(!r.signInDT && !r.signOutDT) return ["Absent"];
-  // Needs correction
   if((r.signInDT && !r.signOutDT) || (!r.signInDT && r.signOutDT)) return ["Needs Correction"];
-  // Normal rules
   const [lh,lm]=lateThreshold.split(":").map(Number);
   if(r.signInDT && (r.signInDT.getHours()*60+r.signInDT.getMinutes())>lh*60+lm) status.push("Late");
   const [eh,em]=earlyThreshold.split(":").map(Number);
@@ -269,12 +281,11 @@ function renderCharts(data){
   lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),borderColor:"#28a745",fill:false}]}}); 
 }
 
-// Holiday manager
+// Holidays
 function renderHolidayList(){
-  const list=document.getElementById("holidayList"); list.innerHTML="";
+  const list=document.getElementById("holidayList");list.innerHTML="";
   customHolidays.forEach((h,i)=>{
-    const li=document.createElement("li");
-    li.className="list-group-item d-flex justify-content-between align-items-center";
+    const li=document.createElement("li");li.className="list-group-item d-flex justify-content-between align-items-center";
     li.innerHTML=`<span>${h.date} ${h.name?("- "+h.name):""}</span><button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>`;
     list.appendChild(li);
   });
@@ -287,7 +298,7 @@ function addHoliday(){
 }
 function removeHoliday(i){customHolidays.splice(i,1);renderHolidayList();applyFilters();}
 
-// Report download
+// Report
 async function downloadFullReport(){
   const el=document.getElementById("reportArea");
   const canvas=await html2canvas(el,{scale:2,backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff"});
@@ -302,7 +313,13 @@ async function loadData(){
   const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
   CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));
   CANON=generateAbsentRows(CANON);
-  populateEmployeeFilter();applyFilters();renderHolidayList();
+  populateEmployeeFilter();applyFilters();renderHolidayList();loadSettings();
+}
+function populateEmployeeFilter(){
+  const sel=document.getElementById("employeeFilter");
+  sel.innerHTML="";const employees=[...new Set(CANON.map(r=>r.employee?.trim()).filter(Boolean))].sort();
+  employees.forEach(emp=>{const opt=document.createElement("option");opt.value=emp;opt.textContent=emp;sel.appendChild(opt);});
+  $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
 }
 loadData();
 </script>
