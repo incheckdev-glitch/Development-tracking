@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Attendance Dashboard</title> 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Attendance Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <!-- DataTables -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- PapaParse -->
@@ -29,11 +29,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body.dark-mode { background:#181a1f; color:#eee; }
-    .card { transition: all 0.3s ease; }
-    .card:hover { transform: translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.1); }
+    .card { transition: all .3s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.1); }
     .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding:10px; }
     .holiday-row { background-color: #ffeeba !important; }
     .weekend-row { background-color: #f0f0f0 !important; }
+    .error-banner { display:none; }
   </style>
 </head>
 <body>
@@ -45,6 +46,9 @@
       <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
     </div>
   </div>
+
+  <!-- Error banner -->
+  <div id="errorBanner" class="alert alert-danger error-banner" role="alert"></div>
 
   <!-- Filters -->
   <div class="card shadow filter-bar mb-4">
@@ -123,103 +127,205 @@
 </div>
 
 <script>
-const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
-let CANON=[],DT;
-let customHolidays = JSON.parse(localStorage.getItem("holidays") || "[]");
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
-// Helpers
-function toggleDark(){document.body.classList.toggle("dark-mode");}
-function normalizeHeaders(r){const obj={};for(let k in r){obj[k.trim().toLowerCase()]=r[k];}return obj;}
+let CANON = [], DT, barChart, pieChart, lineChart;
+
+// ---------- Helpers ----------
+function toggleDark(){ document.body.classList.toggle("dark-mode"); }
+function showError(msg){ const b=document.getElementById('errorBanner'); b.textContent=msg; b.style.display='block'; }
+function hideError(){ const b=document.getElementById('errorBanner'); b.style.display='none'; }
+
+function normalizeHeaders(r){
+  const obj={};
+  for(let k in r){ obj[k.trim().toLowerCase()] = r[k]; }
+  return obj;
+}
 function normalizeDate(d){
   if(!d) return "";
-  if(d.includes("/")){const [day,month,year]=d.split("/");return `${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`;}
-  if(d.includes("-")) return d;
+  if(d.includes("/")){ const [dd,mm,yy]=d.split("/"); return `${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`; }
+  if(d.includes("-")) return d; // assume YYYY-MM-DD
   return "";
 }
+function parsePunch(v){
+  // returns Date or null
+  if(!v) return null;
+  const s=String(v).trim();
+  if(!s || s==='-' || s.toLowerCase()==='null') return null;
+  const dt=new Date(s);
+  return isNaN(dt.getTime()) ? null : dt;
+}
 function mapRow(r){
-  const signIn=r["sign in"]||r["sign in time"],signOut=r["sign out"]||r["sign out time"];
-  let signInDT=signIn?new Date(signIn):null,signOutDT=signOut?new Date(signOut):null;
-  let totalHours=(signInDT&&signOutDT)?(signOutDT-signInDT)/36e5:0;
-  return{month:r["month"]||"",date:normalizeDate(r["date"]||""),employee:r["employee"]||r["employee name"]||"",signIn,signOut,totalHours,signInDT,signOutDT};
+  const signIn = r["sign in"] || r["sign in time"] || r["signin"] || r["in"];
+  const signOut = r["sign out"] || r["sign out time"] || r["signout"] || r["out"];
+  const signInDT = parsePunch(signIn);
+  const signOutDT = parsePunch(signOut);
+  const totalHours = (signInDT && signOutDT) ? (signOutDT - signInDT)/36e5 : 0;
+  return {
+    month: r["month"] || "",
+    date: normalizeDate(r["date"] || r["day"] || ""),
+    employee: r["employee"] || r["employee name"] || r["name"] || "",
+    signIn, signOut, signInDT, signOutDT, totalHours
+  };
 }
 
-// Settings persistence
+// ---------- Settings persistence ----------
 function saveSettings(){
   const settings = {
-    late: document.getElementById("lateThreshold").value,
-    early: document.getElementById("earlyThreshold").value,
-    halfDay: document.getElementById("halfDayHours").value,
-    overtime: document.getElementById("overtimeHours").value
+    late: document.getElementById("lateThreshold").value || "08:15",
+    early: document.getElementById("earlyThreshold").value || "16:30",
+    halfDay: document.getElementById("halfDayHours").value || 4,
+    overtime: document.getElementById("overtimeHours").value || 9
   };
   localStorage.setItem("settings", JSON.stringify(settings));
+  applyFilters(); // recalc immediately
 }
 function loadSettings(){
-  const settings = JSON.parse(localStorage.getItem("settings") || "{}");
-  document.getElementById("lateThreshold").value = settings.late || "08:15";
-  document.getElementById("earlyThreshold").value = settings.early || "16:30";
-  document.getElementById("halfDayHours").value = settings.halfDay || 4;
-  document.getElementById("overtimeHours").value = settings.overtime || 9;
-}
-["lateThreshold","earlyThreshold","halfDayHours","overtimeHours"].forEach(id=>{
-  document.addEventListener("DOMContentLoaded", ()=>{
+  const s = JSON.parse(localStorage.getItem("settings") || "{}");
+  document.getElementById("lateThreshold").value = s.late || "08:15";
+  document.getElementById("earlyThreshold").value = s.early || "16:30";
+  document.getElementById("halfDayHours").value = s.halfDay ?? 4;
+  document.getElementById("overtimeHours").value = s.overtime ?? 9;
+
+  ["lateThreshold","earlyThreshold","halfDayHours","overtimeHours"].forEach(id=>{
     document.getElementById(id).addEventListener("change", saveSettings);
+    document.getElementById(id).addEventListener("input", saveSettings);
   });
-});
-
-// Generate absent rows
-function generateAbsentRows(data){
-  const employees=[...new Set(data.map(r=>r.employee).filter(Boolean))];
-  const dates=[...new Set(data.map(r=>r.date).filter(Boolean))];
-  const fullRows=[];
-  dates.forEach(d=>{
-    const day=new Date(d).getDay();
-    if(day===0||day===6) return;
-    if(customHolidays.some(h=>h.date===d)) return;
-    employees.forEach(emp=>{
-      const found=data.find(r=>r.employee===emp && r.date===d);
-      if(found){ fullRows.push(found); }
-      else{
-        fullRows.push({month:d.slice(0,7),date:d,employee:emp,signIn:null,signOut:null,signInDT:null,signOutDT:null,totalHours:0});
-      }
-    });
-  });
-  return fullRows;
 }
 
-// Status
+// ---------- Holidays (persistent) ----------
+let customHolidays = JSON.parse(localStorage.getItem("holidays") || "[]");
+function renderHolidayList(){
+  const list=document.getElementById("holidayList"); list.innerHTML="";
+  customHolidays.sort((a,b)=>a.date.localeCompare(b.date));
+  customHolidays.forEach((h,i)=>{
+    const li=document.createElement("li");
+    li.className="list-group-item d-flex justify-content-between align-items-center";
+    li.innerHTML=`<span>${h.date}${h.name?(" - "+h.name):""}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>`;
+    list.appendChild(li);
+  });
+  localStorage.setItem("holidays", JSON.stringify(customHolidays));
+}
+function addHoliday(){
+  const date=document.getElementById("holidayDate").value;
+  const name=document.getElementById("holidayName").value;
+  if(!date) return alert("Please select a date");
+  if(customHolidays.some(h=>h.date===date)) return alert("Holiday already exists");
+  customHolidays.push({date,name});
+  renderHolidayList(); applyFilters();
+}
+function removeHoliday(i){
+  customHolidays.splice(i,1);
+  renderHolidayList(); applyFilters();
+}
+
+// ---------- Status rules ----------
 function computeStatus(r){
-  const status=[]; if(!r.date) return ["Unknown"];
-  const lateThreshold=document.getElementById("lateThreshold").value||"08:15";
-  const earlyThreshold=document.getElementById("earlyThreshold").value||"16:30";
-  const halfDayMax=parseFloat(document.getElementById("halfDayHours").value)||4;
-  const overtimeMin=parseFloat(document.getElementById("overtimeHours").value)||9;
-  const day=new Date(r.date).getDay();
-  if(day===0||day===6) return ["Weekend"];
+  const status=[];
+  if(!r.date) return ["Unknown"];
+
+  const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+  const lateThreshold = (settings.late || "08:15").split(":").map(Number);
+  const earlyThreshold = (settings.early || "16:30").split(":").map(Number);
+  const halfDayMax = parseFloat(settings.halfDay ?? 4);
+  const overtimeMin = parseFloat(settings.overtime ?? 9);
+
+  const day = new Date(r.date+"T00:00:00").getDay(); // use local midnight
+  if(day===0 || day===6) return ["Weekend"];
   if(customHolidays.some(h=>h.date===r.date)) return ["Holiday"];
+
   if(!r.signInDT && !r.signOutDT) return ["Absent"];
   if((r.signInDT && !r.signOutDT) || (!r.signInDT && r.signOutDT)) return ["Needs Correction"];
-  const [lh,lm]=lateThreshold.split(":").map(Number);
-  if(r.signInDT && (r.signInDT.getHours()*60+r.signInDT.getMinutes())>lh*60+lm) status.push("Late");
-  const [eh,em]=earlyThreshold.split(":").map(Number);
-  if(r.signOutDT && (r.signOutDT.getHours()*60+r.signOutDT.getMinutes())<eh*60+em) status.push("Early Leave");
-  if(r.totalHours>0 && r.totalHours<halfDayMax) status.push("Half-day");
-  if(r.totalHours>=overtimeMin) status.push("Overtime");
+
+  const signInMin = r.signInDT ? r.signInDT.getHours()*60 + r.signInDT.getMinutes() : null;
+  const signOutMin = r.signOutDT ? r.signOutDT.getHours()*60 + r.signOutDT.getMinutes() : null;
+
+  if(signInMin!==null && signInMin > (lateThreshold[0]*60 + lateThreshold[1])) status.push("Late");
+  if(signOutMin!==null && signOutMin < (earlyThreshold[0]*60 + earlyThreshold[1])) status.push("Early Leave");
+  if(r.totalHours>0 && r.totalHours < halfDayMax) status.push("Half-day");
+  if(r.totalHours >= overtimeMin) status.push("Overtime");
+
   if(!status.length) status.push("On Time");
   return status;
 }
 
-// Filters
-function getCriteria(){return{employees:$("#employeeFilter").val()||[],start:document.getElementById("startDate").value,end:document.getElementById("endDate").value,q:document.getElementById("quickSearch").value.toLowerCase()};}
-function applyFilters(){
-  const c=getCriteria();
-  const filtered=CANON.filter(r=>{
-    if(c.employees.length&&!c.employees.includes(r.employee))return false;
-    if(c.start&&r.date<c.start)return false;
-    if(c.end&&r.date>c.end)return false;
-    if(c.q&&!`${r.employee} ${r.date}`.toLowerCase().includes(c.q))return false;
-    return true;
+// ---------- Absent generation ----------
+function buildWorkdays(minISO, maxISO){
+  const days=[];
+  if(!minISO || !maxISO) return days;
+  let d=new Date(minISO+"T00:00:00"), end=new Date(maxISO+"T00:00:00");
+  while(d<=end){
+    const iso=d.toISOString().slice(0,10);
+    const dow=d.getDay();
+    if(dow!==0 && dow!==6 && !customHolidays.some(h=>h.date===iso)) days.push(iso);
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+}
+
+function generateAbsentRows(data){
+  // Get employees & date range
+  const employees=[...new Set(data.map(r=>r.employee).filter(Boolean))];
+  const datesSorted = data.map(r=>r.date).filter(Boolean).sort();
+  if(!datesSorted.length || !employees.length) return data;
+
+  const minDate=datesSorted[0];
+  const maxDate=datesSorted[datesSorted.length-1];
+  const workdays = buildWorkdays(minDate, maxDate);
+
+  const index = new Map(); // key: date|employee -> row
+  data.forEach(r=> index.set(`${r.date}|${r.employee}`, r));
+
+  const full = [];
+  workdays.forEach(d=>{
+    employees.forEach(emp=>{
+      const key=`${d}|${emp}`;
+      if(index.has(key)){
+        full.push(index.get(key));
+      }else{
+        full.push({
+          month: d.slice(0,7),
+          date: d,
+          employee: emp,
+          signIn: null,
+          signOut: null,
+          signInDT: null,
+          signOutDT: null,
+          totalHours: 0
+        });
+      }
+    });
   });
-  renderTable(filtered);
+
+  return full;
+}
+
+// ---------- Filters ----------
+function getCriteria(){
+  return {
+    employees: $("#employeeFilter").val() || [],
+    start: document.getElementById("startDate").value,
+    end: document.getElementById("endDate").value,
+    q: (document.getElementById("quickSearch").value||"").toLowerCase()
+  };
+}
+function applyFilters(){
+  try{
+    const c=getCriteria();
+    const filtered = CANON.filter(r=>{
+      if(c.employees.length && !c.employees.includes(r.employee)) return false;
+      if(c.start && r.date < c.start) return false;
+      if(c.end && r.date > c.end) return false;
+      if(c.q && !`${r.employee} ${r.date}`.toLowerCase().includes(c.q)) return false;
+      return true;
+    });
+    renderTable(filtered);
+    hideError();
+  }catch(err){
+    console.error(err);
+    showError("Failed to filter/render data. See console for details.");
+  }
 }
 function resetFilters(){
   $("#employeeFilter").val(null).trigger("change");
@@ -229,117 +335,168 @@ function resetFilters(){
   applyFilters();
 }
 
-// Render table
+// ---------- Table & Charts ----------
 function renderTable(data){
-  const tableData=data.map(r=>{
+  const rows = data.map(r=>{
     const st=computeStatus(r);
-    const badge=st.map(s=>{
+    const badge = st.map(s=>{
       let cls="bg-secondary";
-      if(s==="Late")cls="bg-danger";
-      else if(s==="Early Leave")cls="bg-warning text-dark";
-      else if(s==="On Time")cls="bg-success";
-      else if(s==="Absent")cls="bg-dark";
-      else if(s==="Needs Correction")cls="bg-danger text-white";
-      else if(s==="Half-day")cls="bg-info text-dark";
-      else if(s==="Overtime")cls="bg-primary";
-      else if(s==="Holiday")cls="bg-secondary";
-      else if(s==="Weekend")cls="bg-light text-dark";
+      if(s==="Late") cls="bg-danger";
+      else if(s==="Early Leave") cls="bg-warning text-dark";
+      else if(s==="On Time") cls="bg-success";
+      else if(s==="Absent") cls="bg-dark";
+      else if(s==="Needs Correction") cls="bg-danger text-white";
+      else if(s==="Half-day") cls="bg-info text-dark";
+      else if(s==="Overtime") cls="bg-primary";
+      else if(s==="Holiday") cls="bg-secondary";
+      else if(s==="Weekend") cls="bg-light text-dark";
       return `<span class="badge ${cls}">${s}</span>`;
     }).join(" ");
-    return[r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"", (isFinite(r.totalHours)?r.totalHours.toFixed(2):""),badge];
+
+    return [
+      r.month||"",
+      r.date||"",
+      r.employee||"",
+      r.signIn||"",
+      r.signOut||"",
+      (isFinite(r.totalHours)? r.totalHours.toFixed(2) : ""),
+      badge
+    ];
   });
 
   if(!DT){
-    DT=$("#attendanceTable").DataTable({
-      data:tableData,
-      columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],
-      dom:'Bfrtip',
-      buttons:['csv','excel','pdf','print'],
-      pageLength:10,
-      order:[[1,'asc']],
-      createdRow: function(row,data){
-        const statusHtml=data[6];
+    DT = $("#attendanceTable").DataTable({
+      data: rows,
+      columns: [
+        {title:"Month"},
+        {title:"Date"},
+        {title:"Employee"},
+        {title:"Sign In"},
+        {title:"Sign Out"},
+        {title:"Total Hours"},
+        {title:"Status"}
+      ],
+      dom: 'Bfrtip',
+      buttons: ['csv','excel','pdf','print'],
+      pageLength: 10,
+      order: [[1,'asc']],
+      createdRow: function(row, data){
+        const statusHtml = data[6] || "";
         if(statusHtml.includes("Holiday")) $(row).addClass("holiday-row");
         if(statusHtml.includes("Weekend")) $(row).addClass("weekend-row");
       }
     });
   } else {
-    DT.clear().rows.add(tableData).draw();
+    DT.clear().rows.add(rows).draw();
   }
 
   // KPIs
-  let sum=0,days=new Set(),late=0,early=0,absent=0,holiday=0;
+  let sum=0, days=new Set(), late=0, early=0, absent=0, holiday=0;
   data.forEach(r=>{
     const st=computeStatus(r);
     if(st.includes("Late")) late++;
     if(st.includes("Early Leave")) early++;
     if(st.includes("Absent")) absent++;
     if(st.includes("Holiday")) holiday++;
-    if(r.totalHours)sum+=r.totalHours;
-    if(r.date)days.add(r.date);
+    if(r.totalHours) sum += r.totalHours;
+    if(r.date) days.add(r.date);
   });
-  document.getElementById("totalHours").textContent=sum.toFixed(2);
-  document.getElementById("avgHours").textContent=(days.size?sum/days.size:0).toFixed(2);
-  document.getElementById("daysCount").textContent=days.size;
-  document.getElementById("lateCount").textContent=late;
-  document.getElementById("earlyCount").textContent=early;
-  document.getElementById("absentCount").textContent=absent;
-  document.getElementById("holidayCount").textContent=holiday;
+
+  document.getElementById("totalHours").textContent = sum.toFixed(2);
+  document.getElementById("avgHours").textContent = (days.size? (sum/days.size) : 0).toFixed(2);
+  document.getElementById("daysCount").textContent = days.size;
+  document.getElementById("lateCount").textContent = late;
+  document.getElementById("earlyCount").textContent = early;
+  document.getElementById("absentCount").textContent = absent;
+  document.getElementById("holidayCount").textContent = holiday;
 
   renderCharts(data);
 }
 
-// Charts
-let barChart,pieChart,lineChart;
 function renderCharts(data){
-  if(barChart)barChart.destroy();if(pieChart)pieChart.destroy();if(lineChart)lineChart.destroy();
-  const grouped={};data.forEach(r=>{if(r.date)grouped[r.date]=(grouped[r.date]||0)+r.totalHours;});
-  barChart=new Chart(document.getElementById("barChart"),{type:"bar",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),backgroundColor:"#0d6efd"}]}});
-  const per={};data.forEach(r=>{if(r.employee)per[r.employee]=(per[r.employee]||0)+r.totalHours;});
-  pieChart=new Chart(document.getElementById("pieChart"),{type:"pie",data:{labels:Object.keys(per),datasets:[{data:Object.values(per),backgroundColor:["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107"]}]}}); 
-  lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:Object.keys(grouped),datasets:[{label:"Hours",data:Object.values(grouped),borderColor:"#28a745",fill:false}]}}); 
-}
+  if(barChart) barChart.destroy();
+  if(pieChart) pieChart.destroy();
+  if(lineChart) lineChart.destroy();
 
-// Holidays
-function renderHolidayList(){
-  const list=document.getElementById("holidayList");list.innerHTML="";
-  customHolidays.forEach((h,i)=>{
-    const li=document.createElement("li");li.className="list-group-item d-flex justify-content-between align-items-center";
-    li.innerHTML=`<span>${h.date} ${h.name?("- "+h.name):""}</span><button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>`;
-    list.appendChild(li);
+  const byDate = {};
+  data.forEach(r=>{ if(r.date) byDate[r.date] = (byDate[r.date]||0) + (r.totalHours||0); });
+
+  barChart = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: { labels: Object.keys(byDate), datasets: [{ label: "Hours", data: Object.values(byDate), backgroundColor:"#0d6efd" }] }
   });
-  localStorage.setItem("holidays", JSON.stringify(customHolidays));
-}
-function addHoliday(){
-  const date=document.getElementById("holidayDate").value;
-  const name=document.getElementById("holidayName").value;
-  if(date){customHolidays.push({date,name});renderHolidayList();applyFilters();}
-}
-function removeHoliday(i){customHolidays.splice(i,1);renderHolidayList();applyFilters();}
 
-// Report
+  const byEmp = {};
+  data.forEach(r=>{ if(r.employee) byEmp[r.employee] = (byEmp[r.employee]||0) + (r.totalHours||0); });
+
+  pieChart = new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: { labels: Object.keys(byEmp), datasets: [{ data: Object.values(byEmp), backgroundColor:["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107","#20c997","#fd7e14"] }] }
+  });
+
+  lineChart = new Chart(document.getElementById("lineChart"), {
+    type: "line",
+    data: { labels: Object.keys(byDate), datasets: [{ label: "Hours", data: Object.values(byDate), borderColor:"#28a745", fill:false }] }
+  });
+}
+
+// ---------- Employee list ----------
+function populateEmployeeFilter(){
+  const sel=document.getElementById("employeeFilter");
+  sel.innerHTML="";
+  const employees=[...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort();
+  employees.forEach(emp=>{
+    const opt=document.createElement("option");
+    opt.value=emp; opt.textContent=emp; sel.appendChild(opt);
+  });
+  $("#employeeFilter").select2({ placeholder:"Select employees...", allowClear:true, width:"100%" });
+}
+
+// ---------- Report ----------
 async function downloadFullReport(){
   const el=document.getElementById("reportArea");
-  const canvas=await html2canvas(el,{scale:2,backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff"});
+  const canvas=await html2canvas(el,{ scale:2, backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff" });
   const img=canvas.toDataURL("image/png");
-  const pdf=new pdfMake.createPdf({content:[{image:img,width:500}]});
+  const pdf=new pdfMake.createPdf({ content:[{ image:img, width:500 }] });
   pdf.download("Attendance_Report.pdf");
 }
 
-// Load
+// ---------- Load ----------
 async function loadData(){
-  const res=await fetch(CSV_URL);const csv=await res.text();
-  const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
-  CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));
-  CANON=generateAbsentRows(CANON);
-  populateEmployeeFilter();applyFilters();renderHolidayList();loadSettings();
+  try{
+    hideError();
+    loadSettings();          // ensure defaults are there before computeStatus
+    renderHolidayList();     // draw any saved holidays
+
+    const res = await fetch(CSV_URL);
+    const csv = await res.text();
+    const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+
+    const mapped = parsed.data
+      .map(r=>mapRow(normalizeHeaders(r)))
+      .filter(r=>r.employee && r.date); // drop unusable rows
+
+    // If your sheet has no rows at all, bail early
+    if(!mapped.length){
+      CANON = [];
+      populateEmployeeFilter();
+      renderTable([]);
+      showError("No rows found in the CSV. Check your sheet headers and sharing settings.");
+      return;
+    }
+
+    // Build complete weekday grid and fill absences
+    CANON = generateAbsentRows(mapped);
+
+    populateEmployeeFilter();
+    applyFilters();
+
+  }catch(err){
+    console.error(err);
+    showError("Failed to load or parse data. Please check console for details and verify the CSV link.");
+  }
 }
-function populateEmployeeFilter(){
-  const sel=document.getElementById("employeeFilter");
-  sel.innerHTML="";const employees=[...new Set(CANON.map(r=>r.employee?.trim()).filter(Boolean))].sort();
-  employees.forEach(emp=>{const opt=document.createElement("option");opt.value=emp;opt.textContent=emp;sel.appendChild(opt);});
-  $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
-}
+
 loadData();
 </script>
 </body>
