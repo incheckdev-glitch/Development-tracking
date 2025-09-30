@@ -179,7 +179,11 @@ function computeStatus(r){
   const day=new Date(r.date).getDay();
   if(day===0||day===6) return ["Weekend"];
   if(customHolidays.some(h=>h.date===r.date)) return ["Holiday"];
+  // Absent
   if(!r.signInDT && !r.signOutDT) return ["Absent"];
+  // Needs correction
+  if((r.signInDT && !r.signOutDT) || (!r.signInDT && r.signOutDT)) return ["Needs Correction"];
+  // Normal rules
   const [lh,lm]=lateThreshold.split(":").map(Number);
   if(r.signInDT && (r.signInDT.getHours()*60+r.signInDT.getMinutes())>lh*60+lm) status.push("Late");
   const [eh,em]=earlyThreshold.split(":").map(Number);
@@ -221,6 +225,7 @@ function renderTable(data){
       else if(s==="Early Leave")cls="bg-warning text-dark";
       else if(s==="On Time")cls="bg-success";
       else if(s==="Absent")cls="bg-dark";
+      else if(s==="Needs Correction")cls="bg-danger text-white";
       else if(s==="Half-day")cls="bg-info text-dark";
       else if(s==="Overtime")cls="bg-primary";
       else if(s==="Holiday")cls="bg-secondary";
