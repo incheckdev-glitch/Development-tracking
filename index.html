@@ -131,13 +131,34 @@ function normalizeHeaders(r){const obj={};for(let k in r){obj[k.trim().toLowerCa
 function normalizeDate(d){
   if(!d) return "";
   if(d.includes("/")){const [day,month,year]=d.split("/");return `${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`;}
-  return d;
+  if(d.includes("-")) return d;
+  return "";
 }
 function mapRow(r){
   const signIn=r["sign in"]||r["sign in time"],signOut=r["sign out"]||r["sign out time"];
   let signInDT=signIn?new Date(signIn):null,signOutDT=signOut?new Date(signOut):null;
   let totalHours=(signInDT&&signOutDT)?(signOutDT-signInDT)/36e5:0;
   return{month:r["month"]||"",date:normalizeDate(r["date"]||""),employee:r["employee"]||r["employee name"]||"",signIn,signOut,totalHours,signInDT,signOutDT};
+}
+
+// Generate absent rows
+function generateAbsentRows(data){
+  const employees=[...new Set(data.map(r=>r.employee).filter(Boolean))];
+  const dates=[...new Set(data.map(r=>r.date).filter(Boolean))];
+  const fullRows=[];
+  dates.forEach(d=>{
+    const day=new Date(d).getDay();
+    if(day===0||day===6) return; // skip weekends
+    if(customHolidays.some(h=>h.date===d)) return; // skip holidays
+    employees.forEach(emp=>{
+      const found=data.find(r=>r.employee===emp && r.date===d);
+      if(found){ fullRows.push(found); }
+      else{
+        fullRows.push({month:d.slice(0,7),date:d,employee:emp,signIn:null,signOut:null,signInDT:null,signOutDT:null,totalHours:0});
+      }
+    });
+  });
+  return fullRows;
 }
 
 // Employee filter
@@ -257,21 +278,26 @@ function renderHolidayList(){
 function addHoliday(){
   const date=document.getElementById("holidayDate").value;
   const name=document.getElementById("holidayName").value;
-  if(!date)return alert("Please select a date");
-  if(customHolidays.some(h=>h.date===date))return alert("Holiday already exists");
-  customHolidays.push({date,name});
-  renderHolidayList();
+  if(date){customHolidays.push({date,name});renderHolidayList();applyFilters();}
 }
-function removeHoliday(index){customHolidays.splice(index,1);renderHolidayList();}
+function removeHoliday(i){customHolidays.splice(i,1);renderHolidayList();applyFilters();}
+
+// Report download
+async function downloadFullReport(){
+  const el=document.getElementById("reportArea");
+  const canvas=await html2canvas(el,{scale:2,backgroundColor:document.body.classList.contains("dark-mode")?"#181a1f":"#fff"});
+  const img=canvas.toDataURL("image/png");
+  const pdf=new pdfMake.createPdf({content:[{image:img,width:500}]});
+  pdf.download("Attendance_Report.pdf");
+}
 
 // Load
 async function loadData(){
-  renderHolidayList();
   const res=await fetch(CSV_URL);const csv=await res.text();
   const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
   CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r)));
-  console.log("Parsed rows:",CANON); // DEBUG
-  populateEmployeeFilter();applyFilters();
+  CANON=generateAbsentRows(CANON);
+  populateEmployeeFilter();applyFilters();renderHolidayList();
 }
 loadData();
 </script>
