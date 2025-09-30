@@ -3,29 +3,17 @@
 <head>
   <!-- ======================= META / TITLE ======================= -->
   <meta charset="UTF-8" />
-  <title>Attendance Dashboard</title>
+  <title>Attendance Dashboard — Lebanon Time</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- ======================= CSS LIBS ======================= -->
   <!-- Bootstrap -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <!-- DataTables core & buttons -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"
-  />
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"/>
   <!-- Select2 -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
   <!-- ======================= JS LIBS ======================= -->
   <!-- Chart.js -->
@@ -39,13 +27,15 @@
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-  <!-- pdfmake for DataTables export + our PDF screenshot -->
+  <!-- pdfmake for DataTables export + our PDF snapshot -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <!-- Select2 -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <!-- html2canvas for PDF snapshot -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Luxon for timezone-robust parsing/formatting -->
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
 
   <!-- ======================= PAGE STYLES ======================= -->
   <style>
@@ -88,8 +78,7 @@
   <div class="container-fluid p-4" id="reportArea">
     <!-- ======= HEADER ======= -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>📊 Attendance Dashboard</h2>
-
+      <h2>📊 Attendance Dashboard — Lebanon Time</h2>
       <div>
         <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
         <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
@@ -101,31 +90,26 @@
       <div class="card-body row g-3 align-items-end">
         <!-- Employee multi-select -->
         <div class="col-lg-3">
-          <label class="form-label">Employee</label>
+          <label class="form-label" for="employeeFilter">Employee</label>
           <select id="employeeFilter" multiple></select>
         </div>
 
         <!-- Date from -->
         <div class="col-lg-3">
-          <label class="form-label">Start Date</label>
+          <label class="form-label" for="startDate">Start Date</label>
           <input type="date" id="startDate" class="form-control" />
         </div>
 
         <!-- Date to -->
         <div class="col-lg-3">
-          <label class="form-label">End Date</label>
+          <label class="form-label" for="endDate">End Date</label>
           <input type="date" id="endDate" class="form-control" />
         </div>
 
         <!-- Quick search -->
         <div class="col-lg-3">
-          <label class="form-label">Quick Search</label>
-          <input
-            type="text"
-            id="quickSearch"
-            class="form-control"
-            placeholder="Search..."
-          />
+          <label class="form-label" for="quickSearch">Quick Search</label>
+          <input type="text" id="quickSearch" class="form-control" placeholder="Search..."/>
         </div>
 
         <div class="col-12 text-end mt-3">
@@ -135,7 +119,7 @@
       </div>
     </div>
 
-    <!-- ======= KPIs (NO Holiday card) ======= -->
+    <!-- ======= KPIs (Lebanon time) ======= -->
     <div class="row mb-4 text-center">
       <div class="col-md-2">
         <div class="card shadow">
@@ -195,11 +179,7 @@
     <!-- ======= TABLE ======= -->
     <div class="card shadow mb-4">
       <div class="card-body">
-        <table
-          id="attendanceTable"
-          class="display nowrap table table-striped"
-          style="width: 100%"
-        ></table>
+        <table id="attendanceTable" class="display nowrap table table-striped" style="width: 100%"></table>
       </div>
     </div>
 
@@ -230,25 +210,25 @@
     <!-- ======= SETTINGS ======= -->
     <div class="card shadow my-4">
       <div class="card-body row g-3">
-        <h5>⚙️ Settings</h5>
+        <h5>⚙️ Settings (Lebanon time)</h5>
 
         <div class="col-md-3">
-          <label class="form-label">Late After (HH:MM)</label>
+          <label class="form-label" for="lateThreshold">Late After (HH:MM)</label>
           <input type="time" id="lateThreshold" class="form-control" />
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Early Leave Before (HH:MM)</label>
+          <label class="form-label" for="earlyThreshold">Early Leave Before (HH:MM)</label>
           <input type="time" id="earlyThreshold" class="form-control" />
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Half-day Max Hours</label>
+          <label class="form-label" for="halfDayHours">Half-day Max Hours</label>
           <input type="number" id="halfDayHours" class="form-control" />
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Overtime Min Hours</label>
+          <label class="form-label" for="overtimeHours">Overtime Min Hours</label>
           <input type="number" id="overtimeHours" class="form-control" />
         </div>
       </div>
@@ -261,12 +241,7 @@
 
         <div class="input-group mb-3">
           <input type="date" id="holidayDate" class="form-control" />
-          <input
-            type="text"
-            id="holidayName"
-            class="form-control"
-            placeholder="Holiday Name (optional)"
-          />
+          <input type="text" id="holidayName" class="form-control" placeholder="Holiday Name (optional)" />
           <button class="btn btn-primary" onclick="addHoliday()">Add</button>
         </div>
 
@@ -280,6 +255,9 @@
     /* ----------------------------------------------------------
      * CONFIG
      * ---------------------------------------------------------- */
+    const { DateTime } = luxon;
+    const LEBANON_TZ = "Asia/Beirut";
+
     const CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
 
@@ -299,72 +277,107 @@
      * UTILITIES
      * ---------------------------------------------------------- */
 
-    // UI: dark mode
+    // UI: dark mode + chart theme refresh
     function toggleDark() {
       document.body.classList.toggle("dark-mode");
+      refreshChartTheme();
+    }
+
+    function refreshChartTheme() {
+      const dark = document.body.classList.contains("dark-mode");
+      const grid = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+      const text = dark ? "#eee" : "#222";
+
+      [barChartHandle, pieChartHandle, lineChartHandle].forEach((ch) => {
+        if (!ch) return;
+        ch.options = {
+          ...ch.options,
+          plugins: {
+            legend: { labels: { color: text } },
+            title: { color: text }
+          },
+          scales: ch.options?.scales
+            ? Object.fromEntries(
+                Object.entries(ch.options.scales).map(([k, v]) => [
+                  k,
+                  { ...v, ticks: { color: text }, grid: { color: grid } }
+                ])
+              )
+            : undefined
+        };
+        ch.update();
+      });
     }
 
     // Normalize headers (case/whitespace)
     function normalizeHeaders(row) {
       const out = {};
-      for (let k in row) {
-        out[k.trim().toLowerCase()] = row[k];
-      }
+      for (let k in row) out[k.trim().toLowerCase()] = row[k];
       return out;
     }
 
     // Normalize date to YYYY-MM-DD
-    // Supports DD/MM/YYYY and already-normalized YYYY-MM-DD
     function normalizeDate(d) {
       if (!d) return "";
       const s = String(d).trim();
 
-      // DD/MM/YYYY
-      if (s.includes("/")) {
-        const [dd, mm, yy] = s.split("/");
-        if (dd && mm && yy) {
-          return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-        }
+      // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+      const m1 = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/.exec(s);
+      if (m1) {
+        const [_, dd, mm, yyyy] = m1;
+        return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
       }
 
       // Already YYYY-MM-DD
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
+      // Fallback: try Date parse and normalize
+      const dt = new Date(s);
+      if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
       return "";
     }
 
-    // Parse a punch; if time-only (e.g. "08:15") combine with dateISO
+    // Parse a punch in Lebanon time; supports HH:mm[:ss] or full ISO
     function parsePunchWithDate(dateISO, value) {
       if (!value) return null;
 
       const s = String(value).trim();
       if (!s || s === "-" || s.toLowerCase() === "null") return null;
 
-      // Pure time
+      // Pure time (Lebanon zone)
       if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
         const t = s.length === 5 ? s + ":00" : s;
-        const dt = new Date(`${dateISO}T${t}`);
-        return isNaN(dt) ? null : dt;
+        const dt = DateTime.fromISO(`${dateISO}T${t}`, { zone: LEBANON_TZ });
+        return dt.isValid ? dt.toJSDate() : null;
       }
 
-      // Full datetime
-      const dt = new Date(s);
-      return isNaN(dt) ? null : dt;
+      // Full datetime string
+      const dt = DateTime.fromISO(s, { zone: LEBANON_TZ });
+      return dt.isValid ? dt.toJSDate() : null;
     }
 
-    // Map a CSV row into our canonical structure
+    // Consistent weekend check using UTC day boundary
+    function isWeekend(dateISO) {
+      const d = new Date(`${dateISO}T00:00:00Z`);
+      const dow = d.getUTCDay(); // 0 Sunday, 6 Saturday
+      return dow === 0 || dow === 6;
+    }
+
+    // Map a CSV row into canonical structure (Lebanon time based)
     function mapRow(r) {
       const dateISO = normalizeDate(r["date"] || r["day"] || "");
-      const signInRaw =
-        r["sign in"] || r["sign in time"] || r["signin"] || r["in"];
-      const signOutRaw =
-        r["sign out"] || r["sign out time"] || r["signout"] || r["out"];
+      const signInRaw = r["sign in"] || r["sign in time"] || r["signin"] || r["in"];
+      const signOutRaw = r["sign out"] || r["sign out time"] || r["signout"] || r["out"];
 
-      const signInDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
-      const signOutDT = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
+      const inDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
+      let outDT = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
 
-      const totalHours =
-        signInDT && signOutDT ? (signOutDT - signInDT) / 36e5 : 0;
+      // Over-midnight handling (e.g., 21:00 → 05:00 next day)
+      if (inDT && outDT && outDT < inDT) {
+        outDT = new Date(outDT.getTime() + 24 * 60 * 60 * 1000);
+      }
+
+      const totalHours = inDT && outDT ? (outDT - inDT) / 36e5 : 0;
 
       return {
         month: dateISO ? dateISO.slice(0, 7) : (r["month"] || ""),
@@ -372,10 +385,17 @@
         employee: r["employee"] || r["employee name"] || r["name"] || "",
         signIn: signInRaw || "",
         signOut: signOutRaw || "",
-        signInDT,
-        signOutDT,
+        signInDT: inDT,
+        signOutDT: outDT,
         totalHours
       };
+    }
+
+    // Format a JS Date to HH:mm in Lebanon time
+    function formatLebanonTime(dt) {
+      return dt
+        ? DateTime.fromJSDate(dt).setZone(LEBANON_TZ).toFormat("HH:mm")
+        : "";
     }
 
     /* ----------------------------------------------------------
@@ -397,14 +417,10 @@
     function loadSettings() {
       const s = JSON.parse(localStorage.getItem("settings") || "{}");
 
-      document.getElementById("lateThreshold").value =
-        s.late || "08:15";
-      document.getElementById("earlyThreshold").value =
-        s.early || "16:30";
-      document.getElementById("halfDayHours").value =
-        s.half ?? 4;
-      document.getElementById("overtimeHours").value =
-        s.over ?? 9;
+      document.getElementById("lateThreshold").value = s.late || "08:15";
+      document.getElementById("earlyThreshold").value = s.early || "16:30";
+      document.getElementById("halfDayHours").value = s.half ?? 4;
+      document.getElementById("overtimeHours").value = s.over ?? 9;
 
       // Auto-save on change
       ["lateThreshold", "earlyThreshold", "halfDayHours", "overtimeHours"].forEach(
@@ -460,10 +476,10 @@
     }
 
     /* ----------------------------------------------------------
-     * STATUS RULES
+     * STATUS RULES (Lebanon time)
      * ---------------------------------------------------------- */
     function computeStatus(row) {
-      // Synthetic rows (Holiday/Weekend/Absent) carry a fixed status array
+      // Synthetic rows carry a fixed status (Holiday/Weekend/Absent)
       if (row.status) return row.status;
 
       const s = JSON.parse(localStorage.getItem("settings") || "{}");
@@ -478,14 +494,11 @@
       if ((row.signInDT && !row.signOutDT) || (!row.signInDT && row.signOutDT))
         return ["Needs Correction"];
 
-      const inMin =
-        row.signInDT != null
-          ? row.signInDT.getHours() * 60 + row.signInDT.getMinutes()
-          : null;
-      const outMin =
-        row.signOutDT != null
-          ? row.signOutDT.getHours() * 60 + row.signOutDT.getMinutes()
-          : null;
+      const inDT = row.signInDT ? DateTime.fromJSDate(row.signInDT).setZone(LEBANON_TZ) : null;
+      const outDT = row.signOutDT ? DateTime.fromJSDate(row.signOutDT).setZone(LEBANON_TZ) : null;
+
+      const inMin = inDT ? inDT.hour * 60 + inDT.minute : null;
+      const outMin = outDT ? outDT.hour * 60 + outDT.minute : null;
 
       const status = [];
       if (inMin !== null && inMin > (late[0] * 60 + late[1])) status.push("Late");
@@ -533,7 +546,6 @@
           if (index.has(key)) {
             full.push(index.get(key));
           } else {
-            const dow = new Date(`${day}T00:00:00`).getDay();
             if (customHolidays.some((h) => h.date === day)) {
               full.push({
                 month: day.slice(0, 7),
@@ -546,7 +558,7 @@
                 totalHours: 0,
                 status: ["Holiday"]
               });
-            } else if (dow === 0 || dow === 6) {
+            } else if (isWeekend(day)) {
               full.push({
                 month: day.slice(0, 7),
                 date: day,
@@ -642,8 +654,8 @@
           r.month || "",
           r.date || "",
           r.employee || "",
-          r.signIn || "",
-          r.signOut || "",
+          formatLebanonTime(r.signInDT),
+          formatLebanonTime(r.signOutDT),
           isFinite(r.totalHours) ? r.totalHours.toFixed(2) : "",
           badge
         ];
@@ -661,6 +673,9 @@
             { title: "Sign Out" },
             { title: "Total Hours" },
             { title: "Status" }
+          ],
+          columnDefs: [
+            { targets: 5, className: "text-end" } // numeric align for hours
           ],
           dom: "Bfrtip",
           buttons: ["csv", "excel", "pdf", "print"],
@@ -789,6 +804,9 @@
           }
         }
       );
+
+      // Sync charts with dark mode state
+      refreshChartTheme();
     }
 
     /* ----------------------------------------------------------
@@ -800,12 +818,8 @@
 
       const employees = [...new Set(CANON.map((r) => r.employee).filter(Boolean))].sort();
 
-      employees.forEach((emp) => {
-        const opt = document.createElement("option");
-        opt.value = emp;
-        opt.textContent = emp;
-        sel.appendChild(opt);
-      });
+      // Add a blank option so placeholder shows
+      sel.innerHTML = `<option></option>` + employees.map(e => `<option value="${e}">${e}</option>`).join("");
 
       $("#employeeFilter").select2({
         placeholder: "Select employees...",
@@ -832,31 +846,52 @@
     }
 
     /* ----------------------------------------------------------
-     * LOAD SEQUENCE
+     * LOAD SEQUENCE (with UX + error handling)
      * ---------------------------------------------------------- */
     async function loadData() {
       // 1) Settings + Holidays UI first (so thresholds & holiday list are ready)
       loadSettings();
       renderHolidayList();
 
-      // 2) Fetch CSV
-      const res = await fetch(CSV_URL);
-      const csv = await res.text();
+      // 2) Loading banner
+      const spinner = document.createElement("div");
+      spinner.className = "alert alert-info";
+      spinner.textContent = "Loading attendance data…";
+      document.getElementById("reportArea").prepend(spinner);
 
-      // 3) Parse CSV
-      const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+      try {
+        // 3) Fetch CSV (no-store to avoid stale cache)
+        const res = await fetch(CSV_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const csv = await res.text();
 
-      // 4) Map rows -> canonical
-      const baseRows = parsed.data
-        .map((raw) => mapRow(normalizeHeaders(raw)))
-        .filter((r) => r.employee && r.date); // keep only usable rows
+        // 4) Parse CSV
+        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
 
-      // 5) Expand to full grid (add synthetic Weekend/Holiday/Absent rows)
-      CANON = generateFullRows(baseRows);
+        // 5) Map rows -> canonical
+        const baseRows = parsed.data
+          .map((raw) => mapRow(normalizeHeaders(raw)))
+          .filter((r) => r.employee && r.date); // keep only usable rows
 
-      // 6) Build employee list, then render with default filters
-      populateEmployeeFilter();
-      applyFilters();
+        if (!baseRows.length) {
+          throw new Error("No usable rows (check headers: Date, Employee, In, Out)");
+        }
+
+        // 6) Expand to full grid (add synthetic Weekend/Holiday/Absent rows)
+        CANON = generateFullRows(baseRows);
+
+        // 7) Build employee list, then render with default filters
+        populateEmployeeFilter();
+        applyFilters();
+      } catch (e) {
+        console.error(e);
+        const err = document.createElement("div");
+        err.className = "alert alert-danger";
+        err.textContent = "Failed to load data. Please verify the CSV link and try again.";
+        document.getElementById("reportArea").prepend(err);
+      } finally {
+        spinner.remove();
+      }
     }
 
     // Kick it off
