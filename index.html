@@ -73,41 +73,7 @@
     </div>
   </div>
 
-  <!-- Settings -->
-  <div class="card shadow mb-4">
-    <div class="card-body row g-3">
-      <h5>⚙️ Settings</h5>
-      <div class="col-md-3">
-        <label class="form-label">Late After (HH:MM)</label>
-        <input type="time" id="lateThreshold" class="form-control" value="08:15">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Early Leave Before (HH:MM)</label>
-        <input type="time" id="earlyThreshold" class="form-control" value="16:30">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Half-day Max Hours</label>
-        <input type="number" id="halfDayHours" class="form-control" value="4">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Overtime Min Hours</label>
-        <input type="number" id="overtimeHours" class="form-control" value="9">
-      </div>
-    </div>
-  </div>
 
-  <!-- Holiday Manager -->
-  <div class="card shadow mb-4">
-    <div class="card-body">
-      <h5>📅 Holiday Manager</h5>
-      <div class="input-group mb-3">
-        <input type="date" id="holidayDate" class="form-control">
-        <input type="text" id="holidayName" class="form-control" placeholder="Holiday Name (optional)">
-        <button class="btn btn-primary" onclick="addHoliday()">Add</button>
-      </div>
-      <ul id="holidayList" class="list-group"></ul>
-    </div>
-  </div>
 
   <!-- KPIs -->
   <div class="row mb-4 text-center">
@@ -132,6 +98,47 @@
     <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
   </div>
 </div>
+  <div class="row">
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours per Day</h5><canvas id="barChart"></canvas></div></div>
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
+    <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
+  </div>
+
+  <!-- Settings (moved here) -->
+  <div class="card shadow my-4">
+    <div class="card-body row g-3">
+      <h5>⚙️ Settings</h5>
+      <div class="col-md-3">
+        <label class="form-label">Late After (HH:MM)</label>
+        <input type="time" id="lateThreshold" class="form-control" value="08:15">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Early Leave Before (HH:MM)</label>
+        <input type="time" id="earlyThreshold" class="form-control" value="16:30">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Half-day Max Hours</label>
+        <input type="number" id="halfDayHours" class="form-control" value="4">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Overtime Min Hours</label>
+        <input type="number" id="overtimeHours" class="form-control" value="9">
+      </div>
+    </div>
+  </div>
+
+  <!-- Holiday Manager (moved here) -->
+  <div class="card shadow mb-4">
+    <div class="card-body">
+      <h5>📅 Holiday Manager</h5>
+      <div class="input-group mb-3">
+        <input type="date" id="holidayDate" class="form-control">
+        <input type="text" id="holidayName" class="form-control" placeholder="Holiday Name (optional)">
+        <button class="btn btn-primary" onclick="addHoliday()">Add</button>
+      </div>
+      <ul id="holidayList" class="list-group"></ul>
+    </div>
+  </div>
 
 <script>
 const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=697198023&single=true&output=csv";
