@@ -32,7 +32,8 @@
     .card { transition: all 0.3s ease; }
     .card:hover { transform: translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.1); }
     .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding:10px; }
-    .badge-space { gap:4px; display:flex; flex-wrap:wrap; }
+    .holiday-row { background-color: #ffeeba !important; }
+    .weekend-row { background-color: #f0f0f0 !important; }
   </style>
 </head>
 <body>
@@ -79,6 +80,7 @@
     <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Late Count</h5><h3 id="lateCount">0</h3></div></div></div>
     <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Early Leaves</h5><h3 id="earlyCount">0</h3></div></div></div>
     <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Holidays</h5><h3 id="holidayCount">0</h3></div></div></div>
   </div>
 
   <!-- Table -->
@@ -171,8 +173,8 @@ function generateAbsentRows(data){
   const fullRows=[];
   dates.forEach(d=>{
     const day=new Date(d).getDay();
-    if(day===0||day===6) return; // skip weekends
-    if(customHolidays.some(h=>h.date===d)) return; // skip holidays
+    if(day===0||day===6) return;
+    if(customHolidays.some(h=>h.date===d)) return;
     employees.forEach(emp=>{
       const found=data.find(r=>r.employee===emp && r.date===d);
       if(found){ fullRows.push(found); }
@@ -247,16 +249,32 @@ function renderTable(data){
     return[r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"", (isFinite(r.totalHours)?r.totalHours.toFixed(2):""),badge];
   });
 
-  if(!DT){DT=$("#attendanceTable").DataTable({data:tableData,columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],dom:'Bfrtip',buttons:['csv','excel','pdf','print'],pageLength:10,order:[[1,'asc']]});}
-  else{DT.clear().rows.add(tableData).draw();}
+  if(!DT){
+    DT=$("#attendanceTable").DataTable({
+      data:tableData,
+      columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],
+      dom:'Bfrtip',
+      buttons:['csv','excel','pdf','print'],
+      pageLength:10,
+      order:[[1,'asc']],
+      createdRow: function(row,data){
+        const statusHtml=data[6];
+        if(statusHtml.includes("Holiday")) $(row).addClass("holiday-row");
+        if(statusHtml.includes("Weekend")) $(row).addClass("weekend-row");
+      }
+    });
+  } else {
+    DT.clear().rows.add(tableData).draw();
+  }
 
   // KPIs
-  let sum=0,days=new Set(),late=0,early=0,absent=0;
+  let sum=0,days=new Set(),late=0,early=0,absent=0,holiday=0;
   data.forEach(r=>{
     const st=computeStatus(r);
-    if(st.includes("Late"))late++;
-    if(st.includes("Early Leave"))early++;
-    if(st.includes("Absent"))absent++;
+    if(st.includes("Late")) late++;
+    if(st.includes("Early Leave")) early++;
+    if(st.includes("Absent")) absent++;
+    if(st.includes("Holiday")) holiday++;
     if(r.totalHours)sum+=r.totalHours;
     if(r.date)days.add(r.date);
   });
@@ -266,6 +284,7 @@ function renderTable(data){
   document.getElementById("lateCount").textContent=late;
   document.getElementById("earlyCount").textContent=early;
   document.getElementById("absentCount").textContent=absent;
+  document.getElementById("holidayCount").textContent=holiday;
 
   renderCharts(data);
 }
