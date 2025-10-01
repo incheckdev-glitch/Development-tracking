@@ -1042,3 +1042,74 @@ function refreshManagers() {
   renderSettingsManager();
 }
 </script>
+<script>
+/* ----------------------------------------------------------
+ * FILTERS & HOOKS
+ * ---------------------------------------------------------- */
+function applyFilters() {
+  const empFilter = document.getElementById("employeeFilter").value;
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  const search = document.getElementById("quickSearch").value.toLowerCase();
+
+  let filtered = CANON;
+
+  if (empFilter) {
+    filtered = filtered.filter(r => r.Employee === empFilter);
+  }
+  if (startDate) {
+    filtered = filtered.filter(r => r.Date >= startDate);
+  }
+  if (endDate) {
+    filtered = filtered.filter(r => r.Date <= endDate);
+  }
+  if (search) {
+    filtered = filtered.filter(r =>
+      r.Employee.toLowerCase().includes(search) ||
+      r.Date.includes(search) ||
+      (r.status.join(" ").toLowerCase().includes(search))
+    );
+  }
+
+  renderTableAndKPIs(filtered);
+  refreshManagers();
+}
+
+/* ----------------------------------------------------------
+ * EVENT BINDINGS
+ * ---------------------------------------------------------- */
+function bindUI() {
+  document.getElementById("employeeFilter").addEventListener("change", applyFilters);
+  document.getElementById("startDate").addEventListener("change", applyFilters);
+  document.getElementById("endDate").addEventListener("change", applyFilters);
+  document.getElementById("quickSearch").addEventListener("input", applyFilters);
+
+  // Add Holiday
+  document.getElementById("addHolidayBtn").onclick = async () => {
+    const date = document.getElementById("addHolidayDate").value;
+    const name = document.getElementById("addHolidayName").value;
+    if (!date || !name) return alert("Fill date & name");
+    await addHoliday(date, name);
+    applyFilters();
+  };
+
+  // Add Leave
+  document.getElementById("addLeaveBtn").onclick = async () => {
+    const date = document.getElementById("addLeaveDate").value;
+    const emp = document.getElementById("addLeaveEmployee").value;
+    const type = document.getElementById("addLeaveType").value;
+    if (!date || !emp || !type) return alert("Fill all fields");
+    await addLeave(date, emp, type);
+    applyFilters();
+  };
+}
+
+/* ----------------------------------------------------------
+ * BOOTSTRAP
+ * ---------------------------------------------------------- */
+window.addEventListener("DOMContentLoaded", async () => {
+  await loadAllData();    // from Chunk 3
+  bindUI();
+  applyFilters();
+});
+</script>
