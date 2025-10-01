@@ -339,18 +339,18 @@
     </div>
   </div>
 <script>
-/* ==============================================================
-   CONFIG
-   ============================================================== */
+/* ----------------------------------------------------------
+ * CONFIG
+ * ---------------------------------------------------------- */
 const API_URL =
   "https://script.google.com/macros/s/AKfycby4i9AoZgoPGKQ4eEwCzm40DPP5YtIFKXoPgVipCuR2t90e5aZpYb2WLJ5Pk3X4fARQ/exec";
 const SECRET = "a9fj32klsdfj0932LKJSDF90wef9";
 
-// Canonical data sets
-let CANON = [];       // attendance
-let HOLIDAYS = [];    // holidays
-let LEAVES = [];      // leaves
-let BALANCES = [];    // balances
+// Canonical data
+let CANON = [];
+let HOLIDAYS = [];
+let LEAVES = [];
+let BALANCES = [];
 
 // DataTable + charts handles
 let DT = null;
@@ -358,96 +358,29 @@ let barChartHandle = null;
 let pieChartHandle = null;
 let lineChartHandle = null;
 
-/* ==============================================================
-   HELPERS
-   ============================================================== */
+/* ----------------------------------------------------------
+ * UTILITIES
+ * ---------------------------------------------------------- */
 function toggleDark() {
   document.body.classList.toggle("dark-mode");
 }
-
-async function fetchSheet(sheet) {
-  console.log("Fetching", sheet);
-  const url = `${API_URL}?secret=${SECRET}&sheet=${sheet}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  console.log("Fetched:", data);
-  return data.ok ? data.data : [];
-}
-
-async function postSheet(sheet, action, payload) {
-  console.log("Posting", sheet, action, payload);
-  const url = `${API_URL}?secret=${SECRET}&sheet=${sheet}&action=${action}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  console.log("Posted:", data);
-  return data.ok;
-}
-
-// Normalize headers
-function normalizeHeaders(row) {
-  const out = {};
-  for (let k in row) out[k.trim().toLowerCase()] = row[k];
-  return out;
-}
-
-// Date format YYYY-MM-DD
 function normalizeDate(d) {
   if (!d) return "";
   const s = String(d).trim();
-  if (s.includes("/")) {
-    const [mm, dd, yy] = s.split(/[\/]/);
-    if (yy && mm && dd) {
-      return `${yy.length === 2 ? "20" + yy : yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-    }
-  }
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const dt = new Date(s);
+  if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
   return "";
 }
-
-// Parse AttendanceSummary row
-function mapAttendanceRow(r) {
-  const dateISO = normalizeDate(r[1]);
-  const employee = r[2] || "";
-  const signInRaw = r[3] || "";
-  const signOutRaw = r[4] || "";
-
-  const signInDT = dateISO ? parsePunchWithDate(dateISO, signInRaw) : null;
-  const signOutDT = dateISO ? parsePunchWithDate(dateISO, signOutRaw) : null;
-  const totalHours = signInDT && signOutDT ? (signOutDT - signInDT) / 36e5 : 0;
-
-  return {
-    month: r[0] || dateISO?.slice(0, 7),
-    date: dateISO,
-    employee,
-    signIn: signInRaw,
-    signOut: signOutRaw,
-    signInDT,
-    signOutDT,
-    totalHours
-  };
-}
-
-// Parse punch time
 function parsePunchWithDate(dateISO, value) {
   if (!value) return null;
-  const s = String(value).trim();
-  if (!s || s === "-" || s.toLowerCase() === "null") return null;
-  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
-    const t = s.length === 5 ? s + ":00" : s;
-    const dt = new Date(`${dateISO}T${t}`);
-    return isNaN(dt) ? null : dt;
-  }
-  const dt = new Date(s);
+  const dt = new Date(value);
   return isNaN(dt) ? null : dt;
 }
 
-/* ==============================================================
-   STATUS RULES
-   ============================================================== */
+/* ----------------------------------------------------------
+ * STATUS RULES
+ * ---------------------------------------------------------- */
 function computeStatus(row) {
   const s = JSON.parse(localStorage.getItem("settings") || "{}");
   const late = (s.late || "08:15").split(":").map(Number);
@@ -455,16 +388,21 @@ function computeStatus(row) {
   const half = parseFloat(s.half ?? 4);
   const over = parseFloat(s.over ?? 9);
 
-  if (HOLIDAYS.some(h => h.date === row.date)) return ["Holiday"];
+  // check if holiday
+  const holiday = HOLIDAYS.find(h => h.date === row.date);
+  if (holiday) return ["Holiday: " + (holiday.name || "")];
+
+  // check if leave
+  const lv = LEAVES.find(l => l.date === row.date && l.employee === row.employee);
+  if (lv) return [lv.type + " Leave"];
+
+  // check absent / weekend
   if (!row.signInDT && !row.signOutDT) {
-    // Check if in leave
-    const lv = LEAVES.find(l => l.date === row.date && l.employee === row.employee);
-    if (lv) return [lv.type + " Leave"];
-    // Weekend?
     const dow = new Date(`${row.date}T00:00:00`).getDay();
     if (dow === 0 || dow === 6) return ["Weekend"];
     return ["Absent"];
   }
+
   if ((row.signInDT && !row.signOutDT) || (!row.signInDT && row.signOutDT))
     return ["Needs Correction"];
 
@@ -480,36 +418,153 @@ function computeStatus(row) {
   return status;
 }
 
-/* ==============================================================
-   RENDER TABLE + KPIs
-   ============================================================== */
+/* ----------------------------------------------------------
+ * HOLIDAY MANAGER
+ * ---------------------------------------------------------- */
+function renderHolidayList() {
+  const list = document.getElementById("holidayList");
+  list.innerHTML = "";
+  HOLIDAYS.forEach((h, i) => {
+    const li = document.createElement("li");
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.innerHTML = `<span>${h.date}${h.name ? " - " + h.name : ""}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>`;
+    list.appendChild(li);
+  });
+  document.getElementById("holidayCount").textContent = HOLIDAYS.length;
+}
+async function addHoliday() {
+  const date = document.getElementById("holidayDate").value;
+  const name = document.getElementById("holidayName").value;
+  if (!date) return alert("Choose a date");
+  const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=Holidays&action=add`, {
+    method: "POST",
+    body: JSON.stringify([date, name]),
+    headers: { "Content-Type": "application/json" }
+  });
+  const j = await res.json();
+  if (j.ok) loadData();
+}
+async function removeHoliday(idx) {
+  const h = HOLIDAYS[idx];
+  const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=Holidays&action=remove`, {
+    method: "POST",
+    body: JSON.stringify(h),
+    headers: { "Content-Type": "application/json" }
+  });
+  const j = await res.json();
+  if (j.ok) loadData();
+}
+
+/* ----------------------------------------------------------
+ * LEAVE MANAGER
+ * ---------------------------------------------------------- */
+function renderLeaveList() {
+  const list = document.getElementById("leaveList");
+  list.innerHTML = "";
+  LEAVES.forEach((l, i) => {
+    const li = document.createElement("li");
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.innerHTML = `<span>${l.date} - ${l.employee} (${l.type})</span>
+      <button class="btn btn-sm btn-danger" onclick="removeLeave(${i})">Remove</button>`;
+    list.appendChild(li);
+  });
+}
+async function addLeave() {
+  const date = document.getElementById("leaveDate").value;
+  const emp = document.getElementById("leaveEmployee").value;
+  const type = document.getElementById("leaveType").value;
+  if (!date || !emp || !type) return alert("Fill all fields");
+  const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=Leaves&action=add`, {
+    method: "POST",
+    body: JSON.stringify([date, emp, type]),
+    headers: { "Content-Type": "application/json" }
+  });
+  const j = await res.json();
+  if (j.ok) loadData();
+}
+async function removeLeave(idx) {
+  const l = LEAVES[idx];
+  const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=Leaves&action=remove`, {
+    method: "POST",
+    body: JSON.stringify(l),
+    headers: { "Content-Type": "application/json" }
+  });
+  const j = await res.json();
+  if (j.ok) loadData();
+}
+
+/* ----------------------------------------------------------
+ * BALANCE MANAGER
+ * ---------------------------------------------------------- */
+function renderBalances() {
+  const table = document.getElementById("balanceTable");
+  table.innerHTML = `<tr><th>Employee</th><th>Annual</th><th>Sick</th><th>Unpaid</th><th></th></tr>`;
+  BALANCES.forEach((b, i) => {
+    table.innerHTML += `
+      <tr>
+        <td>${b.employee}</td>
+        <td><input type="number" value="${b.annual}" id="balA${i}"></td>
+        <td><input type="number" value="${b.sick}" id="balS${i}"></td>
+        <td><input type="number" value="${b.unpaid}" id="balU${i}"></td>
+        <td><button class="btn btn-sm btn-primary" onclick="updateBalance(${i})">Save</button></td>
+      </tr>`;
+  });
+}
+async function updateBalance(i) {
+  const b = BALANCES[i];
+  const newRow = {
+    employee: b.employee,
+    annual: document.getElementById("balA" + i).value,
+    sick: document.getElementById("balS" + i).value,
+    unpaid: document.getElementById("balU" + i).value
+  };
+  const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=Balances&action=update`, {
+    method: "POST",
+    body: JSON.stringify(newRow),
+    headers: { "Content-Type": "application/json" }
+  });
+  const j = await res.json();
+  if (j.ok) loadData();
+}
+function updateBalanceCards() {
+  let totalAnnual = 0, totalSick = 0, totalUnpaid = 0;
+  BALANCES.forEach(b => {
+    totalAnnual += Number(b.annual) || 0;
+    totalSick += Number(b.sick) || 0;
+    totalUnpaid += Number(b.unpaid) || 0;
+  });
+  // Subtract leaves taken
+  const usedAnnual = LEAVES.filter(l => l.type === "Annual").length;
+  const usedSick = LEAVES.filter(l => l.type === "Sick").length;
+  const usedUnpaid = LEAVES.filter(l => l.type === "Unpaid").length;
+  document.getElementById("annualLeaveCount").textContent = totalAnnual - usedAnnual;
+  document.getElementById("sickLeaveCount").textContent = totalSick - usedSick;
+  document.getElementById("unpaidLeaveCount").textContent = totalUnpaid - usedUnpaid;
+  document.getElementById("holidayCount").textContent = HOLIDAYS.length;
+}
+
+/* ----------------------------------------------------------
+ * TABLE RENDER + KPIs
+ * ---------------------------------------------------------- */
 function renderTable(data) {
   const rows = data.map(r => {
     const st = computeStatus(r);
     const badge = st.map(label => {
       let cls = "bg-secondary";
-      if (label === "Late") cls = "bg-danger";
-      else if (label === "Early Leave") cls = "bg-warning text-dark";
-      else if (label === "On Time") cls = "bg-success";
+      if (label.includes("Late")) cls = "bg-danger";
+      else if (label.includes("Early Leave")) cls = "bg-warning text-dark";
+      else if (label.includes("On Time")) cls = "bg-success";
       else if (label.includes("Absent")) cls = "bg-dark";
-      else if (label === "Needs Correction") cls = "bg-danger text-white";
-      else if (label === "Half-day") cls = "bg-info text-dark";
-      else if (label === "Overtime") cls = "bg-primary";
-      else if (label === "Holiday") cls = "bg-secondary";
-      else if (label === "Weekend") cls = "bg-light text-dark";
-      else if (label.includes("Leave")) cls = "bg-info text-dark";
+      else if (label.includes("Needs Correction")) cls = "bg-danger text-white";
+      else if (label.includes("Half-day")) cls = "bg-info text-dark";
+      else if (label.includes("Overtime")) cls = "bg-primary";
+      else if (label.includes("Holiday")) cls = "bg-secondary";
+      else if (label.includes("Weekend")) cls = "bg-light text-dark";
+      else if (label.includes("Leave")) cls = "bg-info";
       return `<span class="badge ${cls}">${label}</span>`;
     }).join(" ");
-
-    return [
-      r.month || "",
-      r.date || "",
-      r.employee || "",
-      r.signIn || "",
-      r.signOut || "",
-      isFinite(r.totalHours) ? r.totalHours.toFixed(2) : "",
-      badge
-    ];
+    return [r.month, r.date, r.employee, r.signIn || "", r.signOut || "", r.totalHours || "", badge];
   });
 
   if (!DT) {
@@ -527,251 +582,97 @@ function renderTable(data) {
       dom: "Bfrtip",
       buttons: ["csv", "excel", "pdf", "print"],
       pageLength: 10,
-      order: [[1, "asc"]],
-      createdRow: function (row, rowData) {
-        const statusHtml = rowData[6] || "";
-        if (statusHtml.includes("Holiday")) $(row).addClass("holiday-row");
-        if (statusHtml.includes("Weekend")) $(row).addClass("weekend-row");
-        if (statusHtml.includes("Leave")) $(row).addClass("leave-row");
-      }
+      order: [[1, "asc"]]
     });
   } else {
     DT.clear().rows.add(rows).draw();
   }
 
-  updateKPIs(data);
-  renderCharts(data);
-}
-
-function updateKPIs(data) {
-  let sum = 0, days = new Set(), late = 0, early = 0, absent = 0;
-  let al = 0, sl = 0, ul = 0, holiday = 0;
-
+  // KPIs
+  let sum = 0, late = 0, early = 0, absent = 0, workdays = 0;
+  const dates = new Set();
   data.forEach(r => {
     const st = computeStatus(r);
     if (st.includes("Late")) late++;
     if (st.includes("Early Leave")) early++;
     if (st.includes("Absent")) absent++;
-    if (st.includes("Annual Leave")) al++;
-    if (st.includes("Sick Leave")) sl++;
-    if (st.includes("Unpaid Leave")) ul++;
-    if (st.includes("Holiday")) holiday++;
-    if (r.totalHours) sum += r.totalHours;
-    if (r.date && (r.signIn || r.signOut)) days.add(r.date);
+    if (r.totalHours) sum += Number(r.totalHours);
+    // workday = has sign in/out
+    if (r.signIn || r.signOut) workdays++;
+    if (r.date) dates.add(r.date);
   });
-
   document.getElementById("totalHours").textContent = sum.toFixed(2);
-  document.getElementById("avgHours").textContent = days.size ? (sum / days.size).toFixed(2) : "0";
-  document.getElementById("daysCount").textContent = days.size;
+  document.getElementById("avgHours").textContent = (workdays ? sum / workdays : 0).toFixed(2);
+  document.getElementById("daysCount").textContent = workdays;
   document.getElementById("lateCount").textContent = late;
   document.getElementById("earlyCount").textContent = early;
   document.getElementById("absentCount").textContent = absent;
-  document.getElementById("annualLeaveCount").textContent = al;
-  document.getElementById("sickLeaveCount").textContent = sl;
-  document.getElementById("unpaidLeaveCount").textContent = ul;
-  document.getElementById("holidayCount").textContent = holiday;
+
+  updateBalanceCards();
+  renderCharts(data);
 }
 
-/* ==============================================================
-   CHARTS
-   ============================================================== */
+/* ----------------------------------------------------------
+ * CHARTS
+ * ---------------------------------------------------------- */
 function renderCharts(data) {
   if (barChartHandle) barChartHandle.destroy();
   if (pieChartHandle) pieChartHandle.destroy();
   if (lineChartHandle) lineChartHandle.destroy();
 
-  const byDate = {}, byEmp = {};
+  const byDate = {};
+  const byEmp = {};
   data.forEach(r => {
-    if (r.date) byDate[r.date] = (byDate[r.date] || 0) + (r.totalHours || 0);
-    if (r.employee) byEmp[r.employee] = (byEmp[r.employee] || 0) + (r.totalHours || 0);
+    if (r.date) byDate[r.date] = (byDate[r.date] || 0) + (Number(r.totalHours) || 0);
+    if (r.employee) byEmp[r.employee] = (byEmp[r.employee] || 0) + (Number(r.totalHours) || 0);
   });
 
   barChartHandle = new Chart(document.getElementById("barChart"), {
     type: "bar",
     data: { labels: Object.keys(byDate), datasets: [{ label: "Hours", data: Object.values(byDate), backgroundColor: "#0d6efd" }] }
   });
-
   pieChartHandle = new Chart(document.getElementById("pieChart"), {
     type: "pie",
     data: { labels: Object.keys(byEmp), datasets: [{ data: Object.values(byEmp), backgroundColor: ["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107","#20c997","#fd7e14"] }] }
   });
-
   lineChartHandle = new Chart(document.getElementById("lineChart"), {
     type: "line",
-    data: { labels: Object.keys(byDate), datasets: [{ label: "Hours", data: Object.values(byDate), borderColor: "#28a745", fill: false }] }
+    data: { labels: Object.keys(byDate), datasets: [{ label: "Trend", data: Object.values(byDate), borderColor: "#28a745", fill: false }] }
   });
 }
 
-/* ==============================================================
-   FILTERS
-   ============================================================== */
-function getCriteria() {
-  return {
-    employees: $("#employeeFilter").val() || [],
-    start: document.getElementById("startDate").value,
-    end: document.getElementById("endDate").value,
-    q: (document.getElementById("quickSearch").value || "").toLowerCase()
-  };
-}
-
-function applyFilters() {
-  const c = getCriteria();
-  const filtered = CANON.filter(r => {
-    if (c.employees.length && !c.employees.includes(r.employee)) return false;
-    if (c.start && r.date < c.start) return false;
-    if (c.end && r.date > c.end) return false;
-    if (c.q && !`${r.employee} ${r.date}`.toLowerCase().includes(c.q)) return false;
-    return true;
-  });
-  renderTable(filtered);
-}
-
-function resetFilters() {
-  $("#employeeFilter").val(null).trigger("change");
-  document.getElementById("startDate").value = "";
-  document.getElementById("endDate").value = "";
-  document.getElementById("quickSearch").value = "";
-  applyFilters();
-}
-
-/* ==============================================================
-   HOLIDAY MANAGER
-   ============================================================== */
-function renderHolidayList() {
-  const list = document.getElementById("holidayList");
-  list.innerHTML = "";
-  HOLIDAYS.forEach((h, i) => {
-    const li = document.createElement("li");
-    li.className = "list-group-item d-flex justify-content-between align-items-center";
-    li.innerHTML = `<span>${h.date}${h.name ? " - " + h.name : ""}</span>
-      <button class="btn btn-sm btn-danger" onclick="removeHoliday(${i})">Remove</button>`;
-    list.appendChild(li);
-  });
-  document.getElementById("holidayCount").textContent = HOLIDAYS.length;
-}
-
-async function addHoliday() {
-  const date = document.getElementById("holidayDate").value;
-  const name = document.getElementById("holidayName").value;
-  if (!date) return alert("Choose a date");
-  HOLIDAYS.push({ date, name });
-  renderHolidayList();
-  await postSheet("Holidays", "add", [date, name]);
-  applyFilters();
-}
-
-async function removeHoliday(idx) {
-  const h = HOLIDAYS[idx];
-  HOLIDAYS.splice(idx, 1);
-  renderHolidayList();
-  await postSheet("Holidays", "remove", h);
-  applyFilters();
-}
-
-/* ==============================================================
-   LEAVE MANAGER
-   ============================================================== */
-function renderLeaveList() {
-  const list = document.getElementById("leaveList");
-  list.innerHTML = "";
-  LEAVES.forEach((l, i) => {
-    const li = document.createElement("li");
-    li.className = "list-group-item d-flex justify-content-between align-items-center";
-    li.innerHTML = `<span>${l.date} - ${l.employee} (${l.type})</span>
-      <button class="btn btn-sm btn-danger" onclick="removeLeave(${i})">Remove</button>`;
-    list.appendChild(li);
-  });
-}
-
-async function addLeave() {
-  const date = document.getElementById("leaveDate").value;
-  const employee = document.getElementById("leaveEmployee").value.trim();
-  const type = document.getElementById("leaveType").value;
-  if (!date || !employee) return alert("Fill date and employee");
-  LEAVES.push({ date, employee, type });
-  renderLeaveList();
-  await postSheet("Leaves", "add", [date, employee, type]);
-  applyFilters();
-}
-
-async function removeLeave(idx) {
-  const l = LEAVES[idx];
-  LEAVES.splice(idx, 1);
-  renderLeaveList();
-  await postSheet("Leaves", "remove", l);
-  applyFilters();
-}
-
-/* ==============================================================
-   BALANCE MANAGER
-   ============================================================== */
-function renderBalances() {
-  const body = document.getElementById("balanceBody");
-  body.innerHTML = "";
-  BALANCES.forEach((b, i) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${b.employee}</td>
-      <td><input type="number" value="${b.annual}" class="form-control form-control-sm" id="bal-annual-${i}"></td>
-      <td><input type="number" value="${b.sick}" class="form-control form-control-sm" id="bal-sick-${i}"></td>
-      <td><input type="number" value="${b.unpaid}" class="form-control form-control-sm" id="bal-unpaid-${i}"></td>
-      <td><button class="btn btn-sm btn-primary" onclick="saveBalance(${i})">Save</button></td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-async function saveBalance(i) {
-  const b = BALANCES[i];
-  b.annual = parseFloat(document.getElementById(`bal-annual-${i}`).value || 0);
-  b.sick = parseFloat(document.getElementById(`bal-sick-${i}`).value || 0);
-  b.unpaid = parseFloat(document.getElementById(`bal-unpaid-${i}`).value || 0);
-  await postSheet("Balances", "update", b);
-  alert("Balance saved");
-}
-
-/* ==============================================================
-   REPORT
-   ============================================================== */
-async function downloadFullReport() {
-  const el = document.getElementById("reportArea");
-  const canvas = await html2canvas(el, {
-    scale: 2,
-    backgroundColor: document.body.classList.contains("dark-mode") ? "#181a1f" : "#fff"
-  });
-  const img = canvas.toDataURL("image/png");
-  pdfMake.createPdf({ content: [{ image: img, width: 500 }] }).download("Attendance_Report.pdf");
-}
-
-/* ==============================================================
-   LOAD SEQUENCE
-   ============================================================== */
+/* ----------------------------------------------------------
+ * LOAD DATA
+ * ---------------------------------------------------------- */
 async function loadData() {
-  const rawAttendance = await fetchSheet("AttendanceSummary");
-  const rawHolidays = await fetchSheet("Holidays");
-  const rawLeaves = await fetchSheet("Leaves");
-  const rawBalances = await fetchSheet("Balances");
+  const sheets = ["AttendanceSummary","Holidays","Leaves","Balances"];
+  const results = {};
+  for (let s of sheets) {
+    const res = await fetch(`${API_URL}?secret=${SECRET}&sheet=${s}`);
+    results[s] = await res.json();
+  }
 
-  CANON = rawAttendance.slice(1).map(mapAttendanceRow); // skip header
-  HOLIDAYS = rawHolidays.slice(1).map(r => ({ date: normalizeDate(r[0]), name: r[1] }));
-  LEAVES = rawLeaves.slice(1).map(r => ({ date: normalizeDate(r[0]), employee: r[1], type: r[2] }));
-  BALANCES = rawBalances.slice(1).map(r => ({ employee: r[0], annual: r[1], sick: r[2], unpaid: r[3] }));
+  CANON = results.AttendanceSummary.data.map(r => ({
+    month: r[0], date: normalizeDate(r[1]), employee: r[2],
+    signIn: r[3], signOut: r[4],
+    signInDT: parsePunchWithDate(r[1], r[3]), signOutDT: parsePunchWithDate(r[1], r[4]),
+    totalHours: parseFloat(r[5] || 0)
+  }));
+  HOLIDAYS = results.Holidays.data.map(r => ({ date: normalizeDate(r[0]), name: r[1] }));
+  LEAVES = results.Leaves.data.map(r => ({ date: normalizeDate(r[0]), employee: r[1], type: r[2] }));
+  BALANCES = results.Balances.data.map(r => ({ employee: r[0], annual: r[1], sick: r[2], unpaid: r[3] }));
 
-  // Employees list
   const employees = [...new Set(CANON.map(r => r.employee))].sort();
-  const sel = document.getElementById("employeeFilter");
+  const sel = document.getElementById("leaveEmployee");
   sel.innerHTML = employees.map(e => `<option value="${e}">${e}</option>`).join("");
+  const sel2 = document.getElementById("employeeFilter");
+  sel2.innerHTML = employees.map(e => `<option value="${e}">${e}</option>`).join("");
   $("#employeeFilter").select2({ placeholder: "Select employees" });
 
-  // Render all
   renderTable(CANON);
   renderHolidayList();
   renderLeaveList();
   renderBalances();
 }
-
-// Kickstart
 loadData();
 </script>
-</body>
-</html>
