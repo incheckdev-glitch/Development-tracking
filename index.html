@@ -1,774 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- ======================= META / TITLE ======================= -->
   <meta charset="UTF-8" />
-  <title>📊 Attendance Dashboard</title>
+  <title>Attendance & Leave Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- ======================= CSS LIBS ======================= -->
-  <!-- Bootstrap -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-  <!-- DataTables core & buttons -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"
-  />
-  <!-- Select2 -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"/>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
   <!-- ======================= JS LIBS ======================= -->
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- PapaParse CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <!-- jQuery (required by DataTables & Select2) -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <!-- DataTables + Buttons -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-  <!-- pdfmake for DataTables export + PDF snapshot -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-  <!-- Select2 -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <!-- html2canvas for PDF snapshot -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <!-- ======================= PAGE STYLES ======================= -->
   <style>
-    /* Dark mode quick toggle */
     body.dark-mode {
       background: #181a1f;
       color: #eee;
     }
-
-    /* Card hover micro-interaction */
-    .card {
-      transition: all 0.3s ease;
-    }
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Sticky filter bar */
-    .filter-bar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: inherit;
-      padding: 10px;
-    }
-
-    /* Row highlights */
-    .holiday-row {
-      background-color: #ffeeba !important; /* light yellow */
-    }
-    .weekend-row {
-      background-color: #f0f0f0 !important; /* light grey */
-    }
+    .card { transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding: 10px; }
+    .holiday-row { background-color: #ffeeba !important; }
+    .weekend-row { background-color: #f0f0f0 !important; }
   </style>
 </head>
 
 <body>
-  <!-- ======================= MAIN WRAPPER ======================= -->
-  <div class="container-fluid p-4" id="reportArea">
-
-    <!-- ======= HEADER ======= -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>📊 Attendance Dashboard</h2>
-
-      <div>
-        <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙 / ☀️</button>
-        <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
-      </div>
+<div class="container-fluid p-4" id="reportArea">
+  <!-- ======= HEADER ======= -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>📊 Attendance & Leave Dashboard</h2>
+    <div>
+      <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
+      <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
     </div>
-
-    <!-- ======= FILTERS ======= -->
-    <div class="card shadow filter-bar mb-4">
-      <div class="card-body row g-3 align-items-end">
-
-        <!-- Employee multi-select -->
-        <div class="col-lg-3">
-          <label class="form-label">Employee</label>
-          <select id="employeeFilter" multiple></select>
-        </div>
-
-        <!-- Date from -->
-        <div class="col-lg-3">
-          <label class="form-label">Start Date</label>
-          <input type="date" id="startDate" class="form-control" />
-        </div>
-
-        <!-- Date to -->
-        <div class="col-lg-3">
-          <label class="form-label">End Date</label>
-          <input type="date" id="endDate" class="form-control" />
-        </div>
-
-        <!-- Quick search -->
-        <div class="col-lg-3">
-          <label class="form-label">Quick Search</label>
-          <input
-            type="text"
-            id="quickSearch"
-            class="form-control"
-            placeholder="Search..."
-          />
-        </div>
-
-        <div class="col-12 text-end mt-3">
-          <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
-          <button class="btn btn-warning" onclick="resetFilters()">Reset</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======= KPIs ======= -->
-    <div class="row mb-4 text-center">
-      <!-- Existing KPIs -->
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Total Hours</h5>
-            <h3 id="totalHours">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Avg Hours</h5>
-            <h3 id="avgHours">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Days Count</h5>
-            <h3 id="daysCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Late Count</h5>
-            <h3 id="lateCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Early Leaves</h5>
-            <h3 id="earlyCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Absent</h5>
-            <h3 id="absentCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- New KPIs -->
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Annual Leave</h5>
-            <h3 id="annualLeaveCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Sick Leave</h5>
-            <h3 id="sickLeaveCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Unpaid Leave</h5>
-            <h3 id="unpaidLeaveCount">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-2">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Holidays</h5>
-            <h3 id="holidayCount">0</h3>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======= TABLE ======= -->
-    <div class="card shadow mb-4">
-      <div class="card-body">
-        <table
-          id="attendanceTable"
-          class="display nowrap table table-striped"
-          style="width: 100%"
-        ></table>
-      </div>
-    </div>
-
-    <!-- ======= CHARTS ======= -->
-    <div class="row">
-      <div class="col-lg-4">
-        <div class="card shadow p-3">
-          <h5>Hours per Day</h5>
-          <canvas id="barChart"></canvas>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <div class="card shadow p-3">
-          <h5>Hours by Employee</h5>
-          <canvas id="pieChart"></canvas>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <div class="card shadow p-3">
-          <h5>Trend</h5>
-          <canvas id="lineChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======= SETTINGS ======= -->
-    <div class="card shadow my-4">
-      <div class="card-body row g-3">
-        <h5>⚙️ Settings</h5>
-
-        <div class="col-md-3">
-          <label class="form-label">Late After (HH:MM)</label>
-          <input type="time" id="lateThreshold" class="form-control" />
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Early Leave Before (HH:MM)</label>
-          <input type="time" id="earlyThreshold" class="form-control" />
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Half-day Max Hours</label>
-          <input type="number" id="halfDayHours" class="form-control" />
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Overtime Min Hours</label>
-          <input type="number" id="overtimeHours" class="form-control" />
-        </div>
-      </div>
-    </div>
-
-    <!-- ======= HOLIDAY MANAGER ======= -->
-    <div class="card shadow mb-4">
-      <div class="card-body">
-        <h5>📅 Holiday Manager</h5>
-
-        <div class="input-group mb-3">
-          <input type="date" id="holidayDate" class="form-control" />
-          <input
-            type="text"
-            id="holidayName"
-            class="form-control"
-            placeholder="Holiday Name (optional)"
-          />
-          <button class="btn btn-primary" onclick="addHoliday()">Add</button>
-        </div>
-
-        <ul id="holidayList" class="list-group"></ul>
-      </div>
-    </div>
-
-    <!-- ======= LEAVE MANAGER ======= -->
-    <div class="card shadow mb-4">
-      <div class="card-body">
-        <h5>🏖️ Leave Manager</h5>
-
-        <div class="input-group mb-3">
-          <input type="date" id="leaveDate" class="form-control" />
-          <input
-            type="text"
-            id="leaveEmployee"
-            class="form-control"
-            placeholder="Employee Name"
-          />
-          <select id="leaveType" class="form-select">
-            <option value="Annual">Annual Leave</option>
-            <option value="Sick">Sick Leave</option>
-            <option value="Unpaid">Unpaid Leave</option>
-          </select>
-          <button class="btn btn-primary" onclick="addLeave()">Add</button>
-        </div>
-
-        <ul id="leaveList" class="list-group"></ul>
-      </div>
-    </div>
-
-    <!-- ======= BALANCE MANAGER ======= -->
-    <div class="card shadow mb-4">
-      <div class="card-body">
-        <h5>📒 Leave Balances</h5>
-        <div class="table-responsive">
-          <table class="table table-bordered" id="balanceTable">
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Annual</th>
-                <th>Sick</th>
-                <th>Unpaid</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
   </div>
-/**
- * ==============================
- * Attendance Dashboard API
- * ==============================
- * - doGet()   → fetch data from sheets (AttendanceSummary, Holidays, Leaves, Balances)
- * - doPost()  → add / remove / update data (for Holidays, Leaves, Balances)
- *
- * Authentication: requires secret token
- * Example GET:
- *   https://script.google.com/macros/s/AKfyXXXX/exec?secret=YOUR_SECRET&sheet=AttendanceSummary
- *
- * Example POST (JSON body):
- *   {
- *     "secret": "YOUR_SECRET",
- *     "sheet": "Holidays",
- *     "action": "add",
- *     "payload": { "date": "2025-07-16", "name": "Eid" }
- *   }
- */
 
-// ==============================
-// CONFIG
-// ==============================
-const API_SECRET = "a9fj32klsdfj0932LKJSDF90wef9"; // change if needed
+  <!-- ======= FILTERS ======= -->
+  <div class="card shadow filter-bar mb-4">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-lg-3">
+        <label class="form-label">Employee</label>
+        <select id="employeeFilter" multiple></select>
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" id="startDate" class="form-control"/>
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">End Date</label>
+        <input type="date" id="endDate" class="form-control"/>
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">Quick Search</label>
+        <input type="text" id="quickSearch" class="form-control" placeholder="Search..."/>
+      </div>
+      <div class="col-12 text-end mt-3">
+        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+        <button class="btn btn-warning" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
+  </div>
 
-// ==============================
-// HELPER: success response
-// ==============================
-function success(obj = {}) {
+  <!-- ======= KPI CARDS ======= -->
+  <div class="row mb-4 text-center">
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Total Hours</h5><h3 id="totalHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Avg Hours</h5><h3 id="avgHours">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Workdays</h5><h3 id="daysCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Late Count</h5><h3 id="lateCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Early Leaves</h5><h3 id="earlyCount">0</h3></div></div></div>
+    <div class="col-md-2"><div class="card shadow"><div class="card-body"><h5>Absent</h5><h3 id="absentCount">0</h3></div></div></div>
+  </div>
+
+  <!-- ======= BALANCE CARDS ======= -->
+  <div class="row mb-4 text-center">
+    <h5>📌 Leave Balances (Company-wide)</h5>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Annual Leaves</h5><h3 id="annualLeavesCard">0</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Sick Leaves</h5><h3 id="sickLeavesCard">0</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Unpaid Leaves</h5><h3 id="unpaidLeavesCard">0</h3></div></div></div>
+  </div>
+
+  <div class="row mb-4 text-center">
+    <h5>📌 Leave Balances (Filtered Employees)</h5>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Annual Leaves</h5><h3 id="annualLeavesCardFiltered">0</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Sick Leaves</h5><h3 id="sickLeavesCardFiltered">0</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><h5>Unpaid Leaves</h5><h3 id="unpaidLeavesCardFiltered">0</h3></div></div></div>
+  </div>
+/***********************
+ * Attendance Dashboard API (Separate sheets)
+ * - doGet:    read one sheet (normalized objects)
+ * - doPost:   add/remove/update Holidays, Leaves, Balances
+ ***********************/
+const API_SECRET = "a9fj32klsdfj0932LKJSDF90wef9"; // <- keep in sync with frontend
+
+/** Utilities **/
+function _success(obj) {
   return ContentService.createTextOutput(
     JSON.stringify(Object.assign({ ok: true }, obj))
   ).setMimeType(ContentService.MimeType.JSON);
 }
-
-// ==============================
-// HELPER: error response
-// ==============================
-function error(msg) {
+function _error(msg) {
   return ContentService.createTextOutput(
     JSON.stringify({ ok: false, error: msg })
   ).setMimeType(ContentService.MimeType.JSON);
 }
+function _normalizeDate(v) {
+  if (!v) return "";
+  let s = String(v).trim();
+  // If already Date type
+  if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v)) {
+    return Utilities.formatDate(v, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  // ISO (keep date part)
+  if (s.indexOf("T") > -1 && /^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    return s.substring(0, 10);
+  }
+  // yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // mm/dd/yyyy
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [mm, dd, yy] = s.split("/");
+    return Utilities.formatString("%s-%02d-%02d", yy, Number(mm), Number(dd));
+  }
+  // dd/mm/yyyy
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [dd, mm, yy] = s.split("/");
+    return Utilities.formatString("%s-%02d-%02d", yy, Number(mm), Number(dd));
+  }
+  // Fallback: try Date parse
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  return "";
+}
 
-// ==============================
-// doGet → read data
-// ==============================
+/** doGet: returns normalized objects with consistent keys */
 function doGet(e) {
   try {
     const secret = e.parameter.secret;
     const sheetName = e.parameter.sheet;
-
-    if (secret !== API_SECRET) {
-      return error("unauthorized");
-    }
-    if (!sheetName) {
-      return error("missing sheet parameter");
-    }
+    if (secret !== API_SECRET) return _error("unauthorized");
+    if (!sheetName) return _error("missing sheet");
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      return error("sheet not found");
+    const sh = ss.getSheetByName(sheetName);
+    if (!sh) return _error("sheet not found");
+
+    const values = sh.getDataRange().getValues();
+    if (values.length < 2) return _success({ sheet: sheetName, data: [] });
+
+    const headers = values[0].map(String);
+    const body = values.slice(1);
+
+    // Return normalized, consistent keys per sheet
+    let out = [];
+    if (sheetName === "AttendanceSummary") {
+      // Expect headers like: Month | Date | Employee Name | Sign In Time | Sign Out Time | Total Hours
+      const idx = {
+        Month: headers.indexOf("Month"),
+        Date: headers.indexOf("Date"),
+        EmpName: headers.indexOf("Employee Name"),
+        SignIn: headers.indexOf("Sign In Time"),
+        SignOut: headers.indexOf("Sign Out Time"),
+        Total: headers.indexOf("Total Hours")
+      };
+      out = body.map(r => ({
+        Month: r[idx.Month] || "",
+        Date: _normalizeDate(r[idx.Date]),
+        Employee: (r[idx.EmpName] || "").toString(),
+        SignIn: r[idx.SignIn] || "",
+        SignOut: r[idx.SignOut] || "",
+        TotalHours: Number(r[idx.Total] || 0)
+      }));
+    } else if (sheetName === "Holidays") {
+      // Headers: Date | Name
+      const iDate = headers.indexOf("Date");
+      const iName = headers.indexOf("Name");
+      out = body.map(r => ({
+        Date: _normalizeDate(r[iDate]),
+        Name: r[iName] || ""
+      }));
+    } else if (sheetName === "Leaves") {
+      // Headers: Date | Employee | Type
+      const iDate = headers.indexOf("Date");
+      const iEmp = headers.indexOf("Employee");
+      const iType = headers.indexOf("Type");
+      out = body.map(r => ({
+        Date: _normalizeDate(r[iDate]),
+        Employee: r[iEmp] || "",
+        Type: r[iType] || ""
+      }));
+    } else if (sheetName === "Balances") {
+      // Headers: Employee | Annual | Sick | Unpaid
+      const iEmp = headers.indexOf("Employee");
+      const iAn = headers.indexOf("Annual");
+      const iSk = headers.indexOf("Sick");
+      const iUp = headers.indexOf("Unpaid");
+      out = body.map(r => ({
+        Employee: r[iEmp] || "",
+        Annual: Number(r[iAn] || 0),
+        Sick: Number(r[iSk] || 0),
+        Unpaid: Number(r[iUp] || 0)
+      }));
+    } else {
+      // generic: return objects by headers + normalized Date if a Date header exists
+      out = body.map(r => {
+        const o = {};
+        headers.forEach((h, i) => o[h] = r[i]);
+        if ("Date" in o) o.Date = _normalizeDate(o.Date);
+        return o;
+      });
     }
 
-    const values = sheet.getDataRange().getValues();
-    const headers = values.shift();
-
-    const data = values.map((row) => {
-      const obj = {};
-      headers.forEach((h, i) => {
-        obj[h] = row[i];
-      });
-      return obj;
-    });
-
-    return success({ sheet: sheetName, data: data });
+    return _success({ sheet: sheetName, data: out });
   } catch (err) {
-    return error(err.message);
+    return _error(err.message);
   }
 }
 
-// ==============================
-// doPost → update data
-// ==============================
+/** doPost: add/remove/update rows by payload */
 function doPost(e) {
   try {
-    if (!e.postData || !e.postData.contents) {
-      return error("missing body");
-    }
-
-    const body = JSON.parse(e.postData.contents);
-    const secret = body.secret;
-    const sheetName = body.sheet;
-    const action = body.action;
-    const payload = body.payload;
-
-    if (secret !== API_SECRET) {
-      return error("unauthorized");
-    }
+    if (!e.postData || !e.postData.contents) return _error("missing body");
+    const { secret, sheet, action, payload } = JSON.parse(e.postData.contents || "{}");
+    if (secret !== API_SECRET) return _error("unauthorized");
+    if (!sheet) return _error("missing sheet");
+    if (!action) return _error("missing action");
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      return error("sheet not found");
-    }
+    const sh = ss.getSheetByName(sheet);
+    if (!sh) return _error("sheet not found");
 
-    // -------------------------
-    // HOLIDAYS
-    // -------------------------
-    if (sheetName === "Holidays") {
+    if (sheet === "Holidays") {
       if (action === "add") {
-        sheet.appendRow([payload.date, payload.name || ""]);
-        return success();
+        sh.appendRow([_normalizeDate(payload.Date || payload.date), payload.Name || payload.name || ""]);
+        return _success();
       }
       if (action === "remove") {
-        const values = sheet.getDataRange().getValues();
-        for (let i = 1; i < values.length; i++) {
-          if (values[i][0] === payload.date) {
-            sheet.deleteRow(i + 1);
-            return success();
+        const target = _normalizeDate(payload.Date || payload.date);
+        const vals = sh.getDataRange().getValues();
+        for (let i = 1; i < vals.length; i++) {
+          if (_normalizeDate(vals[i][0]) === target) {
+            sh.deleteRow(i + 1);
+            return _success();
           }
         }
-        return error("holiday not found");
+        return _error("holiday not found");
       }
     }
 
-    // -------------------------
-    // LEAVES
-    // -------------------------
-    if (sheetName === "Leaves") {
+    if (sheet === "Leaves") {
       if (action === "add") {
-        sheet.appendRow([payload.date, payload.employee, payload.type]);
-        return success();
+        sh.appendRow([
+          _normalizeDate(payload.Date || payload.date),
+          payload.Employee || payload.employee || "",
+          payload.Type || payload.type || ""
+        ]);
+        return _success();
       }
       if (action === "remove") {
-        const values = sheet.getDataRange().getValues();
-        for (let i = 1; i < values.length; i++) {
-          if (
-            values[i][0] === payload.date &&
-            values[i][1] === payload.employee
-          ) {
-            sheet.deleteRow(i + 1);
-            return success();
+        const dateKey = _normalizeDate(payload.Date || payload.date);
+        const employee = payload.Employee || payload.employee || "";
+        const vals = sh.getDataRange().getValues();
+        for (let i = 1; i < vals.length; i++) {
+          if (_normalizeDate(vals[i][0]) === dateKey && (vals[i][1] || "") === employee) {
+            sh.deleteRow(i + 1);
+            return _success();
           }
         }
-        return error("leave not found");
+        return _error("leave not found");
       }
     }
 
-    // -------------------------
-    // BALANCES
-    // -------------------------
-    if (sheetName === "Balances") {
+    if (sheet === "Balances") {
       if (action === "update") {
-        const values = sheet.getDataRange().getValues();
+        const employee = payload.Employee || payload.employee || "";
+        const annual = Number(payload.Annual ?? payload.annual ?? 0);
+        const sick   = Number(payload.Sick   ?? payload.sick   ?? 0);
+        const unpaid = Number(payload.Unpaid ?? payload.unpaid ?? 0);
+        const vals = sh.getDataRange().getValues();
         let updated = false;
-
-        for (let i = 1; i < values.length; i++) {
-          if (values[i][0] === payload.employee) {
-            // Update row
-            sheet.getRange(i + 1, 2, 1, 3).setValues([
-              [
-                payload.annual || 0,
-                payload.sick || 0,
-                payload.unpaid || 0,
-              ],
-            ]);
+        for (let i = 1; i < vals.length; i++) {
+          if ((vals[i][0] || "") === employee) {
+            sh.getRange(i + 1, 2, 1, 3).setValues([[annual, sick, unpaid]]);
             updated = true;
             break;
           }
         }
-
-        if (!updated) {
-          // Insert new
-          sheet.appendRow([
-            payload.employee,
-            payload.annual || 0,
-            payload.sick || 0,
-            payload.unpaid || 0,
-          ]);
-        }
-        return success();
+        if (!updated) sh.appendRow([employee, annual, sick, unpaid]);
+        return _success();
       }
-
       if (action === "remove") {
-        const values = sheet.getDataRange().getValues();
-        for (let i = 1; i < values.length; i++) {
-          if (values[i][0] === payload.employee) {
-            sheet.deleteRow(i + 1);
-            return success();
+        const employee = payload.Employee || payload.employee || "";
+        const vals = sh.getDataRange().getValues();
+        for (let i = 1; i < vals.length; i++) {
+          if ((vals[i][0] || "") === employee) {
+            sh.deleteRow(i + 1);
+            return _success();
           }
         }
-        return error("balance not found");
+        return _error("balance not found");
       }
     }
 
-    return error("unknown action");
+    return _error("unknown action");
   } catch (err) {
-    return error(err.message);
+    return _error(err.message);
   }
 }
 <script>
 /* ============================================================
- * CONFIGURATION
+ * CONFIG
  * ============================================================ */
-const API_BASE = "https://script.google.com/macros/s/AKfycby4i9AoZgoPGKQ4eEwCzm40DPP5YtIFKXoPgVipCuR2t90e5aZpYb2WLJ5Pk3X4fARQ/exec";
+const API_BASE   = "https://script.google.com/macros/s/AKfycby4i9AoZgoPGKQ4eEwCzm40DPP5YtIFKXoPgVipCuR2t90e5aZpYb2WLJ5Pk3X4fARQ/exec";
 const API_SECRET = "a9fj32klsdfj0932LKJSDF90wef9";
 
-let CANON = []; // Canonical data (AttendanceSummary + Holidays + Leaves expansion)
-let HOLIDAYS = [];
-let LEAVES = [];
-let BALANCES = [];
+let ATT = [];      // AttendanceSummary objects
+let HOLIDAYS = []; // [{Date, Name}]
+let LEAVES = [];   // [{Date, Employee, Type}]
+let BALANCES = []; // [{Employee, Annual, Sick, Unpaid}]
 
-let DT = null; // DataTable handle
-let barChartHandle = null;
-let pieChartHandle = null;
-let lineChartHandle = null;
+let DT = null;
+let barChartHandle = null, pieChartHandle = null, lineChartHandle = null;
 
 /* ============================================================
  * UTILITIES
  * ============================================================ */
+function toggleDark() { document.body.classList.toggle("dark-mode"); }
 
-// Toggle dark mode
-function toggleDark() {
-  document.body.classList.toggle("dark-mode");
-}
-
-// Robust date normalization
-function normalizeDate(d) {
-  if (!d) return "";
-
-  const s = String(d).trim();
-
-  // ISO format (e.g. 2025-07-16T08:47:54Z)
-  if (s.includes("T")) {
-    return s.substring(0, 10);
-  }
-
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    return s;
-  }
-
-  // MM/DD/YYYY
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
-    const [mm, dd, yy] = s.split("/");
-    return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-  }
-
-  // DD/MM/YYYY
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
-    const [dd, mm, yy] = s.split("/");
-    return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-  }
-
-  return "";
-}
-
-// Safe date object
-function safeDate(value) {
+function safeDate(v) {
   try {
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return null;
-    return d;
-  } catch {
-    return null;
-  }
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  } catch { return null; }
 }
 
-// Fetch API GET
-async function fetchSheet(sheet) {
-  const url = `${API_BASE}?secret=${API_SECRET}&sheet=${sheet}`;
-  const res = await fetch(url);
-  return res.json();
+function fetchSheet(sheet) {
+  return fetch(`${API_BASE}?secret=${API_SECRET}&sheet=${sheet}`).then(r => r.json());
 }
-
-// Fetch API POST
-async function postSheet(sheet, action, payload) {
-  const res = await fetch(API_BASE, {
+function postSheet(sheet, action, payload) {
+  return fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      secret: API_SECRET,
-      sheet: sheet,
-      action: action,
-      payload: payload
-    })
-  });
-  return res.json();
+    body: JSON.stringify({ secret: API_SECRET, sheet, action, payload })
+  }).then(r => r.json());
 }
 
 /* ============================================================
- * MAP ROW (AttendanceSummary row → Canonical object)
+ * MAPPERS
  * ============================================================ */
-function mapRow(r) {
-  const dateISO = normalizeDate(r.Date || r.date);
-  const signInRaw = r["Sign In Time"] || r["sign in"] || "";
-  const signOutRaw = r["Sign Out Time"] || r["sign out"] || "";
-
-  const signInDT = safeDate(signInRaw);
-  const signOutDT = safeDate(signOutRaw);
-  const totalHours = parseFloat(r["Total Hours"] || r.totalHours || 0) || 0;
-
+function mapAttendanceRow(r) {
+  // r = { Month, Date, Employee, SignIn, SignOut, TotalHours }
   return {
-    month: r.Month || "",
-    date: dateISO,
-    employee: r["Employee Name"] || r.employee || "",
-    signIn: signInRaw,
-    signOut: signOutRaw,
-    signInDT: signInDT,
-    signOutDT: signOutDT,
-    totalHours: totalHours,
-    status: null
+    Month: r.Month || "",
+    Date: r.Date || "",
+    Employee: r.Employee || "",
+    SignIn: r.SignIn || "",
+    SignOut: r.SignOut || "",
+    SignInDT: r.SignIn ? safeDate(r.SignIn) : null,
+    SignOutDT: r.SignOut ? safeDate(r.SignOut) : null,
+    TotalHours: Number(r.TotalHours || 0)
   };
 }
 
 /* ============================================================
- * STATUS COMPUTATION
+ * LOOKUP STRUCTURES
  * ============================================================ */
-function computeStatus(row) {
-  const s = JSON.parse(localStorage.getItem("settings") || "{}");
-
-  const late = (s.late || "08:15").split(":").map(Number);
-  const early = (s.early || "16:30").split(":").map(Number);
-  const half = parseFloat(s.half ?? 4);
-  const over = parseFloat(s.over ?? 9);
-
-  // Leave check
-  const leaveMatch = LEAVES.find(
-    (l) => normalizeDate(l.Date) === row.date && l.Employee === row.employee
-  );
-  if (leaveMatch) {
-    return [leaveMatch.Type + " Leave"];
+function buildLookups() {
+  // Set of holiday dates
+  const holidaySet = new Set(HOLIDAYS.map(h => h.Date));
+  // Map date|employee -> Type
+  const leaveMap = new Map();
+  for (const l of LEAVES) {
+    const key = `${l.Date}|${l.Employee}`;
+    leaveMap.set(key, l.Type);
   }
-
-  // Holiday check
-  if (HOLIDAYS.some((h) => normalizeDate(h.Date) === row.date)) {
-    if (row.signInDT || row.signOutDT) {
-      return ["Holiday Worked"];
-    }
-    return ["Holiday"];
-  }
-
-  // Weekend check
-  const dow = new Date(`${row.date}T00:00:00`).getDay();
-  if (dow === 0 || dow === 6) {
-    return ["Weekend"];
-  }
-
-  // Absent check
-  if (!row.signInDT && !row.signOutDT) {
-    return ["Absent"];
-  }
-
-  // Needs Correction
-  if ((row.signInDT && !row.signOutDT) || (!row.signInDT && row.signOutDT)) {
-    return ["Needs Correction"];
-  }
-
-  const inMin =
-    row.signInDT != null
-      ? row.signInDT.getHours() * 60 + row.signInDT.getMinutes()
-      : null;
-  const outMin =
-    row.signOutDT != null
-      ? row.signOutDT.getHours() * 60 + row.signOutDT.getMinutes()
-      : null;
-
-  const status = [];
-  if (inMin !== null && inMin > late[0] * 60 + late[1]) status.push("Late");
-  if (outMin !== null && outMin < early[0] * 60 + early[1]) status.push("Early Leave");
-  if (row.totalHours > 0 && row.totalHours < half) status.push("Half-day");
-  if (row.totalHours >= over) status.push("Overtime");
-
-  if (!status.length) status.push("On Time");
-  return status;
+  return { holidaySet, leaveMap };
 }
 
 /* ============================================================
- * RENDER TABLE + KPI UPDATE
+ * STATUS & KPI LOGIC
  * ============================================================ */
-function renderTable(data) {
-  const rows = data.map((r) => {
-    const st = computeStatus(r);
+function computeStatus(row, holidaySet, leaveMap) {
+  // Order:
+  // 1) Leave
+  // 2) Holiday no work
+  // 3) Weekend no work
+  // 4) Absent
+  // 5) Needs Correction
+  // 6) Late/Early/Half/Overtime/On Time
 
-    const badge = st
-      .map((label) => {
-        let cls = "bg-secondary";
-        if (label.includes("Late")) cls = "bg-danger";
-        else if (label.includes("Early Leave")) cls = "bg-warning text-dark";
-        else if (label.includes("On Time")) cls = "bg-success";
-        else if (label.includes("Absent")) cls = "bg-dark";
-        else if (label.includes("Needs Correction")) cls = "bg-danger text-white";
-        else if (label.includes("Half-day")) cls = "bg-info text-dark";
-        else if (label.includes("Overtime")) cls = "bg-primary";
-        else if (label.includes("Holiday")) cls = "bg-secondary";
-        else if (label.includes("Weekend")) cls = "bg-light text-dark";
-        return `<span class="badge ${cls}">${label}</span>`;
-      })
-      .join(" ");
+  const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+  const lateTh   = (settings.late  || "08:15").split(":").map(Number);
+  const earlyTh  = (settings.early || "16:30").split(":").map(Number);
+  const halfMax  = parseFloat(settings.half ?? 4);
+  const overMin  = parseFloat(settings.over ?? 9);
+
+  const key = `${row.Date}|${row.Employee}`;
+  const leaveType = leaveMap.get(key);
+
+  if (leaveType) {
+    return [`${leaveType} Leave`];
+  }
+
+  const isHoliday = holidaySet.has(row.Date);
+  const hasWork   = !!(row.SignInDT || row.SignOutDT);
+
+  if (isHoliday && !hasWork) {
+    return ["Holiday"];
+  }
+
+  // Weekend
+  if (!hasWork) {
+    const dow = new Date(`${row.Date}T00:00:00`).getDay();
+    if (dow === 0 || dow === 6) return ["Weekend"];
+  }
+
+  // Absent (no punches, not leave, not holiday)
+  if (!hasWork) {
+    return ["Absent"];
+  }
+
+  // If worked on a holiday
+  if (isHoliday && hasWork) {
+    // Show they worked; you can add other labels too if desired
+    return ["Holiday Worked"];
+  }
+
+  // Needs correction
+  if ((row.SignInDT && !row.SignOutDT) || (!row.SignInDT && row.SignOutDT)) {
+    return ["Needs Correction"];
+  }
+
+  // Time thresholds
+  const inMin  = row.SignInDT ? row.SignInDT.getHours() * 60 + row.SignInDT.getMinutes() : null;
+  const outMin = row.SignOutDT ? row.SignOutDT.getHours() * 60 + row.SignOutDT.getMinutes() : null;
+
+  const status = [];
+  if (inMin !== null && inMin > (lateTh[0] * 60 + lateTh[1])) status.push("Late");
+  if (outMin !== null && outMin < (earlyTh[0] * 60 + earlyTh[1])) status.push("Early Leave");
+  if (row.TotalHours > 0 && row.TotalHours < halfMax) status.push("Half-day");
+  if (row.TotalHours >= overMin) status.push("Overtime");
+  if (status.length === 0) status.push("On Time");
+
+  return status;
+}
+
+function shouldCountWorkday(row, leaveMap) {
+  // Count a day in "Days Count" ONLY if there was SignIn or SignOut
+  // and NOT on a leave (even if punches exist erroneously)
+  const hasWork = !!(row.SignInDT || row.SignOutDT);
+  if (!hasWork) return false;
+  const key = `${row.Date}|${row.Employee}`;
+  return !leaveMap.has(key);
+}
+
+/* ============================================================
+ * RENDER TABLE
+ * ============================================================ */
+function renderTable(filteredAtt) {
+  const { holidaySet, leaveMap } = buildLookups();
+
+  const rows = filteredAtt.map(r => {
+    const st = computeStatus(r, holidaySet, leaveMap);
+    const badge = st.map(label => {
+      let cls = "bg-secondary";
+      if (label.includes("Late")) cls = "bg-danger";
+      else if (label.includes("Early Leave")) cls = "bg-warning text-dark";
+      else if (label.includes("On Time")) cls = "bg-success";
+      else if (label.includes("Absent")) cls = "bg-dark";
+      else if (label.includes("Needs Correction")) cls = "bg-danger text-white";
+      else if (label.includes("Half-day")) cls = "bg-info text-dark";
+      else if (label.includes("Overtime")) cls = "bg-primary";
+      else if (label.includes("Holiday Worked")) cls = "bg-secondary";
+      else if (label.includes("Holiday")) cls = "bg-secondary";
+      else if (label.includes("Weekend")) cls = "bg-light text-dark";
+      else if (label.includes("Leave")) cls = "bg-info text-dark";
+      return `<span class="badge ${cls}">${label}</span>`;
+    }).join(" ");
 
     return [
-      r.month,
-      r.date,
-      r.employee,
-      r.signIn,
-      r.signOut,
-      r.totalHours.toFixed(2),
+      r.Month,
+      r.Date,
+      r.Employee,
+      r.SignIn || "",
+      r.SignOut || "",
+      (Number.isFinite(r.TotalHours) ? r.TotalHours.toFixed(2) : "0.00"),
       badge
     ];
   });
@@ -789,7 +519,7 @@ function renderTable(data) {
       buttons: ["csv", "excel", "pdf", "print"],
       pageLength: 10,
       order: [[1, "asc"]],
-      createdRow: function (row, rowData) {
+      createdRow: (row, rowData) => {
         const statusHtml = rowData[6] || "";
         if (statusHtml.includes("Holiday")) $(row).addClass("holiday-row");
         if (statusHtml.includes("Weekend")) $(row).addClass("weekend-row");
@@ -798,47 +528,66 @@ function renderTable(data) {
   } else {
     DT.clear().rows.add(rows).draw();
   }
-
-  // ================= KPI UPDATE =================
-  let sum = 0;
-  const days = new Set();
-  let late = 0, early = 0, absent = 0;
-  let annual = 0, sick = 0, unpaid = 0, holidays = 0;
-
-  data.forEach((r) => {
-    const st = computeStatus(r);
-    if (st.includes("Late")) late++;
-    if (st.includes("Early Leave")) early++;
-    if (st.includes("Absent")) absent++;
-    if (st.includes("Annual Leave")) annual++;
-    if (st.includes("Sick Leave")) sick++;
-    if (st.includes("Unpaid Leave")) unpaid++;
-    if (st.includes("Holiday")) holidays++;
-
-    if (r.signInDT || r.signOutDT) {
-      sum += r.totalHours;
-      days.add(r.date);
-    }
-  });
-
-  document.getElementById("totalHours").textContent = sum.toFixed(2);
-  document.getElementById("avgHours").textContent = days.size ? (sum / days.size).toFixed(2) : 0;
-  document.getElementById("daysCount").textContent = days.size;
-  document.getElementById("lateCount").textContent = late;
-  document.getElementById("earlyCount").textContent = early;
-  document.getElementById("absentCount").textContent = absent;
-  document.getElementById("annualLeaveCount").textContent = annual;
-  document.getElementById("sickLeaveCount").textContent = sick;
-  document.getElementById("unpaidLeaveCount").textContent = unpaid;
-  document.getElementById("holidayCount").textContent = holidays;
-
-  renderCharts(data);
 }
 
 /* ============================================================
- * CHARTS
+ * KPIs + CHARTS
  * ============================================================ */
-function renderCharts(data) {
+function updateKPIs(filteredAtt, criteria) {
+  const { holidaySet, leaveMap } = buildLookups();
+
+  // Attendance-based KPIs
+  let totalHours = 0, workdays = 0, late = 0, early = 0, absent = 0;
+
+  filteredAtt.forEach(r => {
+    const st = computeStatus(r, holidaySet, leaveMap);
+    if (st.includes("Late")) late++;
+    if (st.includes("Early Leave")) early++;
+    if (st.includes("Absent")) absent++;
+    if (Number.isFinite(r.TotalHours)) totalHours += r.TotalHours;
+    if (shouldCountWorkday(r, leaveMap)) workdays++;
+  });
+
+  document.getElementById("totalHours").textContent = totalHours.toFixed(2);
+  document.getElementById("avgHours").textContent = workdays ? (totalHours / workdays).toFixed(2) : "0.00";
+  document.getElementById("daysCount").textContent = workdays;
+  document.getElementById("lateCount").textContent = late;
+  document.getElementById("earlyCount").textContent = early;
+  document.getElementById("absentCount").textContent = absent;
+
+  // Leave counts should be computed from LEAVES dataset filtered by the same filters
+  const inRange = (d) => {
+    if (criteria.start && d < criteria.start) return false;
+    if (criteria.end   && d > criteria.end) return false;
+    return true;
+  };
+  const empMatch = (e) => {
+    if (!criteria.employees.length) return true;
+    return criteria.employees.includes(e);
+  };
+
+  let al = 0, sl = 0, ul = 0;
+  LEAVES.forEach(l => {
+    if (!inRange(l.Date)) return;
+    if (!empMatch(l.Employee)) return;
+    if (l.Type === "Annual") al++;
+    else if (l.Type === "Sick") sl++;
+    else if (l.Type === "Unpaid") ul++;
+  });
+
+  // Holidays count in date range (not per-employee)
+  let holidayCount = HOLIDAYS.filter(h => inRange(h.Date)).length;
+
+  document.getElementById("annualLeaveCount").textContent = al;
+  document.getElementById("sickLeaveCount").textContent = sl;
+  document.getElementById("unpaidLeaveCount").textContent = ul;
+  document.getElementById("holidayCount").textContent = holidayCount;
+
+  // Charts (from filtered attendance)
+  renderCharts(filteredAtt);
+}
+
+function renderCharts(filteredAtt) {
   if (barChartHandle) barChartHandle.destroy();
   if (pieChartHandle) pieChartHandle.destroy();
   if (lineChartHandle) lineChartHandle.destroy();
@@ -846,16 +595,12 @@ function renderCharts(data) {
   const byDate = {};
   const byEmp = {};
 
-  data.forEach((r) => {
-    if (r.date) {
-      byDate[r.date] = (byDate[r.date] || 0) + (r.totalHours || 0);
-    }
-    if (r.employee) {
-      byEmp[r.employee] = (byEmp[r.employee] || 0) + (r.totalHours || 0);
-    }
+  filteredAtt.forEach(r => {
+    if (r.Date) byDate[r.Date] = (byDate[r.Date] || 0) + (r.TotalHours || 0);
+    if (r.Employee) byEmp[r.Employee] = (byEmp[r.Employee] || 0) + (r.TotalHours || 0);
   });
 
-  // Bar chart
+  // Bar: Hours per Day
   barChartHandle = new Chart(document.getElementById("barChart"), {
     type: "bar",
     data: {
@@ -864,19 +609,16 @@ function renderCharts(data) {
     }
   });
 
-  // Pie chart
+  // Pie: Hours by Employee
   pieChartHandle = new Chart(document.getElementById("pieChart"), {
     type: "pie",
     data: {
       labels: Object.keys(byEmp),
-      datasets: [{
-        data: Object.values(byEmp),
-        backgroundColor: ["#0d6efd", "#00c9a7", "#ff7e5f", "#6f42c1", "#ffc107", "#20c997", "#fd7e14"]
-      }]
+      datasets: [{ data: Object.values(byEmp), backgroundColor: ["#0d6efd","#00c9a7","#ff7e5f","#6f42c1","#ffc107","#20c997","#fd7e14"] }]
     }
   });
 
-  // Line chart
+  // Line: Trend
   lineChartHandle = new Chart(document.getElementById("lineChart"), {
     type: "line",
     data: {
@@ -887,104 +629,209 @@ function renderCharts(data) {
 }
 
 /* ============================================================
- * HOLIDAY & LEAVE MANAGER (uses doPost)
- * ============================================================ */
-async function addHoliday() {
-  const date = document.getElementById("holidayDate").value;
-  const name = document.getElementById("holidayName").value;
-  if (!date) return alert("Choose a date");
-
-  await postSheet("Holidays", "add", { date, name });
-  await loadData();
-}
-
-async function addLeave() {
-  const date = document.getElementById("leaveDate").value;
-  const employee = document.getElementById("leaveEmployee").value;
-  const type = document.getElementById("leaveType").value;
-  if (!date || !employee) return alert("Fill all fields");
-
-  await postSheet("Leaves", "add", { date, employee, type });
-  await loadData();
-}
-
-/* ============================================================
- * BALANCE MANAGER
- * ============================================================ */
-async function renderBalanceTable() {
-  const tbody = document.querySelector("#balanceTable tbody");
-  tbody.innerHTML = "";
-
-  BALANCES.forEach((b) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${b.Employee}</td>
-      <td>${b.Annual || 0}</td>
-      <td>${b.Sick || 0}</td>
-      <td>${b.Unpaid || 0}</td>
-      <td>
-        <button class="btn btn-sm btn-danger" onclick="removeBalance('${b.Employee}')">Remove</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-async function removeBalance(employee) {
-  await postSheet("Balances", "remove", { employee });
-  await loadData();
-}
-
-/* ============================================================
  * FILTERS
  * ============================================================ */
 function getCriteria() {
   return {
     employees: $("#employeeFilter").val() || [],
-    start: document.getElementById("startDate").value,
-    end: document.getElementById("endDate").value,
+    start: document.getElementById("startDate").value || "",
+    end:   document.getElementById("endDate").value   || "",
     q: (document.getElementById("quickSearch").value || "").toLowerCase()
   };
 }
-
 function applyFilters() {
   const c = getCriteria();
-  const filtered = CANON.filter((r) => {
-    if (c.employees.length && !c.employees.includes(r.employee)) return false;
-    if (c.start && r.date < c.start) return false;
-    if (c.end && r.date > c.end) return false;
-    if (c.q && !`${r.employee} ${r.date}`.toLowerCase().includes(c.q)) return false;
+  const filtered = ATT.filter(r => {
+    if (c.employees.length && !c.employees.includes(r.Employee)) return false;
+    if (c.start && r.Date < c.start) return false;
+    if (c.end   && r.Date > c.end) return false;
+    if (c.q && !`${r.Employee} ${r.Date}`.toLowerCase().includes(c.q)) return false;
     return true;
   });
   renderTable(filtered);
+  updateKPIs(filtered, c);
 }
-
 function resetFilters() {
   $("#employeeFilter").val(null).trigger("change");
   document.getElementById("startDate").value = "";
-  document.getElementById("endDate").value = "";
+  document.getElementById("endDate").value   = "";
   document.getElementById("quickSearch").value = "";
   applyFilters();
 }
 
 /* ============================================================
- * EMPLOYEE FILTER (Select2)
+ * HOLIDAYS / LEAVES CRUD (instant UI updates)
  * ============================================================ */
-function populateEmployeeFilter() {
-  const sel = document.getElementById("employeeFilter");
-  sel.innerHTML = "";
-  const employees = [...new Set(CANON.map((r) => r.employee).filter(Boolean))].sort();
-  employees.forEach((emp) => {
-    const opt = document.createElement("option");
-    opt.value = emp;
-    opt.textContent = emp;
-    sel.appendChild(opt);
-  });
-  $("#employeeFilter").select2({ placeholder: "Select employees...", allowClear: true, width: "100%" });
+async function addHoliday() {
+  const DateVal = document.getElementById("holidayDate").value;
+  const NameVal = document.getElementById("holidayName").value;
+  if (!DateVal) return alert("Choose a holiday date");
+  const res = await postSheet("Holidays", "add", { Date: DateVal, Name: NameVal });
+  if (res.ok) {
+    HOLIDAYS.push({ Date: DateVal, Name: NameVal });
+    renderHolidayList();
+    applyFilters();
+  } else alert(res.error || "Add failed");
+}
+async function removeHolidayAt(i) {
+  const h = HOLIDAYS[i];
+  const res = await postSheet("Holidays", "remove", { Date: h.Date });
+  if (res.ok) {
+    HOLIDAYS.splice(i,1);
+    renderHolidayList();
+    applyFilters();
+  } else alert(res.error || "Remove failed");
+}
+function renderHolidayList() {
+  const ul = document.getElementById("holidayList");
+  ul.innerHTML = "";
+  HOLIDAYS
+    .slice()
+    .sort((a,b)=>a.Date.localeCompare(b.Date))
+    .forEach((h, idx) => {
+      const li = document.createElement("li");
+      li.className = "list-group-item d-flex justify-content-between align-items-center";
+      li.innerHTML = `<span>${h.Date}${h.Name ? " - "+h.Name : ""}</span>
+        <button class="btn btn-sm btn-danger" onclick="removeHolidayAt(${idx})">Remove</button>`;
+      ul.appendChild(li);
+    });
+}
+
+async function addLeave() {
+  const DateVal = document.getElementById("leaveDate").value;
+  const EmpVal  = document.getElementById("leaveEmployee").value;
+  const TypeVal = document.getElementById("leaveType").value;
+  if (!DateVal || !EmpVal) return alert("Fill date and employee");
+  const res = await postSheet("Leaves","add",{ Date: DateVal, Employee: EmpVal, Type: TypeVal });
+  if (res.ok) {
+    LEAVES.push({ Date: DateVal, Employee: EmpVal, Type: TypeVal });
+    renderLeaveList();
+    applyFilters();
+  } else alert(res.error || "Add failed");
+}
+async function removeLeaveAt(i) {
+  const l = LEAVES[i];
+  const res = await postSheet("Leaves","remove",{ Date: l.Date, Employee: l.Employee });
+  if (res.ok) {
+    LEAVES.splice(i,1);
+    renderLeaveList();
+    applyFilters();
+  } else alert(res.error || "Remove failed");
+}
+function renderLeaveList() {
+  const ul = document.getElementById("leaveList");
+  ul.innerHTML = "";
+  LEAVES
+    .slice()
+    .sort((a,b)=>a.Date.localeCompare(b.Date) || a.Employee.localeCompare(b.Employee))
+    .forEach((l, idx) => {
+      const li = document.createElement("li");
+      li.className = "list-group-item d-flex justify-content-between align-items-center";
+      li.innerHTML = `<span>${l.Date} - ${l.Employee} (${l.Type})</span>
+        <button class="btn btn-sm btn-danger" onclick="removeLeaveAt(${idx})">Remove</button>`;
+      ul.appendChild(li);
+    });
 }
 
 /* ============================================================
- * REPORT (PDF SNAPSHOT)
+ * BALANCES: render + update/remove + add
+ * ============================================================ */
+function renderBalanceTable() {
+  const tbody = document.querySelector("#balanceTable tbody");
+  tbody.innerHTML = "";
+
+  BALANCES
+    .slice()
+    .sort((a,b)=>a.Employee.localeCompare(b.Employee))
+    .forEach((b, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${b.Employee}</td>
+        <td><input type="number" class="form-control form-control-sm" id="balA${idx}" value="${Number(b.Annual)||0}"></td>
+        <td><input type="number" class="form-control form-control-sm" id="balS${idx}" value="${Number(b.Sick)||0}"></td>
+        <td><input type="number" class="form-control form-control-sm" id="balU${idx}" value="${Number(b.Unpaid)||0}"></td>
+        <td class="d-flex gap-2">
+          <button class="btn btn-sm btn-primary" onclick="saveBalance(${idx})">Save</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteBalance(${idx})">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+  // Add row
+  const trAdd = document.createElement("tr");
+  trAdd.innerHTML = `
+    <td><input type="text" class="form-control form-control-sm" id="balNewEmp" placeholder="Employee"/></td>
+    <td><input type="number" class="form-control form-control-sm" id="balNewA" value="0"></td>
+    <td><input type="number" class="form-control form-control-sm" id="balNewS" value="0"></td>
+    <td><input type="number" class="form-control form-control-sm" id="balNewU" value="0"></td>
+    <td><button class="btn btn-sm btn-success" onclick="addBalance()">Add</button></td>`;
+  tbody.appendChild(trAdd);
+}
+async function saveBalance(idx) {
+  const b = BALANCES[idx];
+  const payload = {
+    Employee: b.Employee,
+    Annual: Number(document.getElementById(`balA${idx}`).value || 0),
+    Sick:   Number(document.getElementById(`balS${idx}`).value || 0),
+    Unpaid: Number(document.getElementById(`balU${idx}`).value || 0)
+  };
+  const res = await postSheet("Balances","update",payload);
+  if (res.ok) {
+    BALANCES[idx] = payload;
+    alert("Saved");
+  } else alert(res.error || "Save failed");
+}
+async function deleteBalance(idx) {
+  const b = BALANCES[idx];
+  if (!confirm(`Delete balance row for ${b.Employee}?`)) return;
+  const res = await postSheet("Balances","remove",{ Employee: b.Employee });
+  if (res.ok) {
+    BALANCES.splice(idx,1);
+    renderBalanceTable();
+  } else alert(res.error || "Delete failed");
+}
+async function addBalance() {
+  const emp = document.getElementById("balNewEmp").value.trim();
+  const a   = Number(document.getElementById("balNewA").value || 0);
+  const s   = Number(document.getElementById("balNewS").value || 0);
+  const u   = Number(document.getElementById("balNewU").value || 0);
+  if (!emp) return alert("Enter employee name");
+  const res = await postSheet("Balances","update",{ Employee: emp, Annual: a, Sick: s, Unpaid: u });
+  if (res.ok) {
+    BALANCES.push({ Employee: emp, Annual: a, Sick: s, Unpaid: u });
+    renderBalanceTable();
+  } else alert(res.error || "Add failed");
+}
+
+/* ============================================================
+ * SETTINGS (persist in localStorage)
+ * ============================================================ */
+function saveSettings() {
+  const settings = {
+    late: document.getElementById("lateThreshold").value || "08:15",
+    early: document.getElementById("earlyThreshold").value || "16:30",
+    half: Number(document.getElementById("halfDayHours").value || 4),
+    over: Number(document.getElementById("overtimeHours").value || 9)
+  };
+  localStorage.setItem("settings", JSON.stringify(settings));
+  applyFilters();
+}
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem("settings") || "{}");
+  document.getElementById("lateThreshold").value  = s.late  || "08:15";
+  document.getElementById("earlyThreshold").value = s.early || "16:30";
+  document.getElementById("halfDayHours").value   = s.half ?? 4;
+  document.getElementById("overtimeHours").value  = s.over ?? 9;
+
+  ["lateThreshold","earlyThreshold","halfDayHours","overtimeHours"].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener("change", saveSettings);
+    el.addEventListener("input", saveSettings);
+  });
+}
+
+/* ============================================================
+ * REPORT
  * ============================================================ */
 async function downloadFullReport() {
   const el = document.getElementById("reportArea");
@@ -997,27 +844,44 @@ async function downloadFullReport() {
 }
 
 /* ============================================================
- * LOAD DATA (Main init)
+ * LOAD + INIT
  * ============================================================ */
 async function loadData() {
-  // Load all sheets
-  const att = await fetchSheet("AttendanceSummary");
-  const hol = await fetchSheet("Holidays");
-  const lea = await fetchSheet("Leaves");
-  const bal = await fetchSheet("Balances");
+  loadSettings();
 
+  // parallel fetch
+  const [att, hol, lea, bal] = await Promise.all([
+    fetchSheet("AttendanceSummary"),
+    fetchSheet("Holidays"),
+    fetchSheet("Leaves"),
+    fetchSheet("Balances")
+  ]);
+
+  ATT      = (att.data || []).map(mapAttendanceRow);
   HOLIDAYS = hol.data || [];
-  LEAVES = lea.data || [];
+  LEAVES   = lea.data || [];
   BALANCES = bal.data || [];
 
-  const baseRows = att.data.map(mapRow);
-  CANON = baseRows;
+  // Populate employee filter choices from ATT + LEAVES + BALANCES (union)
+  const empSet = new Set();
+  ATT.forEach(r => r.Employee && empSet.add(r.Employee));
+  LEAVES.forEach(r => r.Employee && empSet.add(r.Employee));
+  BALANCES.forEach(r => r.Employee && empSet.add(r.Employee));
 
-  populateEmployeeFilter();
-  applyFilters();
+  const sel = document.getElementById("employeeFilter");
+  sel.innerHTML = "";
+  Array.from(empSet).sort().forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e; opt.textContent = e;
+    sel.appendChild(opt);
+  });
+  $("#employeeFilter").select2({ placeholder: "Select employees...", allowClear: true, width: "100%" });
+
+  renderHolidayList();
+  renderLeaveList();
   renderBalanceTable();
-}
 
-// Start
+  applyFilters();
+}
 loadData();
 </script>
