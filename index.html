@@ -155,7 +155,108 @@
     function computeStatus(r){ if(r.status) return r.status; const s=JSON.parse(localStorage.getItem("settings")||"{}"); const late=(s.late||"08:15").split(":").map(Number); const early=(s.early||"16:30").split(":").map(Number); const half=parseFloat(s.half??4); const over=parseFloat(s.over??9); if(!r.signInDT&&!r.signOutDT)return["Absent"]; if((r.signInDT&&!r.signOutDT)||(!r.signInDT&&r.signOutDT)) return["Needs Correction"]; const inMin=r.signInDT?r.signInDT.getHours()*60+r.signInDT.getMinutes():null; const outMin=r.signOutDT?r.signOutDT.getHours()*60+r.signOutDT.getMinutes():null; const st=[]; if(inMin!==null&&inMin>(late[0]*60+late[1])) st.push("Late"); if(outMin!==null&&outMin<(early[0]*60+early[1])) st.push("Early Leave"); if(r.totalHours>0&&r.totalHours<half) st.push("Half-day"); if(r.totalHours>=over) st.push("Overtime"); if(!st.length) st.push("On Time"); return st; }
 
     /* ---------------- TABLE + KPIs ---------------- */
-    function renderTable(data){ const rows=data.map(r=>{const st=computeStatus(r); const badge=st.map(l=>{let c="bg-secondary"; if(l==="Late")c="bg-danger"; else if(l==="Early Leave")c="bg-warning text-dark"; else if(l==="On Time")c="bg-success"; else if(l==="Absent")c="bg-dark"; else if(l==="Needs Correction")c="bg-danger text-white"; else if(l==="Half-day")c="bg-info text-dark"; else if(l==="Overtime")c="bg-primary"; else if(l==="Holiday")c="bg-secondary"; else if(l==="Weekend")c="bg-light text-dark"; return `<span class="badge ${c}">${l}</span>`;}).join(" "); return [r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"",isFinite(r.totalHours)?r.totalHours.toFixed(2):"",badge]; }); if(!DT){ DT=$("#attendanceTable").DataTable({data:rows,columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],dom:"Bfrtip",buttons:[{extend:"csv",exportOptions:{modifier:{search:"applied",order:"applied"}}},"excel","pdf","print","colvis"],pageLength:10,order:[[1,"asc"]],createdRow:(row,rowData)=>{if(rowData[6].includes("Holiday"))$(row).addClass("holiday-row"); if(rowData[6].includes("Weekend"))$(row).addClass("weekend-row");}});} else {DT.clear().rows.add(rows).draw();} let sum=0;const days=new Set();let late=0,early=0,abs=0; data.forEach(r=>{const st=computeStatus(r); if(st.includes("Late"))late++; if(st.includes("Early Leave"))early++; if(st.includes("Absent"))abs++; if(r.totalHours)sum+=r.totalHours; if(r.date)days.add(r.date);}); const kpi=[{id:"totalHours",label:"Total Hours",val:sum.toFixed(2)},{id:"avgHours",label:"Avg Hours",val:(days.size?(sum/days.size):0).toFixed(2)},{id:"daysCount",label:"Days Count",val:days.size},{id:"lateCount",label:"Late Count",val:late},{id:"earlyCount",label:"Early Leaves",val:early},{id:"absentCount",label:"Absent",val:abs}]; const kpiDiv=document.getElementById("kpiCards"); kpiDiv.innerHTML=kpi.map(k=>`<div class="col-md-2"><div class="card shadow" title="${k.label}"><div class="card-body"><h5>${k.label}</h5><h3 id="${k.id}">${k.val}</h3></div></div></div>`).join(""); renderCharts(data); }
+    function renderTable(data) {
+  const rows = data.map(r => {
+    const st = computeStatus(r);
+    const badge = st.map(l => {
+      let c = "bg-secondary";
+      if (l === "Late") c = "bg-danger";
+      else if (l === "Early Leave") c = "bg-warning text-dark";
+      else if (l === "On Time") c = "bg-success";
+      else if (l === "Absent") c = "bg-dark";
+      else if (l === "Needs Correction") c = "bg-danger text-white";
+      else if (l === "Half-day") c = "bg-info text-dark";
+      else if (l === "Overtime") c = "bg-primary";
+      else if (l === "Holiday") c = "bg-secondary";
+      else if (l === "Weekend") c = "bg-light text-dark";
+      return `<span class="badge ${c}">${l}</span>`;
+    }).join(" ");
+    return [
+      r.month || "",
+      r.date || "",
+      r.employee || "",
+      r.signIn || "",
+      r.signOut || "",
+      isFinite(r.totalHours) ? r.totalHours.toFixed(2) : "",
+      badge
+    ];
+  });
+
+  if (!DT) {
+    DT = $("#attendanceTable").DataTable({
+      data: rows,
+      columns: [
+        { title: "Month" },
+        { title: "Date" },
+        { title: "Employee" },
+        { title: "Sign In" },
+        { title: "Sign Out" },
+        { title: "Total Hours" },
+        { title: "Status" }
+      ],
+      dom: "Bfrtip",
+      buttons: [
+        { extend: "csv", exportOptions: { modifier: { search: "applied", order: "applied" } } },
+        "excel", "pdf", "print", "colvis"
+      ],
+      pageLength: 10,
+      order: [[1, "asc"]],
+      createdRow: (row, rowData) => {
+        if (rowData[6].includes("Holiday")) $(row).addClass("holiday-row");
+        if (rowData[6].includes("Weekend")) $(row).addClass("weekend-row");
+      }
+    });
+  } else {
+    DT.clear().rows.add(rows).draw();
+  }
+
+  // ---- KPI calculations ----
+  let sum = 0;
+  const workingDays = new Set();
+  let late = 0, early = 0, abs = 0;
+
+  data.forEach(r => {
+    const st = computeStatus(r);
+    if (st.includes("Late")) late++;
+    if (st.includes("Early Leave")) early++;
+    if (st.includes("Absent")) abs++;
+    if (r.totalHours) sum += r.totalHours;
+
+    // ✅ Only count working days (exclude weekends & holidays)
+    if (r.date) {
+      const d = new Date(r.date);
+      const dow = d.getDay(); // 0 = Sunday, 6 = Saturday
+      const isHoliday = customHolidays.some(h => h.date === r.date);
+      if (dow !== 0 && dow !== 6 && !isHoliday) {
+        workingDays.add(r.date);
+      }
+    }
+  });
+
+  const kpi = [
+    { id: "totalHours", label: "Total Hours", val: sum.toFixed(2) },
+    { id: "avgHours", label: "Avg Hours", val: (workingDays.size ? (sum / workingDays.size) : 0).toFixed(2) },
+    { id: "daysCount", label: "Working Days Count", val: workingDays.size },
+    { id: "lateCount", label: "Late Count", val: late },
+    { id: "earlyCount", label: "Early Leaves", val: early },
+    { id: "absentCount", label: "Absent", val: abs }
+  ];
+
+  const kpiDiv = document.getElementById("kpiCards");
+  kpiDiv.innerHTML = kpi.map(k =>
+    `<div class="col-md-2">
+       <div class="card shadow" title="${k.label}">
+         <div class="card-body">
+           <h5>${k.label}</h5>
+           <h3 id="${k.id}">${k.val}</h3>
+         </div>
+       </div>
+     </div>`
+  ).join("");
+
+  renderCharts(data);
+}
+
 
     /* ---------------- CHARTS ---------------- */
     function renderCharts(data){ if(barChartHandle)barChartHandle.destroy(); if(pieChartHandle)pieChartHandle.destroy(); if(lineChartHandle)lineChartHandle.destroy(); const byDate={}; const byEmp={}; data.forEach(r=>{if(r.date)byDate[r.date]=(byDate[r.date]||0)+(r.totalHours||0); if(r.employee)byEmp[r.employee]=(byEmp[r.employee]||0)+(r.totalHours||0);}); barChartHandle=new Chart(barChart.getContext("2d"),{type:"bar",data:{labels:Object.keys(byDate),datasets:[{label:"Hours",data:Object.values(byDate)}]},options:{scales:{x:{ticks:{autoSkip:true}}}}}); pieChartHandle=new Chart(pieChart.getContext("2d"),{type:"pie",data:{labels:Object.keys(byEmp),datasets:[{data:Object.values(byEmp)}]}}); lineChartHandle=new Chart(lineChart.getContext("2d"),{type:"line",data:{labels:Object.keys(byDate),datasets:[{label:"Hours",data:Object.values(byDate),borderColor:"#28a745"}]}}); }
