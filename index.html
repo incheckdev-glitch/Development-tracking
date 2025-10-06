@@ -17,8 +17,6 @@
     .card { transition: all 0.3s ease; }
     .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); }
     .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding: 10px; }
-    .holiday-row { background-color: #ffeeba !important; }
-    .weekend-row { background-color: #f0f0f0 !important; }
     #loadingOverlay {
       display:none; position:fixed; top:0; left:0; right:0; bottom:0;
       background:rgba(0,0,0,0.5); color:#fff; font-size:2rem;
@@ -28,17 +26,14 @@
 </head>
 
 <body>
-  <!-- Loading overlay -->
   <div id="loadingOverlay">⏳ Loading...</div>
 
-  <!-- ======================= MAIN WRAPPER ======================= -->
   <div class="container-fluid p-4" id="reportArea">
-    <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2>📊 Attendance Dashboard</h2>
       <div>
-        <button class="btn btn-outline-secondary me-2" onclick="toggleDark()" aria-label="Toggle dark mode">🌙/☀️</button>
-        <button class="btn btn-success" onclick="downloadFullReport()">Download Report</button>
+        <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
+        <button class="btn btn-success" onclick="downloadFullReport()">Download PDF</button>
       </div>
     </div>
 
@@ -47,19 +42,19 @@
       <div class="card-body row g-3 align-items-end">
         <div class="col-lg-3">
           <label class="form-label">Employee</label>
-          <select id="employeeFilter" multiple aria-label="Employee filter"></select>
+          <select id="employeeFilter" multiple></select>
         </div>
         <div class="col-lg-3">
           <label class="form-label">Start Date</label>
-          <input type="date" id="startDate" class="form-control" aria-label="Start date"/>
+          <input type="date" id="startDate" class="form-control"/>
         </div>
         <div class="col-lg-3">
           <label class="form-label">End Date</label>
-          <input type="date" id="endDate" class="form-control" aria-label="End date"/>
+          <input type="date" id="endDate" class="form-control"/>
         </div>
         <div class="col-lg-3">
           <label class="form-label">Quick Search</label>
-          <input type="text" id="quickSearch" class="form-control" placeholder="Search..." aria-label="Quick search"/>
+          <input type="text" id="quickSearch" class="form-control" placeholder="Search..."/>
         </div>
         <div class="col-12 text-end mt-3">
           <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
@@ -68,43 +63,17 @@
       </div>
     </div>
 
-    <!-- KPI CARDS -->
-    <div class="row mb-4 text-center" id="kpiCards"></div>
-
     <!-- TABLE -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <table id="attendanceTable" class="display nowrap table table-striped" style="width:100%"></table>
       </div>
     </div>
-
-    <!-- CHARTS -->
-    <div class="row">
-      <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours per Day</h5><canvas id="barChart"></canvas></div></div>
-      <div class="col-lg-4"><div class="card shadow p-3"><h5>Hours by Employee</h5><canvas id="pieChart"></canvas></div></div>
-      <div class="col-lg-4"><div class="card shadow p-3"><h5>Trend</h5><canvas id="lineChart"></canvas></div></div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div class="card shadow my-4">
-      <div class="card-body row g-3">
-        <h5>⚙️ Settings</h5>
-        <div class="col-md-3"><label class="form-label">Late After (HH:MM)</label><input type="time" id="lateThreshold" class="form-control"/></div>
-        <div class="col-md-3"><label class="form-label">Early Leave Before (HH:MM)</label><input type="time" id="earlyThreshold" class="form-control"/></div>
-        <div class="col-md-3"><label class="form-label">Half-day Max Hours</label><input type="number" id="halfDayHours" class="form-control"/></div>
-        <div class="col-md-3"><label class="form-label">Overtime Min Hours</label><input type="number" id="overtimeHours" class="form-control"/></div>
-        <div class="col-12 mt-3 text-end">
-          <button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <!-- ======================= JS LIBS ======================= -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
@@ -116,91 +85,112 @@
 
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/export?format=csv&gid=390845393";
     let CANON = [], DT = null;
-    let barChartHandle, pieChartHandle, lineChartHandle;
 
     function toggleDark(){ document.body.classList.toggle("dark-mode"); }
 
-    function normalizeHeaders(r){ const o={}; for(let k in r) o[k.trim().toLowerCase()]=r[k]; return o;}
-    function normalizeDate(d){ if(!d)return""; const s=String(d).trim(); if(s.includes("/")){const[dd,mm,yy]=s.split("/");return`${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`} if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; return ""; }
-    function parsePunchWithDate(dateISO,val){ if(!val) return null; const s=String(val).trim(); if(!s||s=="-") return null; if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)){ const t=s.length===5?s+":00":s; const dt=new Date(`${dateISO}T${t}`); return isNaN(dt)?null:dt;} const dt=new Date(s); return isNaN(dt)?null:dt; }
+    function normalizeHeaders(r){ const o={}; for(let k in r) o[k.trim().toLowerCase()]=r[k]; return o; }
+    function normalizeDate(d){
+      if(!d) return "";
+      const s = String(d).trim();
+      if(s.includes("/")){
+        const parts = s.split("/");
+        if(parts[0].length===4) return s; // already yyyy/mm/dd
+        const [dd,mm,yy]=parts;
+        return `${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+      }
+      return s;
+    }
+    function parsePunchWithDate(dateISO,val){
+      if(!val) return null;
+      const s=String(val).trim();
+      if(!s||s=="-") return null;
+      if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)){
+        const t=s.length===5?s+":00":s;
+        const dt=new Date(`${dateISO}T${t}`);
+        return isNaN(dt)?null:dt;
+      }
+      const dt=new Date(s);
+      return isNaN(dt)?null:dt;
+    }
 
-    /* ---------------- SETTINGS ---------------- */
-    function saveSettings(){
-      const s = {
-        late: lateThreshold.value || "08:15",
-        early: earlyThreshold.value || "16:30",
-        half: halfDayHours.value || 4,
-        over: overtimeHours.value || 9
+    function mapRow(r){
+      const dateISO = normalizeDate(r["date"]||r["day"]||"");
+      const siRaw = r["sign in"]||r["in"]||r["first in"];
+      const soRaw = r["sign out"]||r["out"]||r["last out"];
+      const siDT = dateISO ? parsePunchWithDate(dateISO, siRaw) : null;
+      const soDT = dateISO ? parsePunchWithDate(dateISO, soRaw) : null;
+      const total = siDT && soDT ? (soDT - siDT)/36e5 : 0;
+      return {
+        date: dateISO,
+        employee: r["employee"]||r["name"]||r["employee name"]||"",
+        signIn: siRaw||"",
+        signOut: soRaw||"",
+        totalHours: total,
+        status: r["status"]||""
       };
-      localStorage.setItem("settings", JSON.stringify(s));
-      alert("Settings saved!");
-    }
-    function loadSettings(){
-      const s = JSON.parse(localStorage.getItem("settings") || "{}");
-      if(s.late) lateThreshold.value = s.late;
-      if(s.early) earlyThreshold.value = s.early;
-      if(s.half) halfDayHours.value = s.half;
-      if(s.over) overtimeHours.value = s.over;
     }
 
-    /* ---------------- STATUS ---------------- */
-    function computeStatus(r){
-      const s=JSON.parse(localStorage.getItem("settings")||"{}");
-      const late=(s.late||"08:15").split(":").map(Number);
-      const early=(s.early||"16:30").split(":").map(Number);
-      const half=parseFloat(s.half??4);
-      const over=parseFloat(s.over??9);
-      if(!r.signInDT&&!r.signOutDT)return["Absent"];
-      if((r.signInDT&&!r.signOutDT)||(!r.signInDT&&r.signOutDT)) return["Needs Correction"];
-      const inMin=r.signInDT?r.signInDT.getHours()*60+r.signInDT.getMinutes():null;
-      const outMin=r.signOutDT?r.signOutDT.getHours()*60+r.signOutDT.getMinutes():null;
-      const st=[];
-      if(inMin!==null&&inMin>(late[0]*60+late[1])) st.push("Late");
-      if(outMin!==null&&outMin<(early[0]*60+early[1])) st.push("Early Leave");
-      if(r.totalHours>0&&r.totalHours<half) st.push("Half-day");
-      if(r.totalHours>=over) st.push("Overtime");
-      if(!st.length) st.push("On Time");
-      return st;
-    }
-
-    /* ---------------- TABLE ---------------- */
     function renderTable(data){
-      const rows=data.map(r=>{
-        const st=computeStatus(r);
-        const badge=st.map(l=>`<span class="badge bg-${l==="Late"?"danger":l==="Early Leave"?"warning text-dark":l==="On Time"?"success":l==="Absent"?"dark":"secondary"}">${l}</span>`).join(" ");
-        return [r.month||"",r.date||"",r.employee||"",r.signIn||"",r.signOut||"",isFinite(r.totalHours)?r.totalHours.toFixed(2):"",badge];
-      });
+      const rows = data.map(r=>[
+        r.date,
+        r.employee,
+        r.signIn,
+        r.signOut,
+        isFinite(r.totalHours)?r.totalHours.toFixed(2):"",
+        r.status
+      ]);
+
       if(!DT){
-        DT=$("#attendanceTable").DataTable({
-          data:rows,
-          columns:[{title:"Month"},{title:"Date"},{title:"Employee"},{title:"Sign In"},{title:"Sign Out"},{title:"Total Hours"},{title:"Status"}],
-          dom:"Bfrtip",
-          buttons:["csv","excel","pdf","print"],
-          pageLength:10
+        DT = $("#attendanceTable").DataTable({
+          data: rows,
+          columns: [
+            { title: "Date" },
+            { title: "Employee" },
+            { title: "Sign In" },
+            { title: "Sign Out" },
+            { title: "Hours" },
+            { title: "Status" }
+          ],
+          dom: "Bfrtip",
+          buttons: ["csv", "excel", "pdf", "print"],
+          pageLength: 10
         });
       } else {
         DT.clear().rows.add(rows).draw();
       }
     }
 
-    /* ---------------- FILTERS ---------------- */
-    function getCriteria(){return{employees:$("#employeeFilter").val()||[],start:startDate.value,end:endDate.value,q:(quickSearch.value||"").toLowerCase()};}
+    function getCriteria(){
+      return {
+        employees: $("#employeeFilter").val()||[],
+        start: startDate.value,
+        end: endDate.value,
+        q: (quickSearch.value||"").toLowerCase()
+      };
+    }
+
     function applyFilters(){
       const c=getCriteria();
-      const filtered=CANON.filter(r=>{
-        if(c.employees.length&&!c.employees.includes(r.employee))return false;
-        if(c.start&&r.date<c.start)return false;
-        if(c.end&&r.date>c.end)return false;
-        if(c.q&&!`${r.employee} ${r.date}`.toLowerCase().includes(c.q))return false;
+      const filtered = CANON.filter(r=>{
+        if(c.employees.length && !c.employees.includes(r.employee)) return false;
+        if(c.start && r.date < c.start) return false;
+        if(c.end && r.date > c.end) return false;
+        if(c.q && !`${r.employee} ${r.date}`.toLowerCase().includes(c.q)) return false;
         return true;
       });
       renderTable(filtered);
     }
-    function resetFilters(){ $("#employeeFilter").val(null).trigger("change"); startDate.value=""; endDate.value=""; quickSearch.value=""; applyFilters(); }
 
-    /* ---------------- EMPLOYEES ---------------- */
+    function resetFilters(){
+      $("#employeeFilter").val(null).trigger("change");
+      startDate.value="";
+      endDate.value="";
+      quickSearch.value="";
+      applyFilters();
+    }
+
     function populateEmployeeFilter(){
       const sel=document.getElementById("employeeFilter");
       sel.innerHTML="";
@@ -212,7 +202,6 @@
       $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
     }
 
-    /* ---------------- REPORT DOWNLOAD ---------------- */
     async function downloadFullReport(){
       const el=document.getElementById("reportArea");
       const canvas=await html2canvas(el,{scale:2});
@@ -221,7 +210,6 @@
       pdfMake.createPdf(doc).download("Attendance_Report.pdf");
     }
 
-    /* ---------------- LOAD DATA ---------------- */
     async function loadData(){
       document.getElementById("loadingOverlay").style.display="flex";
       try{
@@ -229,34 +217,16 @@
         if(!res.ok) throw new Error("Failed to load CSV");
         const csv=await res.text();
         const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
-        CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r))).filter(r=>r.employee&&r.date);
+        CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r))).filter(r=>r.employee && r.date);
         populateEmployeeFilter();
         applyFilters();
-      }catch(e){alert("Error: "+e.message);}
-      finally{ document.getElementById("loadingOverlay").style.display="none"; }
+      }catch(e){
+        alert("Error: " + e.message);
+      }finally{
+        document.getElementById("loadingOverlay").style.display="none";
+      }
     }
 
-    function mapRow(r){
-      const dateISO=normalizeDate(r["date"]||r["day"]||"");
-      const siRaw=r["sign in"]||r["in"]||r["first in"];
-      const soRaw=r["sign out"]||r["out"]||r["last out"];
-      const siDT=dateISO?parsePunchWithDate(dateISO,siRaw):null;
-      const soDT=dateISO?parsePunchWithDate(dateISO,soRaw):null;
-      const total=siDT&&soDT?(soDT-siDT)/36e5:0;
-      return{
-        month:dateISO?dateISO.slice(0,7):"",
-        date:dateISO,
-        employee:r["employee"]||r["name"]||r["employee name"]||"",
-        signIn:siRaw||"",
-        signOut:soRaw||"",
-        signInDT:siDT,
-        signOutDT:soDT,
-        totalHours:total
-      };
-    }
-
-    /* ---------------- INIT ---------------- */
-    loadSettings();
     loadData();
   </script>
 </body>
