@@ -284,7 +284,7 @@
     </div></div>
   </div>
 
-  <!-- Correction Modal (UI-only) -->
+  <!-- Correction Modal -->
   <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
       <div class="modal-header">
@@ -311,7 +311,7 @@
           </div>
         </div>
         <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
-        <div class="form-text mt-2">Applies to the dashboard view only. Use Export to share patched data.</div>
+        <div class="form-text mt-2">Writes back to SignIn / SignOut sheets and updates the view instantly.</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -339,12 +339,39 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+  <script>
 /** ================= CONFIG ================= **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 60_000;
 const TZ = "Asia/Beirut";
-const BUILD = "v2-pro-inline-correction";
+const BUILD = "v2-pro-inline-correction-writeback";
+
+/** Writeback API — uses your deployed URL + shared token **/
+const WRITEBACK = {
+  url: 'https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec',
+  token: '3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11'
+};
+// Use text/plain to avoid preflight; token in querystring.
+async function sendWriteback(kind, payload){ // kind: 'IN'|'OUT'
+  if (!WRITEBACK.url || !WRITEBACK.token) throw new Error('writeback_not_configured');
+  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      kind,
+      employee: payload.Employee,
+      date: payload.Date,
+      time: (kind==='IN' ? payload.In : payload.Out)
+    }),
+    cache: 'no-store',
+    redirect: 'follow'
+  });
+  const txt = await res.text();
+  let j = {}; try { j = JSON.parse(txt); } catch {}
+  if (!j.ok) throw new Error(j.error || 'writeback_failed');
+  return j;
+}
 
 /** Defaults & persisted settings **/
 const DEFAULT_POLICY = {
@@ -353,8 +380,8 @@ const DEFAULT_POLICY = {
   markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true
 };
 const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
-const DEFAULT_HOLIDAYS = [];   // add yyyy-mm-dd as needed
-const DEFAULT_PREFS = { hoursFormat:'hms' }; // 'hms' | 'decimal'
+const DEFAULT_HOLIDAYS = [];
+const DEFAULT_PREFS = { hoursFormat:'hms' };
 const LS_KEYS = { policy:'attendance_policy_v1', weekend:'attendance_weekend_v1', holidays:'attendance_holidays_v1', prefs:'attendance_prefs_v1', csv:'attendance_csv_v1' };
 
 function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
@@ -436,13 +463,13 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
-  // Absent (only on working day) — both missing
+  // Absent (only on working day)
   if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT) return 'Absent';
 
-  // Need Correction when exactly one punch is missing
+  // Need Correction when exactly one punch is missing (on any day)
   if((!inDT && outDT) || (inDT && !outDT)) return 'Need Correction';
 
-  if(!inDT || !outDT) return ''; // non-working day with no punches: no status
+  if(!inDT || !outDT) return ''; // non-working day no punches => blank
 
   let hours = outDT.diff(inDT,'hours').hours;
   if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
@@ -493,7 +520,6 @@ function mapRow(r){
     total = (si&&so)? so.diff(si,'hours').hours : 0;
   }
   const statusCSV = r['status'] || '';
-  // keep CSV, but we’ll compute display status in table when recompute is ON
   return {
     month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO,
     employee: r['employee name']||r['employee']||r['name']||'',
@@ -816,7 +842,7 @@ function openEmpDrawer(name){
   new bootstrap.Offcanvas('#empDrawer').show();
 }
 
-/** ================= INLINE CORRECTION ================= **/
+/** ================= INLINE CORRECTION with WRITEBACK ================= **/
 function openCorrectionModal(rowLike){
   const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
   const hasOut = !!(rowLike.Out && String(rowLike.Out).trim());
@@ -833,7 +859,7 @@ function openCorrectionModal(rowLike){
 
   new bootstrap.Modal('#corrModal').show();
 }
-function applyLocalCorrection(){
+async function applyLocalCorrection(){
   const emp  = document.getElementById('corrEmp').value;
   const date = document.getElementById('corrDate').value;
   const inVal  = document.getElementById('corrIn').value.trim();
@@ -844,6 +870,24 @@ function applyLocalCorrection(){
   if (__corrCtx.kind==='OUT' && !outVal){ al.textContent='Please enter Sign-Out time.'; al.classList.remove('d-none'); return; }
   if (__corrCtx.kind==='BOTH' && (!inVal || !outVal)){ al.textContent='Please enter both times.'; al.classList.remove('d-none'); return; }
 
+  const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || '', Out: outVal || __corrCtx.Out || '' };
+
+  // Write back to Apps Script (SignIn / SignOut)
+  try {
+    if (__corrCtx.kind === 'IN' || __corrCtx.kind === 'BOTH') {
+      await sendWriteback('IN', { ...rowLike, In: inVal });
+    }
+    if (__corrCtx.kind === 'OUT' || __corrCtx.kind === 'BOTH') {
+      await sendWriteback('OUT', { ...rowLike, Out: outVal });
+    }
+  } catch (e) {
+    console.warn('Writeback failed:', e);
+    al.textContent = 'Saved locally, but write-back to Google Sheets failed. You can export now, or try again.';
+    al.classList.remove('d-none');
+    // continue with local patch
+  }
+
+  // Local patch for instant UX
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
@@ -853,13 +897,13 @@ function applyLocalCorrection(){
       const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
       r.totalHours = (si&&so)? so.diff(si,'hours').hours : 0;
       r._edited = true;
-      // if policy is off and CSV had old status, keep CSV; display layer recomputes anyway
       patched=true; break;
     }
   }
   if(!patched){ al.textContent='Could not find the row in current data.'; al.classList.remove('d-none'); return; }
+
   bootstrap.Modal.getInstance(document.getElementById('corrModal')).hide();
-  applyFilters();
+  applyFilters(); // refresh table/charts/anomalies
 }
 
 /** ================= EXPORTS ================= **/
@@ -1050,7 +1094,7 @@ loadData();
   ok('cachebust URL', /cachebust=\d+/.test(candidateURLs()[0]||''));
   ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
   ok('status Need Correction', computeStatusByPolicy('2025-10-14','08:00','')==='Need Correction');
-  ok('Absent on working day no punches', computeStatusByPolicy('2025-10-14','','')==='Absent' || true /* holiday configurable */);
+  ok('Absent on working day no punches', computeStatusByPolicy('2025-10-14','','')==='Absent' || true);
 })();
 </script>
 </body>
