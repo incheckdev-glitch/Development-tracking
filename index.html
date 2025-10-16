@@ -175,22 +175,20 @@
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
     // === CONFIG ===
-    // Replace with your own GSheet export link (published or anyone-with-link viewable):
-    // Optional secondary endpoint (Google export). Fill SHEET_ID to enable fallback.
-    const SHEET_ID = ""; // e.g. 1AbCDEF... from https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit
+    // Primary endpoint: Google Sheet "Publish to web" CSV (CORS-safe)
+    const SHEET_ID = ""; // optional (used only for fallback export URL)
     const GID = 390845393;
     const APPS_SCRIPT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
     const GS_EXPORT_URL = SHEET_ID ? `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}` : null;
+
     function candidateURLs(){
       const t = Date.now();
       // Use the Published-to-web CSV first (CORS-safe), then optional Google export fallback
       const urls = [`${APPS_SCRIPT_URL}&cachebust=${t}`];
       if (GS_EXPORT_URL) urls.push(`${GS_EXPORT_URL}&cachebust=${t}`);
       return urls;
-    }&cachebust=${t}`];
-      if (GS_EXPORT_URL) urls.push(`${GS_EXPORT_URL}&cachebust=${t}`);
-      return urls;
-    } // prevent stale cache // prevent stale cache
+    }
+
     const REFRESH_MS = 60_000; // auto-refresh every 60s (tune as needed)
 
     const TZ = "Asia/Beirut"; // used for display
@@ -215,8 +213,6 @@
       if(!s) return "";
       const x = String(s).trim();
       if(!x) return "";
-      // Try common patterns: dd/mm/yyyy, yyyy-mm-dd, dd-mm-yyyy, mm/dd/yyyy
-      // Prefer explicit parse with Luxon to avoid locale confusion.
       const candidates = [
         DateTime.fromFormat(x, 'd/M/yyyy'),
         DateTime.fromFormat(x, 'd/M/yy'),
@@ -226,7 +222,6 @@
         DateTime.fromISO(x)
       ];
       for(const c of candidates){ if(c.isValid) return c.toISODate(); }
-      // Fallback: native Date
       const d = new Date(x);
       if(!isNaN(d)) return d.toISOString().slice(0,10);
       return "";
@@ -236,7 +231,6 @@
       if(!dateISO || !val) return null;
       const s = String(val).trim();
       if(!s || s === '-') return null;
-      // Accept HH:mm[:ss], hh:mm AM/PM, or full ISO
       const hm = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm');
       if(hm.isValid) return hm;
       const hms = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm:ss');
@@ -245,7 +239,6 @@
       if(ampm.isValid) return ampm;
       const iso = DateTime.fromISO(s);
       if(iso.isValid) return iso;
-      // Last resort: native Date
       const d = new Date(`${dateISO}T${s.length===5? s+':00' : s}`);
       return isNaN(d) ? null : DateTime.fromJSDate(d);
     }
@@ -342,7 +335,6 @@
               .data()
               .toArray()
               .reduce((a,v)=> a + (typeof v === 'number' ? v : 0), 0);
-            // Create/ensure footer
             if(!$(api.table().footer()).length){
               $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
               const tfootRow = columns.map(()=>'');
@@ -449,17 +441,15 @@
     document.getElementById('resetBtn').addEventListener('click', resetFilters);
     document.getElementById('refreshBtn').addEventListener('click', loadData);
     document.getElementById('quickSearch').addEventListener('input', function(){
-      // Live text filter without pressing Apply
       applyFilters();
     });
 
     // Auto refresh
     setInterval(() => {
-      // Only refresh if the page is visible to avoid unnecessary loads
       if(document.visibilityState === 'visible') loadData();
     }, REFRESH_MS);
 
-    // Define loadData (this was missing and caused no data to show)
+    // Define loadData
     async function loadData(){
       const overlay = document.getElementById('loadingOverlay');
       overlay.style.display = 'flex';
@@ -479,6 +469,27 @@
         overlay.style.display = 'none';
       }
     }
+
+    // --- Minimal internal tests (run once, logs to console) ---
+    (function runInternalTests(){
+      function assert(name, cond){ (cond?console.log:console.error)(`[TEST] ${name}: ${cond? 'OK':'FAIL'}`); }
+      try{
+        const urls = candidateURLs();
+        assert('candidateURLs returns array', Array.isArray(urls) && urls.length > 0);
+        assert('candidateURLs includes cachebust', urls[0].includes('cachebust='));
+
+        assert('toISODate(16/07/2025) => 2025-07-16', toISODate('16/07/2025') === '2025-07-16');
+        assert('toISODate(2025-10-16) => 2025-10-16', toISODate('2025-10-16') === '2025-10-16');
+
+        const sample = normalizeHeaders({
+          'Month Name':'July', 'Date':'2025-07-16', 'Employee Name':'Khaled Yakan', 'First In':'8:00:00', 'Last Out':'16:45:00', 'Hours':'8.75', 'Status':'Present'
+        });
+        const mapped = mapRow(sample);
+        assert('mapRow employee', mapped.employee === 'Khaled Yakan');
+        assert('mapRow date', mapped.date === '2025-07-16');
+        assert('mapRow hours numeric ~ 8.75', Math.abs(mapped.totalHours - 8.75) < 0.01);
+      } catch(e){ console.error('[TEST] Uncaught', e); }
+    })();
 
     // Initial load
     loadData();
