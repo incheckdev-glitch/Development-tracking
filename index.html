@@ -305,8 +305,7 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Part 2 (script) goes here -->
-<script>
+  <script>
 /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 min
@@ -318,7 +317,6 @@ const WRITEBACK = {
   url: 'https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec',
   token: '3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11'
 };
-// Direct write to SignIn/SignOut
 async function sendWriteback(kind, payload){
   const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
   const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
@@ -336,7 +334,6 @@ async function sendWriteback(kind, payload){
   if (!j.ok) throw new Error(j.error || 'writeback_failed');
   return j;
 }
-// Queue correction for approval
 async function sendQueue(payload, reason=''){
   const qs = new URLSearchParams({ token: WRITEBACK.token, action: 'queue' });
   const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
@@ -576,7 +573,6 @@ function renderKPIs(data){
   document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
   document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
 
-  // Cohorts (current vs previous month)
   const cohorts = computeCohorts(data);
   if(cohorts.prev){
     document.getElementById('kpiHoursVar').textContent = arrowDelta(cohorts.mc.hours, cohorts.mp.hours);
@@ -586,7 +582,6 @@ function renderKPIs(data){
     document.getElementById('kpiOntimeVar').textContent = '';
   }
 
-  // Sticky totals
   document.getElementById('stickyTotals').textContent =
     `Rows: ${data.length} • Hours: ${fmtHours(hours)} • On-time: ${ontimeRate}%`;
 
@@ -595,17 +590,14 @@ function renderKPIs(data){
 }
 
 function renderCharts(data){
-  // Hours by employee
   const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
   const empData = empLabels.map(k=> byEmp[k]);
 
-  // Hours over time
   const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
 
-  // Over/Under bands
   const perEmpDays = aggregateBy(data, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) :
@@ -619,7 +611,6 @@ function renderCharts(data){
     under.push(Math.max(0,-d));
   });
 
-  // Late/Early minutes by employee
   const lateMap={}, earlyMap={};
   data.forEach(r=>{
     const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
@@ -666,8 +657,13 @@ function igniteSpark(id, value){
   const c = document.getElementById(id); if(!c) return;
   const ctx = c.getContext('2d');
   const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-  new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
+  // prevent stacking on redraw
+  if (c._chart) { c._chart.destroy(); }
+  c._chart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+  });
 }
 
 /** ============== TABLE ============== **/
@@ -707,7 +703,7 @@ function renderTable(data){
 
   if(!DT){
     DT = $('#attendanceTable').DataTable({
-      data: rows, columns: colDefs, responsive: true, fixedHeader:true,
+      data: rows, columns: colDefs, fixedHeader:true,
       order: [[1,'desc'],[2,'asc']], pageLength: 12,
       dom:'Bfrtip',
       buttons: [
@@ -743,12 +739,16 @@ function populateSelect(id, values, placeholder){
   $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
 }
 function getCriteria(){
+  const sd = document.getElementById('startDate');
+  const ed = document.getElementById('endDate');
+  const qs = document.getElementById('quickSearch');
   return {
     employees: $('#employeeFilter').val()||[],
     months: $('#monthFilter').val()||[],
     statuses: $('#statusFilter').val()||[],
-    start: startDate.value, end: endDate.value,
-    q: (quickSearch.value||'').toLowerCase(),
+    start: sd ? sd.value : '',
+    end: ed ? ed.value : '',
+    q: (qs && qs.value ? qs.value : '').toLowerCase(),
     policy: document.getElementById('policySwitch').checked
   };
 }
@@ -780,7 +780,12 @@ function resetFilters(){
   $('#employeeFilter').val(null).trigger('change');
   $('#monthFilter').val(null).trigger('change');
   $('#statusFilter').val(null).trigger('change');
-  startDate.value=''; endDate.value=''; quickSearch.value='';
+  const sd = document.getElementById('startDate');
+  const ed = document.getElementById('endDate');
+  const qs = document.getElementById('quickSearch');
+  if (sd) sd.value = '';
+  if (ed) ed.value = '';
+  if (qs) qs.value = '';
   document.getElementById('policySwitch').checked = POLICY.recompute;
   document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
   applyFilters();
@@ -806,7 +811,8 @@ function readFiltersFromURL(){
   if(employees.length) $('#employeeFilter').val(employees).trigger('change');
   if(months.length) $('#monthFilter').val(months).trigger('change');
   if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
-  startDate.value = start; endDate.value = end; quickSearch.value = q;
+  const sd=document.getElementById('startDate'); const ed=document.getElementById('endDate'); const qs=document.getElementById('quickSearch');
+  if (sd) sd.value = start; if (ed) ed.value = end; if (qs) qs.value = q;
   document.getElementById('policySwitch').checked = policy || POLICY.recompute;
   PREFS.hoursFormat = fmt;
   document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
@@ -891,7 +897,6 @@ function openEmpDrawer(name){
   const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
   const ontimeRate = rows.length? Math.round(100*(counts['Present']||0)/rows.length):0;
 
-  // minutes
   let lateM=0, earlyM=0;
   rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
 
@@ -977,7 +982,6 @@ async function applyLocalCorrection(){
     al.classList.remove('d-none');
   }
 
-  // Local patch for instant UX
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
@@ -1034,7 +1038,6 @@ async function exportPack(){
 
   const blob = await zip.generateAsync({type:'blob'}); saveAs(blob,'attendance_export_pack.zip');
 }
-// Monthly packs (per-employee, per-month)
 async function exportMonthlyPacks(){
   const zip = new JSZip();
   const byEmpMonth = {};
@@ -1052,7 +1055,6 @@ async function exportMonthlyPacks(){
       Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
     }));
     folder.file(`${emp}_${mk}.csv`, toCSV(csvRows));
-    // mini PDF card
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
     const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==='Present').length;
     const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==='Half Day').length;
@@ -1061,22 +1063,22 @@ async function exportMonthlyPacks(){
   });
   const blob = await zip.generateAsync({type:'blob'}); saveAs(blob,'monthly_packs.zip');
 }
-// ICS export (Absences & Half-days)
 function exportICS(){
   const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Attendance//ICS//EN'];
   const uidBase = Date.now();
   lastFiltered.forEach((r,i)=>{
     const s = computeStatusByPolicy(r.date,r.signIn,r.signOut);
     if(s==='Absent' || s==='Half Day'){
-      const dt = r.date.replace(/-/g,'');
+      const dtStart = r.date.replace(/-/g,'');
+      const dtEnd   = DateTime.fromISO(r.date).plus({days:1}).toISODate().replace(/-/g,''); // exclusive end
       const uid = `${uidBase}-${i}@attendance`;
       const title = `${s} - ${r.employee}`;
       lines.push(
         'BEGIN:VEVENT',
         `UID:${uid}`,
-        `DTSTAMP:${dt}T000000Z`,
-        `DTSTART;VALUE=DATE:${dt}`,
-        `DTEND;VALUE=DATE:${dt}`, // all-day
+        `DTSTAMP:${dtStart}T000000Z`,
+        `DTSTART;VALUE=DATE:${dtStart}`,
+        `DTEND;VALUE=DATE:${dtEnd}`,
         `SUMMARY:${title}`,
         'END:VEVENT'
       );
@@ -1239,6 +1241,6 @@ document.getElementById('buildStamp').textContent = `${BUILD} • ${DateTime.now
   ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
   ok('approval default pass', (POLICY.approvalPass||'12345678').length>=4);
 })();
-</script>
+  </script>
 </body>
 </html>
