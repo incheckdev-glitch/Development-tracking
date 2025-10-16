@@ -129,6 +129,10 @@
           <select id="employeeFilter" multiple></select>
         </div>
         <div class="col-lg-3">
+          <label class="form-label">Month</label>
+          <select id="monthFilter" class="form-select" multiple></select>
+        </div>
+        <div class="col-lg-3">
           <label class="form-label">Start Date</label>
           <input type="date" id="startDate" class="form-control"/>
         </div>
@@ -172,12 +176,13 @@
   <script>
     // === CONFIG ===
     // Replace with your own GSheet export link (published or anyone-with-link viewable):
-    const SHEET_GID = 390845393; // tab GID
-    const SHEET_BASE = "https://docs.google.com/spreadsheets/d/1yD6aIMz1MYoeU9ovFo8N4GF7W8TQmmEtoGCUjEgAb80/edit?resourcekey=&gid=390845393#gid=390845393";
-    const CSV_URL = () => `${SHEET_BASE}${SHEET_GID}&cachebust=${Date.now()}`; // prevent stale cache
+    const SHEET_GID = ""; // not used with Apps Script web app // tab GID
+    const SHEET_BASE = "https://script.google.com/macros/s/AKfycbw9S1Ic5kuUPcUi7yAbXpoZgKFIycfj8_jvBA1SpHiH58i6wdzAZupsibBjHbIXoe9bLg/exec?format=csv";
+    const CSV_URL = () => `${SHEET_BASE}&cachebust=${Date.now()}`; // prevent stale cache // prevent stale cache
     const REFRESH_MS = 60_000; // auto-refresh every 60s (tune as needed)
 
-    const TZ = "Asia/Beirut"; // used for display; parsing relies on local unless explicit
+    const TZ = "Asia/Beirut"; // used for display
+    const KNOWN_HEADERS = { month: 'month name', date: 'date', employee: 'employee name', in: 'first in', out: 'last out', hours: 'hours', status: 'status' };
 
     // === STATE ===
     let CANON = [];
@@ -243,22 +248,33 @@
     }
 
     function mapRow(r){
-      const dateISO = toISODate(r['date'] || r['day'] || r['attendance date'] || '');
-      const siRaw = r['sign in'] || r['in'] || r['first in'] || r['signin'] || '';
-      const soRaw = r['sign out'] || r['out'] || r['last out'] || r['signout'] || '';
+      const monthRaw = r[KNOWN_HEADERS.month] || r['month'] || '';
+      const dateISO = toISODate(r[KNOWN_HEADERS.date] || r['day'] || r['attendance date'] || '');
+      const siRaw = r[KNOWN_HEADERS.in] || r['sign in'] || r['in'] || r['first in'] || r['signin'] || '';
+      const soRaw = r[KNOWN_HEADERS.out] || r['sign out'] || r['out'] || r['last out'] || r['signout'] || '';
+      const hoursRaw = r[KNOWN_HEADERS.hours];
+
       const siDT = dateISO ? parsePunchWithDate(dateISO, siRaw) : null;
       const soDT = dateISO ? parsePunchWithDate(dateISO, soRaw) : null;
 
-      let total = 0;
-      if(siDT && soDT){ total = soDT.diff(siDT, 'hours').hours; }
+      let total = NaN;
+      if(hoursRaw !== undefined && hoursRaw !== null && String(hoursRaw).trim() !== ''){
+        const parsed = parseFloat(String(hoursRaw).replace(',', '.'));
+        if(!isNaN(parsed)) total = parsed;
+      }
+      if(!isFinite(total) && siDT && soDT){ total = soDT.diff(siDT, 'hours').hours; }
+      if(!isFinite(total)) total = 0;
+
+      const month = monthRaw || (dateISO ? (luxon.DateTime.fromISO(dateISO).isValid ? luxon.DateTime.fromISO(dateISO).toFormat('LLLL') : '') : '');
 
       return {
+        month,
         date: dateISO,
-        employee: r['employee'] || r['name'] || r['employee name'] || '',
+        employee: r[KNOWN_HEADERS.employee] || r['employee'] || r['name'] || r['employee name'] || '',
         signIn: siRaw || '',
         signOut: soRaw || '',
-        totalHours: isFinite(total) ? total : 0,
-        status: r['status'] || r['remarks'] || ''
+        totalHours: total,
+        status: r[KNOWN_HEADERS.status] || r['status'] || r['remarks'] || ''
       };
     }
 
@@ -274,6 +290,7 @@
 
     function renderTable(data){
       const rows = data.map(r => ({
+        Month: r.month,
         Date: r.date,
         Employee: r.employee,
         'Sign In': r.signIn,
@@ -283,6 +300,7 @@
       }));
 
       const columns = [
+        { title: 'Month', data: 'Month' },
         { title: 'Date', data: 'Date' },
         { title: 'Employee', data: 'Employee' },
         { title: 'Sign In', data: 'Sign In' },
@@ -306,7 +324,7 @@
           ],
           footerCallback: function(row, data){
             const api = this.api();
-            const colIdx = 4; // Hours
+            const colIdx = 5; // Hours column index (Month=0, Date=1, Employee=2, In=3, Out=4, Hours=5, Status=6)
             const sum = api
               .column(colIdx, { page: 'current' })
               .data()
@@ -332,6 +350,7 @@
     function getCriteria(){
       return {
         employees: $('#employeeFilter').val() || [],
+        months: $('#monthFilter').val() || [],
         start: startDate.value,
         end: endDate.value,
         q: (quickSearch.value || '').toLowerCase()
@@ -342,6 +361,7 @@
       const c = getCriteria();
       const filtered = CANON.filter(r => {
         if(c.employees.length && !c.employees.includes(r.employee)) return false;
+        if(c.months.length && !c.months.includes(r.month)) return false;
         if(c.start && r.date < c.start) return false;
         if(c.end && r.date > c.end) return false;
         if(c.q && !`${r.employee} ${r.date} ${r.status}`.toLowerCase().includes(c.q)) return false;
@@ -353,6 +373,7 @@
 
     function resetFilters(){
       $('#employeeFilter').val(null).trigger('change');
+      $('#monthFilter').val(null).trigger('change');
       startDate.value = '';
       endDate.value = '';
       quickSearch.value = '';
@@ -370,6 +391,19 @@
           sel.appendChild(o);
         });
       $('#employeeFilter').select2({ placeholder: 'Select employees...', allowClear: true, width: '100%' });
+    }
+
+    function populateMonthFilter(){
+      const sel = document.getElementById('monthFilter');
+      sel.innerHTML = '';
+      [...new Set(CANON.map(r => r.month).filter(Boolean))]
+        .sort((a,b)=> a.localeCompare(b))
+        .forEach(m => {
+          const o = document.createElement('option');
+          o.value = m; o.textContent = m;
+          sel.appendChild(o);
+        });
+      $('#monthFilter').select2({ placeholder: 'Filter by month...', allowClear: true, width: '100%' });
     }
 
     async function downloadFullReport(){
@@ -395,6 +429,7 @@
           .map(r => mapRow(normalizeHeaders(r)))
           .filter(r => r.employee && r.date);
         populateEmployeeFilter();
+        populateMonthFilter();
         applyFilters();
       } catch(e){
         alert('Error: ' + e.message);
@@ -420,6 +455,27 @@
       // Only refresh if the page is visible to avoid unnecessary loads
       if(document.visibilityState === 'visible') loadData();
     }, REFRESH_MS);
+
+    // Define loadData (this was missing and caused no data to show)
+    async function loadData(){
+      const overlay = document.getElementById('loadingOverlay');
+      overlay.style.display = 'flex';
+      try{
+        const csv = await fetchCSV();
+        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+        CANON = parsed.data
+          .map(r => mapRow(normalizeHeaders(r)))
+          .filter(r => r.employee && r.date);
+        populateEmployeeFilter();
+        populateMonthFilter();
+        applyFilters();
+      } catch(e){
+        console.error(e);
+        alert('Failed to load data: ' + e.message);
+      } finally {
+        overlay.style.display = 'none';
+      }
+    }
 
     // Initial load
     loadData();
