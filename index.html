@@ -2,127 +2,125 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Attendance Dashboard</title>
+  <title>Attendance Intelligence — Pro Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- ======================= CSS LIBS ======================= -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css"/>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
 
   <!-- ======================= PAGE STYLES ======================= -->
   <style>
     :root{
-      --bg: #ffffff;
-      --fg: #111827;
-      --muted: #6b7280;
-      --card: #ffffff;
-      --accent: #0d6efd;
-      --border: #e5e7eb;
+      --bg: #0b1220;          /* deep slate */
+      --card: #101828;        /* dark card */
+      --elev: #0f172a;        /* elevated */
+      --fg: #e6edf7;          /* text */
+      --muted: #94a3b8;       /* muted text */
+      --border: #1f2a44;      /* borders */
+      --accent: #7c3aed;      /* purple */
+      --good: #16a34a;        /* green */
+      --warn: #f59e0b;        /* amber */
+      --bad:  #ef4444;        /* red */
     }
-    body.dark-mode {
-      --bg: #0f1115;
-      --fg: #e5e7eb;
-      --muted: #9ca3af;
-      --card: #161a22;
-      --accent: #22c55e;
-      --border: #222633;
-      background: var(--bg);
-      color: var(--fg);
+    body { background: linear-gradient(180deg, #0b1220 0%, #0b1220 60%, #0a0f1a 100%); color: var(--fg); }
+    .container-xxl{ max-width: 1400px; }
+    .glass { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,.35); }
+    .toolbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px); }
+    .kpi-card{ border-radius: 16px; padding: 16px; border: 1px solid var(--border); background: var(--card); }
+    .kpi-title{ color: var(--muted); font-weight: 600; letter-spacing: .4px; }
+    .kpi-value{ font-size: 1.75rem; font-weight: 700; }
+    .chip{ padding: 2px 10px; border-radius: 999px; font-size: .75rem; border:1px solid var(--border); color: var(--muted); }
+
+    .status-badge{ padding:.35rem .6rem; border-radius: 10px; font-weight:600; font-size:.78rem; }
+    .status-Present{ background: rgba(22,163,74,.15); color:#86efac; border:1px solid rgba(22,163,74,.35); }
+    .status-Late, .status-Late\\ \&\\ Left\\ Early{ background: rgba(245,158,11,.15); color:#fde68a; border:1px solid rgba(245,158,11,.35); }
+    .status-Left\\ Early{ background: rgba(239,68,68,.15); color:#fecaca; border:1px solid rgba(239,68,68,.35); }
+
+    .datatable-wrap{ border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--elev); }
+    table.dataTable tbody tr:hover{ background: rgba(124,58,237,.08) !important; }
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select{
+      background: #0b1220; border:1px solid var(--border); color: var(--fg);
     }
-    body { background: var(--bg); color: var(--fg); }
-    .card { background: var(--card); border-color: var(--border); transition: all 0.2s ease; }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.08); }
-    .filter-bar { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 10px; border: 1px solid var(--border); border-radius: .75rem; }
-    .muted { color: var(--muted); }
-    #loadingOverlay {
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); color:#fff; font-size:1.25rem;
-      display:flex; justify-content:center; align-items:center; z-index:2000;
-    }
-    .select2-container--default .select2-selection--multiple { background: var(--card); border-color: var(--border); color: var(--fg); }
-    .select2-container--default .select2-results>.select2-results__options { color: #111; }
-    /* DataTables tweaks for dark mode */
-    body.dark-mode table.dataTable { color: var(--fg); }
-    body.dark-mode .dataTables_wrapper .dataTables_filter input,
-    body.dark-mode .dataTables_wrapper .dataTables_length select { background: #0b0d12; border: 1px solid #2a3142; color: var(--fg); }
+
+    .select2-container--default .select2-selection--multiple{ background: #0b1220; color:var(--fg); border:1px solid var(--border); min-height: 38px; }
+    .select2-container .select2-selection--multiple .select2-selection__choice{ background:#172036; border:1px solid var(--border); color:var(--fg); }
+
+    .btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--fg); }
+    .btn-ghost:hover{ background:#141a2b; }
+
+    .spark{ width:100%; height:46px; }
   </style>
 </head>
 
 <body>
-  <div id="loadingOverlay">⏳ Loading...</div>
-
-  <div class="container-fluid p-4" id="reportArea">
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-      <div>
-        <h2 class="mb-0">📊 Attendance Dashboard</h2>
-        <small class="muted">Synced from Google Sheets (auto-refresh)</small>
+  <!-- ===== Toolbar ===== -->
+  <div class="toolbar glass py-3 mb-4">
+    <div class="container-xxl d-flex justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-graph-up-arrow fs-3 text-warning"></i>
+        <div>
+          <div class="fw-bold">Attendance Intelligence</div>
+          <div class="text-secondary small">Live from Google Sheets</div>
+        </div>
       </div>
       <div class="d-flex gap-2">
-        <button id="darkBtn" class="btn btn-outline-secondary" title="Toggle theme">🌙/☀️</button>
-        <button id="refreshBtn" class="btn btn-outline-primary">Refresh</button>
-        <button class="btn btn-success" id="pdfBtn">Download PDF</button>
+        <button id="darkBtn" class="btn btn-ghost"><i class="bi bi-moon-stars"></i></button>
+        <button id="refreshBtn" class="btn btn-ghost"><i class="bi bi-arrow-repeat me-2"></i>Refresh</button>
+        <button id="pdfBtn" class="btn btn-primary"><i class="bi bi-filetype-pdf me-2"></i>Export PDF</button>
       </div>
     </div>
+  </div>
 
-    <!-- KPIs -->
+  <div class="container-xxl">
+    <!-- ===== KPIs ===== -->
     <div class="row g-3 mb-3">
       <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <div class="muted">Rows</div>
-                <div class="fs-4" id="kpiRows">–</div>
-              </div>
-              <span class="badge text-bg-primary">All</span>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Rows</div>
+          <div class="d-flex justify-content-between align-items-end">
+            <div class="kpi-value" id="kpiRows">–</div>
+            <canvas id="sparkRows" class="spark"></canvas>
           </div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <div class="muted">Employees</div>
-                <div class="fs-4" id="kpiEmployees">–</div>
-              </div>
-              <span class="badge text-bg-info">Unique</span>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Unique Employees</div>
+          <div class="d-flex justify-content-between align-items-end">
+            <div class="kpi-value" id="kpiEmployees">–</div>
+            <canvas id="sparkEmp" class="spark"></canvas>
           </div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <div class="muted">Total Hours</div>
-                <div class="fs-4" id="kpiHours">–</div>
-              </div>
-              <span class="badge text-bg-success">Sum</span>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Total Hours</div>
+          <div class="d-flex justify-content-between align-items-end">
+            <div class="kpi-value" id="kpiHours">–</div>
+            <canvas id="sparkHours" class="spark"></canvas>
           </div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <div class="muted">Last Updated</div>
-                <div class="fs-6" id="kpiUpdated">–</div>
-              </div>
-              <span class="badge text-bg-secondary">Auto</span>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Last Updated</div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div id="kpiUpdated" class="fw-semibold">–</div>
+            <span class="chip">Auto</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- FILTERS -->
-    <div class="filter-bar mb-4">
+    <!-- ===== Filters ===== -->
+    <div class="glass p-3 mb-3">
       <div class="row g-3 align-items-end">
         <div class="col-lg-3">
           <label class="form-label">Employee</label>
@@ -130,31 +128,46 @@
         </div>
         <div class="col-lg-3">
           <label class="form-label">Month</label>
-          <select id="monthFilter" class="form-select" multiple></select>
+          <select id="monthFilter" multiple></select>
         </div>
         <div class="col-lg-3">
-          <label class="form-label">Start Date</label>
-          <input type="date" id="startDate" class="form-control"/>
+          <label class="form-label">Status</label>
+          <select id="statusFilter" multiple></select>
         </div>
         <div class="col-lg-3">
-          <label class="form-label">End Date</label>
-          <input type="date" id="endDate" class="form-control"/>
+          <label class="form-label">Date range</label>
+          <div class="d-flex gap-2">
+            <input type="date" id="startDate" class="form-control"/>
+            <input type="date" id="endDate" class="form-control"/>
+          </div>
         </div>
-        <div class="col-lg-3">
+        <div class="col-lg-4">
           <label class="form-label">Quick Search</label>
-          <input type="text" id="quickSearch" class="form-control" placeholder="Search..."/>
+          <input type="text" id="quickSearch" class="form-control" placeholder="Search name, date, status..."/>
         </div>
-        <div class="col-12 text-end mt-2">
-          <button class="btn btn-primary" id="applyBtn">Apply Filters</button>
-          <button class="btn btn-warning" id="resetBtn">Reset</button>
+        <div class="col-lg-8 text-end">
+          <button class="btn btn-primary" id="applyBtn"><i class="bi bi-funnel me-2"></i>Apply</button>
+          <button class="btn btn-ghost" id="resetBtn"><i class="bi bi-arrow-counterclockwise me-2"></i>Reset</button>
         </div>
       </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <table id="attendanceTable" class="display nowrap table table-striped" style="width:100%"></table>
+    <!-- ===== Table ===== -->
+    <div class="datatable-wrap mb-4">
+      <table id="attendanceTable" class="display nowrap" style="width:100%"></table>
+    </div>
+
+    <!-- ===== Charts ===== -->
+    <div class="glass p-3 mb-5">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <h6 class="text-secondary">Hours by Employee</h6>
+          <canvas id="chartByEmp" height="160"></canvas>
+        </div>
+        <div class="col-lg-6">
+          <h6 class="text-secondary">Hours over Time</h6>
+          <canvas id="chartOverTime" height="160"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -166,83 +179,36 @@
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
     // === CONFIG ===
-    // Primary endpoint: Google Sheet "Publish to web" CSV (CORS-safe)
-    const SHEET_ID = ""; // optional (used only for fallback export URL)
     const GID = 390845393;
-    const APPS_SCRIPT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-    const GS_EXPORT_URL = SHEET_ID ? `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}` : null;
-
+    const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
     function candidateURLs(){
       const t = Date.now();
-      // Use the Published-to-web CSV first (CORS-safe), then optional Google export fallback
-      const urls = [`${APPS_SCRIPT_URL}&cachebust=${t}`];
-      if (GS_EXPORT_URL) urls.push(`${GS_EXPORT_URL}&cachebust=${t}`);
+      const urls = [`${PUBLISHED_CSV}&cachebust=${t}`];
       return urls;
     }
-
-    const REFRESH_MS = 60_000; // auto-refresh every 60s (tune as needed)
-
-    const TZ = "Asia/Beirut"; // used for display
-    const KNOWN_HEADERS = { month: 'month name', date: 'date', employee: 'employee name', in: 'first in', out: 'last out', hours: 'hours', status: 'status' };
+    const REFRESH_MS = 60_000;
+    const TZ = "Asia/Beirut";
 
     // === STATE ===
     let CANON = [];
     let DT = null;
+    let sparkRows, sparkEmp, sparkHours, chartByEmp, chartOverTime;
 
-    // === HELPERS ===
     const { DateTime } = luxon;
 
     function toggleDark(){ document.body.classList.toggle("dark-mode"); }
-
-    function normalizeHeaders(r){
-      const o={};
-      for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; }
-      return o;
-    }
-
-    function toISODate(s){
-      if(!s) return "";
-      const x = String(s).trim();
-      if(!x) return "";
-      const candidates = [
-        DateTime.fromFormat(x, 'd/M/yyyy'),
-        DateTime.fromFormat(x, 'd/M/yy'),
-        DateTime.fromFormat(x, 'yyyy-MM-dd'),
-        DateTime.fromFormat(x, 'd-M-yyyy'),
-        DateTime.fromFormat(x, 'M/d/yyyy'),
-        DateTime.fromISO(x)
-      ];
-      for(const c of candidates){ if(c.isValid) return c.toISODate(); }
-      const d = new Date(x);
-      if(!isNaN(d)) return d.toISOString().slice(0,10);
-      return "";
-    }
-
-    function parsePunchWithDate(dateISO, val){
-      if(!dateISO || !val) return null;
-      const s = String(val).trim();
-      if(!s || s === '-') return null;
-      const hm = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm');
-      if(hm.isValid) return hm;
-      const hms = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm:ss');
-      if(hms.isValid) return hms;
-      const ampm = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd h:mm a');
-      if(ampm.isValid) return ampm;
-      const iso = DateTime.fromISO(s);
-      if(iso.isValid) return iso;
-      const d = new Date(`${dateISO}T${s.length===5? s+':00' : s}`);
-      return isNaN(d) ? null : DateTime.fromJSDate(d);
-    }
-
     function hmsFromHours(hours){
       if(!isFinite(hours)) return '';
       const sign = hours < 0 ? '-' : '';
@@ -252,45 +218,44 @@
       return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     }
 
+    function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()]=r[k]; } return o; }
+    function toISODate(s){
+      if(!s) return ""; const x=String(s).trim(); if(!x) return "";
+      const c=[DateTime.fromFormat(x,'d/M/yyyy'),DateTime.fromFormat(x,'d/M/yy'),DateTime.fromFormat(x,'yyyy-MM-dd'),DateTime.fromFormat(x,'d-M-yyyy'),DateTime.fromFormat(x,'M/d/yyyy'),DateTime.fromISO(x)];
+      for(const t of c){ if(t.isValid) return t.toISODate(); }
+      const d=new Date(x); return isNaN(d)?"":d.toISOString().slice(0,10);
+    }
+    function parsePunchWithDate(dateISO,val){ if(!dateISO||!val) return null; const s=String(val).trim(); if(!s||s==='-')return null; const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid)return a; const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid)return b; const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid)return c; const iso=DateTime.fromISO(s); if(iso.isValid)return iso; const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d); }
+
     function mapRow(r){
-      const monthRaw = r[KNOWN_HEADERS.month] || r['month'] || '';
-      const dateISO = toISODate(r[KNOWN_HEADERS.date] || r['day'] || r['attendance date'] || '');
-      const siRaw = r[KNOWN_HEADERS.in] || r['sign in'] || r['in'] || r['first in'] || r['signin'] || '';
-      const soRaw = r[KNOWN_HEADERS.out] || r['sign out'] || r['out'] || r['last out'] || r['signout'] || '';
-      const hoursRaw = r[KNOWN_HEADERS.hours];
-
-      const siDT = dateISO ? parsePunchWithDate(dateISO, siRaw) : null;
-      const soDT = dateISO ? parsePunchWithDate(dateISO, soRaw) : null;
-
-      let total = NaN;
-      if(hoursRaw !== undefined && hoursRaw !== null && String(hoursRaw).trim() !== ''){
-        const parsed = parseFloat(String(hoursRaw).replace(',', '.'));
-        if(!isNaN(parsed)) total = parsed;
+      const month = r['month name'] || r['month'] || '';
+      const dateISO = toISODate(r['date'] || r['day'] || '');
+      const siRaw = r['first in'] || r['sign in'] || r['in'] || '';
+      const soRaw = r['last out']  || r['sign out'] || r['out'] || '';
+      const hoursRaw = r['hours'];
+      let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN;
+      if(!isFinite(total)){
+        const si=dateISO?parsePunchWithDate(dateISO,siRaw):null;
+        const so=dateISO?parsePunchWithDate(dateISO,soRaw):null;
+        if(si&&so) total = so.diff(si,'hours').hours; else total=0;
       }
-      if(!isFinite(total) && siDT && soDT){ total = soDT.diff(siDT, 'hours').hours; }
-      if(!isFinite(total)) total = 0;
-
-      const month = monthRaw || (dateISO ? (luxon.DateTime.fromISO(dateISO).isValid ? luxon.DateTime.fromISO(dateISO).toFormat('LLLL') : '') : '');
-
-      return {
-        month,
-        date: dateISO,
-        employee: r[KNOWN_HEADERS.employee] || r['employee'] || r['name'] || r['employee name'] || '',
-        signIn: siRaw || '',
-        signOut: soRaw || '',
-        totalHours: total,
-        status: r[KNOWN_HEADERS.status] || r['status'] || r['remarks'] || ''
-      };
+      const status = r['status'] || '';
+      return { month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO, employee: r['employee name']||r['employee']||r['name']||'', signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status };
     }
 
     function renderKPIs(data){
       const rows = data.length;
       const emps = new Set(data.map(d => d.employee).filter(Boolean)).size;
       const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
-      document.getElementById('kpiRows').textContent = rows.toLocaleString();
-      document.getElementById('kpiEmployees').textContent = emps.toLocaleString();
-      document.getElementById('kpiHours').textContent = hmsFromHours(hours);
-      document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
+      $('#kpiRows').text(rows.toLocaleString());
+      $('#kpiEmployees').text(emps.toLocaleString());
+      $('#kpiHours').text(hmsFromHours(hours));
+      $('#kpiUpdated').text(DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ'));
+
+      const byDay = aggregateBy(data, r=>r.date, r=>r.totalHours);
+      igniteSpark('sparkRows', Object.keys(byDay).length ? Object.keys(byDay).length : rows);
+      igniteSpark('sparkEmp', emps);
+      igniteSpark('sparkHours', Math.round(hours));
     }
 
     function renderTable(data){
@@ -298,51 +263,51 @@
         Month: r.month,
         Date: r.date,
         Employee: r.employee,
-        'Sign In': r.signIn,
-        'Sign Out': r.signOut,
-        Hours: isFinite(r.totalHours) ? r.totalHours : null,
+        In: r.signIn,
+        Out: r.signOut,
+        Hours: isFinite(r.totalHours)? r.totalHours : null,
         Status: r.status
       }));
-
-      const columns = [
-        { title: 'Month', data: 'Month' },
-        { title: 'Date', data: 'Date' },
-        { title: 'Employee', data: 'Employee' },
-        { title: 'Sign In', data: 'Sign In' },
-        { title: 'Sign Out', data: 'Sign Out' },
-        { title: 'Hours', data: 'Hours', render: (d)=> d==null? '' : hmsFromHours(d) },
-        { title: 'Status', data: 'Status' }
+      const colDefs = [
+        { title:'Month', data:'Month' },
+        { title:'Date', data:'Date' },
+        { title:'Employee', data:'Employee' },
+        { title:'First In', data:'In' },
+        { title:'Last Out', data:'Out' },
+        { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':hmsFromHours(d) },
+        { title:'Status', data:'Status', render:d=> `<span class="status-badge status-${(d||'').replace(/\s/g,'_')}">${d||''}</span>` }
       ];
 
       if(!DT){
         DT = $('#attendanceTable').DataTable({
           data: rows,
-          columns,
-          order: [[0,'desc']],
+          columns: colDefs,
           responsive: true,
-          pageLength: 10,
+          fixedHeader: true,
+          order: [[1,'desc'],[2,'asc']],
+          pageLength: 12,
           dom: 'Bfrtip',
           buttons: [
             { extend: 'csv', title: 'Attendance_Export' },
             { extend: 'print', title: 'Attendance' },
             { extend: 'copy' }
           ],
-          footerCallback: function(row, data){
+          createdRow: function(row, data){
+            if((data.Status||'').includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.05)';
+            if((data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.05)';
+            if((data.Status||'')==='Present') row.style.backgroundColor = 'rgba(22,163,74,.05)';
+          },
+          footerCallback: function(){
             const api = this.api();
-            const colIdx = 5; // Hours column index (Month=0, Date=1, Employee=2, In=3, Out=4, Hours=5, Status=6)
-            const sum = api
-              .column(colIdx, { page: 'current' })
-              .data()
-              .toArray()
-              .reduce((a,v)=> a + (typeof v === 'number' ? v : 0), 0);
+            const colIdx = 5;
+            const sum = api.column(colIdx, { page: 'current' }).data().toArray().reduce((a,v)=> a + (typeof v==='number'?v:0), 0);
             if(!$(api.table().footer()).length){
               $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
-              const tfootRow = columns.map(()=>'');
-              tfootRow[colIdx] = hmsFromHours(sum);
-              $(api.table().footer()).find('tr').html(tfootRow.map(c=>`<th>${c}</th>`).join(''));
+              const cells = colDefs.map(()=>'<th></th>');
+              cells[colIdx] = `<th class="text-end">${hmsFromHours(sum)}</th>`;
+              $(api.table().footer()).find('tr').html(cells.join(''));
             } else {
-              const cells = $(api.table().footer()).find('th');
-              cells.eq(colIdx).text(hmsFromHours(sum));
+              $(api.table().footer()).find('th').eq(colIdx).html(hmsFromHours(sum));
             }
           }
         });
@@ -351,10 +316,57 @@
       }
     }
 
+    function aggregateBy(data, keyFn, valFn){
+      const m = new Map();
+      for(const r of data){
+        const k = keyFn(r);
+        const v = valFn(r) || 0;
+        m.set(k, (m.get(k)||0) + v);
+      }
+      return Object.fromEntries(m);
+    }
+
+    function renderCharts(data){
+      const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
+      const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours);
+      const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,15);
+      const empData = empLabels.map(k=> byEmp[k]);
+      const dateLabels = Object.keys(byDate).sort();
+      const dateData = dateLabels.map(k=> byDate[k]);
+
+      chartByEmp && chartByEmp.destroy();
+      chartOverTime && chartOverTime.destroy();
+
+      chartByEmp = new Chart(document.getElementById('chartByEmp'), {
+        type: 'bar',
+        data: { labels: empLabels, datasets: [{ label: 'Hours', data: empData }] },
+        options: { plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#cbd5e1' } }, y:{ ticks:{ color:'#cbd5e1' } } } }
+      });
+      chartOverTime = new Chart(document.getElementById('chartOverTime'), {
+        type: 'line',
+        data: { labels: dateLabels, datasets: [{ label: 'Hours', data: dateData, tension:.3, fill:false }] },
+        options: { plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#cbd5e1' } }, y:{ ticks:{ color:'#cbd5e1' } } } }
+      });
+    }
+
+    function igniteSpark(id, value){
+      const c = document.getElementById(id);
+      if(!c) return;
+      const ctx = c.getContext('2d');
+      const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))))
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: data.map((_,i)=>i+1), datasets: [{ data, pointRadius:0, tension:.3 }] },
+        options: { responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+      });
+      return chart;
+    }
+
     function getCriteria(){
       return {
         employees: $('#employeeFilter').val() || [],
         months: $('#monthFilter').val() || [],
+        statuses: $('#statusFilter').val() || [],
         start: startDate.value,
         end: endDate.value,
         q: (quickSearch.value || '').toLowerCase()
@@ -366,6 +378,7 @@
       const filtered = CANON.filter(r => {
         if(c.employees.length && !c.employees.includes(r.employee)) return false;
         if(c.months.length && !c.months.includes(r.month)) return false;
+        if(c.statuses.length && !c.statuses.includes(r.status)) return false;
         if(c.start && r.date < c.start) return false;
         if(c.end && r.date > c.end) return false;
         if(c.q && !`${r.employee} ${r.date} ${r.status}`.toLowerCase().includes(c.q)) return false;
@@ -373,65 +386,58 @@
       });
       renderTable(filtered);
       renderKPIs(filtered);
+      renderCharts(filtered);
     }
 
     function resetFilters(){
       $('#employeeFilter').val(null).trigger('change');
       $('#monthFilter').val(null).trigger('change');
+      $('#statusFilter').val(null).trigger('change');
       startDate.value = '';
       endDate.value = '';
       quickSearch.value = '';
       applyFilters();
     }
 
-    function populateEmployeeFilter(){
-      const sel = document.getElementById('employeeFilter');
+    function populateSelect(id, values, placeholder){
+      const sel = document.getElementById(id);
       sel.innerHTML = '';
-      [...new Set(CANON.map(r => r.employee).filter(Boolean))]
+      [...new Set(values.filter(Boolean))]
         .sort((a,b)=> a.localeCompare(b))
-        .forEach(emp => {
-          const o = document.createElement('option');
-          o.value = emp; o.textContent = emp;
-          sel.appendChild(o);
-        });
-      $('#employeeFilter').select2({ placeholder: 'Select employees...', allowClear: true, width: '100%' });
-    }
-
-    function populateMonthFilter(){
-      const sel = document.getElementById('monthFilter');
-      sel.innerHTML = '';
-      [...new Set(CANON.map(r => r.month).filter(Boolean))]
-        .sort((a,b)=> a.localeCompare(b))
-        .forEach(m => {
-          const o = document.createElement('option');
-          o.value = m; o.textContent = m;
-          sel.appendChild(o);
-        });
-      $('#monthFilter').select2({ placeholder: 'Filter by month...', allowClear: true, width: '100%' });
+        .forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+      $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
     }
 
     async function downloadFullReport(){
-      const el = document.getElementById('reportArea');
+      const el = document.body; // full-page snap for nicer PDF
       const canvas = await html2canvas(el, { scale: 2 });
       const img = canvas.toDataURL('image/png');
       const doc = { content: [{ image: img, width: 520 }] };
-      pdfMake.createPdf(doc).download('Attendance_Report.pdf');
+      pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf');
     }
 
     async function fetchCSV(){
       const urls = candidateURLs();
       let lastErr;
       for (const url of urls){
-        try{
-          const res = await fetch(url, { cache: 'no-store' });
-          if(!res.ok) throw new Error(`HTTP ${res.status} at ${url}`);
-          return await res.text();
-        } catch(e){
-          console.warn('Fetch failed:', e);
-          lastErr = e;
-        }
+        try{ const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); }
+        catch(e){ console.warn('Fetch failed:', url, e); lastErr=e; }
       }
-      throw new Error(`All endpoints failed. Last error: ${lastErr}`);
+      throw lastErr || new Error('All endpoints failed');
+    }
+
+    async function loadData(){
+      try{
+        const csv = await fetchCSV();
+        const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+        CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+        populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
+        populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
+        populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses');
+        applyFilters();
+      } catch(e){
+        console.error(e); alert('Failed to load data: '+e.message);
+      }
     }
 
     // === EVENTS ===
@@ -440,58 +446,11 @@
     document.getElementById('applyBtn').addEventListener('click', applyFilters);
     document.getElementById('resetBtn').addEventListener('click', resetFilters);
     document.getElementById('refreshBtn').addEventListener('click', loadData);
-    document.getElementById('quickSearch').addEventListener('input', function(){
-      applyFilters();
-    });
+    document.getElementById('quickSearch').addEventListener('input', applyFilters);
 
-    // Auto refresh
-    setInterval(() => {
-      if(document.visibilityState === 'visible') loadData();
-    }, REFRESH_MS);
+    setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
 
-    // Define loadData
-    async function loadData(){
-      const overlay = document.getElementById('loadingOverlay');
-      overlay.style.display = 'flex';
-      try{
-        const csv = await fetchCSV();
-        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-        CANON = parsed.data
-          .map(r => mapRow(normalizeHeaders(r)))
-          .filter(r => r.employee && r.date);
-        populateEmployeeFilter();
-        populateMonthFilter();
-        applyFilters();
-      } catch(e){
-        console.error(e);
-        alert('Failed to load data: ' + e.message);
-      } finally {
-        overlay.style.display = 'none';
-      }
-    }
-
-    // --- Minimal internal tests (run once, logs to console) ---
-    (function runInternalTests(){
-      function assert(name, cond){ (cond?console.log:console.error)(`[TEST] ${name}: ${cond? 'OK':'FAIL'}`); }
-      try{
-        const urls = candidateURLs();
-        assert('candidateURLs returns array', Array.isArray(urls) && urls.length > 0);
-        assert('candidateURLs includes cachebust', urls[0].includes('cachebust='));
-
-        assert('toISODate(16/07/2025) => 2025-07-16', toISODate('16/07/2025') === '2025-07-16');
-        assert('toISODate(2025-10-16) => 2025-10-16', toISODate('2025-10-16') === '2025-10-16');
-
-        const sample = normalizeHeaders({
-          'Month Name':'July', 'Date':'2025-07-16', 'Employee Name':'Khaled Yakan', 'First In':'8:00:00', 'Last Out':'16:45:00', 'Hours':'8.75', 'Status':'Present'
-        });
-        const mapped = mapRow(sample);
-        assert('mapRow employee', mapped.employee === 'Khaled Yakan');
-        assert('mapRow date', mapped.date === '2025-07-16');
-        assert('mapRow hours numeric ~ 8.75', Math.abs(mapped.totalHours - 8.75) < 0.01);
-      } catch(e){ console.error('[TEST] Uncaught', e); }
-    })();
-
-    // Initial load
+    // Kick-off
     loadData();
   </script>
 </body>
