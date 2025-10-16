@@ -218,16 +218,35 @@
     // Business policy (edit if needed)
     const POLICY = {
       dayStart: '08:00',     // expected start time
-      dayEnd:   '17:00',     // expected end time
-      graceMin: 15,          // grace period for late
-      breakMin: 0,           // unpaid break minutes included in expected day
-      workdayHours: 8,       // target hours per working day
+      dayEnd:   '16:45',     // expected end time (matches your current “Present” rows)
+      graceMin: 20,          // late tolerance in minutes
+      breakMin: 30,          // unpaid break minutes
+      workdayHours: 8.75,    // target hours per working day (08:00–16:45)
       recompute: false       // if true, replace CSV Status with computed
     };
     // Weekends and holidays (Luxon weekday: Mon=1..Sun=7). Default Sat+Sun
     const WEEKEND = [6,7];
     const HOLIDAYS = new Set([
-      // Add company holidays like '2025-01-01', '2025-04-22', ...
+      // 2025 Lebanon public holidays (Islamic dates are moon‑sighting dependent; adjust per official circulars)
+      '2025-01-01', // New Year
+      '2025-01-06', // Armenian Orthodox Christmas
+      '2025-02-09', // St. Maroun Day
+      '2025-02-14', // Rafik Hariri Memorial Day
+      '2025-03-25', // Feast of the Annunciation
+      '2025-03-31', // Eid al‑Fitr (approx)
+      '2025-04-01', // Eid al‑Fitr Holiday (approx)
+      '2025-04-18', // Good Friday (both rites coincide in 2025)
+      '2025-05-01', // Labour Day
+      '2025-05-25', // Resistance and Liberation Day (falls on weekend)
+      '2025-06-06', // Eid al‑Adha (Day 1)
+      '2025-06-07', // Eid al‑Adha Holiday (Day 2)
+      '2025-06-27', // Hijri New Year (approx)
+      '2025-07-05', // Ashoura
+      '2025-08-04', // Beirut Explosion Memorial Day
+      '2025-08-15', // Assumption Day
+      '2025-09-04', // Prophet's Birthday (approx)
+      '2025-11-22', // Independence Day
+      '2025-12-25'  // Christmas Day
     ]);
 
     function candidateURLs(){
