@@ -92,6 +92,7 @@
       </div>
       <div class="d-flex gap-2">
         <button id="themeBtn" class="btn btn-ghost" title="Toggle light/dark"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
+        <button id="settingsBtn" class="btn btn-ghost" title="Settings"><i class="bi bi-gear"></i> Settings</button>
         <button id="refreshBtn" class="btn btn-ghost"><i class="bi bi-arrow-repeat me-2"></i>Refresh</button>
         <button class="btn btn-outline-primary" id="packBtn"><i class="bi bi-box-arrow-down me-2"></i>Export Pack</button>
         <button class="btn btn-primary" id="pdfBtn"><i class="bi bi-filetype-pdf me-2"></i>Export PDF</button>
@@ -162,7 +163,13 @@
             <label class="form-check-label" for="policySwitch">Compute status via policy</label>
           </div>
         </div>
-        <div class="col-lg-3 text-end">
+        <div class="col-lg-3 d-flex align-items-center">
+          <div class="form-check form-switch mt-4">
+            <input class="form-check-input" type="checkbox" id="decimalSwitch">
+            <label class="form-check-label" for="decimalSwitch">Decimal hours</label>
+          </div>
+        </div>
+        <div class="col-lg-12 text-end">
           <button class="btn btn-primary" id="applyBtn"><i class="bi bi-funnel me-2"></i>Apply</button>
           <button class="btn btn-ghost" id="resetBtn"><i class="bi bi-arrow-counterclockwise me-2"></i>Reset</button>
         </div>
@@ -189,6 +196,79 @@
     </div>
   </div>
 
+  <!-- ===== Settings Modal ===== -->
+  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-gear me-2"></i>Attendance Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Start time</label>
+              <input type="time" class="form-control" id="setStart">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">End time</label>
+              <input type="time" class="form-control" id="setEnd">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Late grace (min)</label>
+              <input type="number" class="form-control" id="setGraceMin" min="0" step="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Early-leave grace (min)</label>
+              <input type="number" class="form-control" id="setEarlyGraceMin" min="0" step="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Unpaid break (min)</label>
+              <input type="number" class="form-control" id="setBreakMin" min="0" step="5">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Target hrs/day</label>
+              <input type="number" class="form-control" id="setWorkdayHours" min="0" step="0.25">
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="setUseCalcTarget">
+                <label class="form-check-label" for="setUseCalcTarget">Use (End − Start − Break) as target</label>
+              </div>
+            </div>
+
+            <div class="col-12"><hr/></div>
+
+            <div class="col-md-12">
+              <label class="form-label">Weekend days</label>
+              <div class="row g-2" id="weekendChecks"></div>
+              <div class="form-text">Mon=1 … Sun=7. Selected days are <b>non-working</b>.</div>
+            </div>
+
+            <div class="col-12"><hr/></div>
+
+            <div class="col-md-8">
+              <label class="form-label">Holidays (YYYY-MM-DD, one per line)</label>
+              <textarea id="holidayText" rows="6" class="form-control" placeholder="2025-01-01\n2025-01-06\n..."></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Quick add holiday</label>
+              <div class="input-group">
+                <input type="date" class="form-control" id="holidayAdd"/>
+                <button class="btn btn-outline-primary" id="holidayAddBtn">Add</button>
+              </div>
+              <div class="form-text">Paste a list or add individually.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-danger" id="settingsReset">Reset to defaults</button>
+          <button class="btn btn-primary" id="settingsSave">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================= JS LIBS ======================= -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -207,6 +287,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
@@ -215,44 +296,42 @@
     const REFRESH_MS = 60_000;
     const TZ = "Asia/Beirut";
 
-    // Business policy (edit if needed)
-    const POLICY = {
-      dayStart: '08:00',     // expected start time
-      dayEnd:   '16:45',     // expected end time (matches your current “Present” rows)
-      graceMin: 20,          // late tolerance in minutes
-      breakMin: 30,          // unpaid break minutes
-      workdayHours: 8.75,    // target hours per working day (08:00–16:45)
-      recompute: false       // if true, replace CSV Status with computed
+    // ===== Defaults =====
+    const DEFAULT_POLICY = {
+      dayStart: '08:00',
+      dayEnd:   '16:45',
+      graceMin: 20,
+      earlyGraceMin: 0, // NEW: minutes before end-time allowed
+      breakMin: 30,
+      workdayHours: 8.75,
+      useCalcTarget: false, // if true => (End-Start-Break)
+      recompute: false
     };
-    // Weekends and holidays (Luxon weekday: Mon=1..Sun=7). Default Sat+Sun
-    const WEEKEND = [6,7];
-    const HOLIDAYS = new Set([
-      // 2025 Lebanon public holidays (Islamic dates are moon‑sighting dependent; adjust per official circulars)
-      '2025-01-01', // New Year
-      '2025-01-06', // Armenian Orthodox Christmas
-      '2025-02-09', // St. Maroun Day
-      '2025-02-14', // Rafik Hariri Memorial Day
-      '2025-03-25', // Feast of the Annunciation
-      '2025-03-31', // Eid al‑Fitr (approx)
-      '2025-04-01', // Eid al‑Fitr Holiday (approx)
-      '2025-04-18', // Good Friday (both rites coincide in 2025)
-      '2025-05-01', // Labour Day
-      '2025-05-25', // Resistance and Liberation Day (falls on weekend)
-      '2025-06-06', // Eid al‑Adha (Day 1)
-      '2025-06-07', // Eid al‑Adha Holiday (Day 2)
-      '2025-06-27', // Hijri New Year (approx)
-      '2025-07-05', // Ashoura
-      '2025-08-04', // Beirut Explosion Memorial Day
-      '2025-08-15', // Assumption Day
-      '2025-09-04', // Prophet's Birthday (approx)
-      '2025-11-22', // Independence Day
-      '2025-12-25'  // Christmas Day
-    ]);
+    const DEFAULT_WEEKEND = [6,7]; // Sat, Sun
+    const DEFAULT_HOLIDAYS = [
+      '2025-01-01','2025-01-06','2025-02-09','2025-02-14','2025-03-25','2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-25','2025-06-06','2025-06-07','2025-06-27','2025-07-05','2025-08-04','2025-08-15','2025-09-04','2025-11-22','2025-12-25'
+    ];
+    const DEFAULT_PREFS = { hoursFormat: 'hms' }; // 'hms' | 'decimal'
 
-    function candidateURLs(){
-      const t = Date.now();
-      return [`${PUBLISHED_CSV}&cachebust=${t}`];
-    }
+    // ===== Persisted Settings =====
+    const LS_KEYS = {
+      policy: 'attendance_policy_v1',
+      weekend: 'attendance_weekend_v1',
+      holidays: 'attendance_holidays_v1',
+      prefs: 'attendance_prefs_v1',
+      csv: 'attendance_csv_v1'
+    };
+
+    function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||'null'); return v??def; } catch{ return def; } }
+    function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
+    let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
+    let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
+    let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
+    let HOLIDAYS_SET = new Set(HOLIDAYS);
+
+    function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
 
     // === STATE ===
     let CANON = [];
@@ -286,6 +365,9 @@
       const m = Math.round((total - h) * 60);
       return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     }
+    function fmtHours(hours){
+      return PREFS.hoursFormat === 'decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours);
+    }
     function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()]=r[k]; } return o; }
     function toISODate(s){
       if(!s) return ""; const x=String(s).trim(); if(!x) return "";
@@ -305,7 +387,7 @@
       const lateMin = inDT.diff(start,'minutes').minutes;
       const earlyMin = end.diff(outDT,'minutes').minutes;
       const late = lateMin > POLICY.graceMin;
-      const leftEarly = earlyMin > 0; // any early leave
+      const leftEarly = earlyMin > POLICY.earlyGraceMin;
       if(late && leftEarly) return 'Late & Left Early';
       if(late) return 'Late';
       if(leftEarly) return 'Left Early';
@@ -330,7 +412,7 @@
     // ==== KPI / Charts ==== //
     function isWorkingDay(isoDate){
       if(!isoDate) return false;
-      if(HOLIDAYS.has(isoDate)) return false;
+      if(HOLIDAYS_SET.has(isoDate)) return false;
       const wd = DateTime.fromISO(isoDate).weekday; // 1..7
       return !WEEKEND.includes(wd);
     }
@@ -339,12 +421,13 @@
       const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
       const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
       document.getElementById('kpiDays').textContent = uniqueWorkingDays.toLocaleString();
-      document.getElementById('kpiHours').textContent = hmsFromHours(hours);
-      const expected = uniqueWorkingDays * POLICY.workdayHours;
+      document.getElementById('kpiHours').textContent = fmtHours(hours);
+      const targetPerDay = POLICY.useCalcTarget ? (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
+      const expected = uniqueWorkingDays * targetPerDay;
       const delta = hours - expected;
       const emoji = delta >= 0 ? '✅' : '⚠️';
-      document.getElementById('kpiVar').textContent = `${emoji} Var vs target: ${delta>=0?'+':''}${hmsFromHours(delta)}`;
-      document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS.size} holidays`;
+      document.getElementById('kpiVar').textContent = `${emoji} Var vs target (${targetPerDay.toFixed(2)}h/day): ${delta>=0?'+':''}${fmtHours(delta)}`;
+      document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
       document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
       igniteSpark('sparkDays', uniqueWorkingDays || 1);
       igniteSpark('sparkHours', Math.round(hours) || 1);
@@ -354,7 +437,7 @@
       lastFiltered = data;
       const rows = data.map(r => ({
         Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut,
-        Hours: isFinite(r.totalHours)? r.totalHours : null, Status: r.status
+        Hours: isFinite(r.totalHours)? r.totalHours : null, Status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status
       }));
       const colDefs = [
         { title:'Month', data:'Month' },
@@ -362,7 +445,7 @@
         { title:'Employee', data:'Employee' },
         { title:'First In', data:'In' },
         { title:'Last Out', data:'Out' },
-        { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':hmsFromHours(d) },
+        { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) },
         { title:'Status', data:'Status', render:d=> `<span class="status-badge status-${(d||'').replace(/\s/g,'_')}">${d||''}</span>` }
       ];
       if(!DT){
@@ -383,9 +466,9 @@
             if(!$(api.table().footer()).length){
               $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
               const cells = colDefs.map(()=>'<th></th>');
-              cells[colIdx] = `<th class="text-end">${hmsFromHours(sum)}</th>`;
+              cells[colIdx] = `<th class="text-end">${fmtHours(sum)}</th>`;
               $(api.table().footer()).find('tr').html(cells.join(''));
-            } else { $(api.table().footer()).find('th').eq(colIdx).html(hmsFromHours(sum)); }
+            } else { $(api.table().footer()).find('th').eq(colIdx).html(fmtHours(sum)); }
           }
         });
       } else { DT.clear().rows.add(rows).draw(); }
@@ -430,6 +513,8 @@
 
     function applyFilters(){
       POLICY.recompute = document.getElementById('policySwitch').checked;
+      PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms';
+      saveLS(LS_KEYS.prefs, PREFS);
       const c = getCriteria();
       const filtered = CANON.filter(r => {
         if(c.employees.length && !c.employees.includes(r.employee)) return false;
@@ -448,7 +533,10 @@
 
     function resetFilters(){
       $('#employeeFilter').val(null).trigger('change'); $('#monthFilter').val(null).trigger('change'); $('#statusFilter').val(null).trigger('change');
-      startDate.value = ''; endDate.value = ''; quickSearch.value = ''; document.getElementById('policySwitch').checked = false; applyFilters();
+      startDate.value = ''; endDate.value = ''; quickSearch.value = '';
+      document.getElementById('policySwitch').checked = POLICY.recompute; // keep policy choice
+      document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+      applyFilters();
     }
 
     function populateSelect(id, values, placeholder){
@@ -467,6 +555,7 @@
       if(c.end) p.set('end', c.end);
       if(c.q) p.set('q', c.q);
       if(c.policy) p.set('policy', '1');
+      if(PREFS.hoursFormat==='decimal') p.set('fmt','dec');
       history.replaceState(null, '', `${location.pathname}?${p.toString()}`);
     }
 
@@ -480,14 +569,16 @@
       const end = p.get('end') || '';
       const q = p.get('q') || '';
       const policy = p.get('policy') === '1';
+      const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat;
       if(employees.length) $('#employeeFilter').val(employees).trigger('change');
       if(months.length) $('#monthFilter').val(months).trigger('change');
       if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
-      startDate.value = start; endDate.value = end; quickSearch.value = q; document.getElementById('policySwitch').checked = policy;
+      startDate.value = start; endDate.value = end; quickSearch.value = q;
+      document.getElementById('policySwitch').checked = policy || POLICY.recompute;
+      PREFS.hoursFormat = fmt; document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
     }
 
     // ==== IO, CACHE & EXPORT PACK ==== //
-    const CACHE_KEY = 'attendance_csv_v1';
     async function downloadFullReport(){
       const el = document.body; const canvas = await html2canvas(el, { scale: 2 }); const img = canvas.toDataURL('image/png');
       const doc = { content: [{ image: img, width: 520 }] }; pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf');
@@ -497,13 +588,12 @@
       throw lastErr || new Error('All endpoints failed');
     }
     async function fetchCSV(){
-      // SWR: render from cache first, then update in background
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cached = localStorage.getItem(LS_KEYS.csv);
       if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; }
       return await refreshFromNetwork(false);
     }
     async function refreshFromNetwork(silent){
-      try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(CACHE_KEY); if(!old || old !== txt){ localStorage.setItem(CACHE_KEY, txt); if(silent) { parseAndRender(txt); } } return txt; }
+      try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(LS_KEYS.csv); if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) { parseAndRender(txt); } } return txt; }
       catch(e){ if(!silent) throw e; return null; }
     }
 
@@ -518,12 +608,12 @@
     async function exportPack(){
       const zip = new JSZip();
       // 1) Filtered CSV
-      const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:r.totalHours.toFixed(2), Status:r.status }));
+      const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:r.totalHours.toFixed(2), Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }));
       zip.file('attendance_filtered.csv', toCSV(simpleRows));
       // 2) XLSX with per-employee sheets
       const wb = XLSX.utils.book_new();
       const groups = {};
-      lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status:r.status }); });
+      lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }); });
       Object.entries(groups).forEach(([emp, rows]) => {
         const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
@@ -532,12 +622,56 @@
       zip.file('attendance_by_employee.xlsx', wbout);
       // 3) Summary text
       const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size;
-      const totalHours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
-      const expected = uniqueWorkingDays * POLICY.workdayHours;
-      const delta = totalHours - expected;
-      zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${totalHours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nGenerated: ${new Date().toISOString()}`);
+      const hours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+      const targetPerDay = POLICY.useCalcTarget ? (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
+      const expected = uniqueWorkingDays * targetPerDay;
+      const delta = hours - expected;
+      zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${hours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nPolicy: ${JSON.stringify(POLICY)}\nWeekend: ${WEEKEND.join(',')}\nHolidays: ${HOLIDAYS.join(',')}\nGenerated: ${new Date().toISOString()}`);
       const blob = await zip.generateAsync({ type:'blob' });
       saveAs(blob, 'attendance_export_pack.zip');
+    }
+
+    // ==== Settings UI ==== //
+    function renderWeekendChecks(){
+      const cont = document.getElementById('weekendChecks');
+      const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      cont.innerHTML = '';
+      for(let i=1;i<=7;i++){
+        const col = document.createElement('div'); col.className='col-6 col-md-3';
+        const id = `wkd_${i}`;
+        col.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(WEEKEND.includes(i)?'checked':'')}><label class="form-check-label" for="${id}">${i}. ${names[i-1]}</label></div>`;
+        cont.appendChild(col);
+      }
+    }
+    function openSettings(){
+      document.getElementById('setStart').value = POLICY.dayStart;
+      document.getElementById('setEnd').value = POLICY.dayEnd;
+      document.getElementById('setGraceMin').value = POLICY.graceMin;
+      document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin;
+      document.getElementById('setBreakMin').value = POLICY.breakMin;
+      document.getElementById('setWorkdayHours').value = POLICY.workdayHours;
+      document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget;
+      renderWeekendChecks();
+      document.getElementById('holidayText').value = HOLIDAYS.join('\n');
+      const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+      modal.show();
+    }
+
+    function saveSettings(){
+      POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart;
+      POLICY.dayEnd = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd;
+      POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value||DEFAULT_POLICY.graceMin);
+      POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value||DEFAULT_POLICY.earlyGraceMin);
+      POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value||DEFAULT_POLICY.breakMin);
+      POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value||DEFAULT_POLICY.workdayHours);
+      POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked;
+      saveLS(LS_KEYS.policy, POLICY);
+      const wk = [];
+      for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`).checked) wk.push(i);
+      WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND);
+      const lines = document.getElementById('holidayText').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+      applyFilters();
     }
 
     // ==== LOAD & PARSE ==== //
@@ -561,6 +695,19 @@
       const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
       applyTheme(next);
     });
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('settingsSave').addEventListener('click', saveSettings);
+    document.getElementById('settingsReset').addEventListener('click', ()=>{
+      POLICY = { ...DEFAULT_POLICY }; saveLS(LS_KEYS.policy, POLICY);
+      WEEKEND = [ ...DEFAULT_WEEKEND ]; saveLS(LS_KEYS.weekend, WEEKEND);
+      HOLIDAYS = [ ...DEFAULT_HOLIDAYS ]; HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+      openSettings();
+    });
+    document.getElementById('holidayAddBtn').addEventListener('click', ()=>{
+      const inp = document.getElementById('holidayAdd'); const v = inp.value.trim(); if(!v) return;
+      const ta = document.getElementById('holidayText'); const lines = ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value = lines.join('\n'); inp.value='';
+    });
+
     document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
     document.getElementById('packBtn').addEventListener('click', exportPack);
     document.getElementById('applyBtn').addEventListener('click', applyFilters);
@@ -577,7 +724,8 @@
     // Minimal tests (console)
     (function tests(){
       function ok(n,c){ (c?console.log:console.error)(`[TEST] ${n}: ${c?'OK':'FAIL'}`); }
-      ok('candidateURLs returns cachebusted CSV', candidateURLs()[0].includes('output=csv') && candidateURLs()[0].includes('cachebust='));
+      ok('candidateURLs cachebust', candidateURLs()[0].includes('output=csv') && candidateURLs()[0].includes('cachebust='));
+      ok('policy persisted', !!POLICY && typeof POLICY.graceMin === 'number');
     })();
   </script>
 </body>
