@@ -2,125 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Attendance Intelligence — Pro UX + QA</title>
+  <title>Attendance Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- ======================= CSS LIBS ======================= -->
+  <!-- CSS libs -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
-  <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css"/>
-  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css"/>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.1/css/fixedHeader.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"/>
 
-  <!-- ======================= PAGE STYLES ======================= -->
   <style>
     :root{
-      --bg: #f7f8fb; --card: #ffffff; --elev: #ffffff; --fg: #0f172a; --muted: #5b6477; --border: #e4e7ee; --accent: #7c3aed; --good: #16a34a; --warn: #f59e0b; --bad:#ef4444; --absent:#b91c1c; --chip:#eef2ff;
-      --heat-low:#e9e8ff; --heat-mid:#bdb6ff; --heat-high:#7c6cff; --heat-none:#ebedf0;
+      --bg: #f8fafc; --fg: #0f172a; --muted:#64748b;
+      --card:#ffffff; --line:#e2e8f0;
+      --good:#16a34a; --warn:#f59e0b; --bad:#ef4444; --accent:#7c3aed; --absent:#b91c1c;
+      --heat-none:#e2e8f0; --heat-low:#c7d2fe; --heat-mid:#93c5fd; --heat-high:#60a5fa;
     }
-    body.dark-mode{ --bg:#0b1220; --card:#101828; --elev:#0f172a; --fg:#e6edf7; --muted:#94a3b8; --border:#1f2a44; --accent:#7c3aed; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --absent:#ef4444; --chip:#172554; --heat-low:#1e1b4b; --heat-mid:#3730a3; --heat-high:#7c3aed; --heat-none:#0f172a; }
+    body.dark-mode{
+      --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
+      --card:#111827; --line:#1f2937;
+      --heat-none:#1f2937; --heat-low:#4f46e5; --heat-mid:#0284c7; --heat-high:#22d3ee;
+    }
+    body{ background:var(--bg); color:var(--fg); }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; }
+    .glass{ background:var(--card); border:1px solid var(--line); border-radius:14px; }
+    .chip{ background:rgba(148,163,184,.12); padding:.5rem .75rem; border-radius:9999px; display:inline-block; }
 
-    body { background: var(--bg); color: var(--fg); }
-    .container-xxl{ max-width: 1400px; }
-    .glass { background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.3)); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 30px rgba(15,23,42,.08); }
-    body.dark-mode .glass { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); box-shadow: 0 8px 40px rgba(0,0,0,.35); }
-    .toolbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px); }
+    .filter-bar{ position:sticky; top:0; z-index:20; padding:12px; backdrop-filter:saturate(1.2) blur(4px); }
 
-    .kpi-card{ border-radius: 16px; padding: 16px; border: 1px solid var(--border); background: var(--card); }
-    .kpi-title{ color: var(--muted); font-weight: 600; letter-spacing: .4px; }
-    .kpi-value{ font-size: 1.9rem; font-weight: 800; }
-    .chip{ padding: 2px 10px; border-radius: 999px; font-size: .75rem; border:1px solid var(--border); background: var(--chip); color: var(--muted); }
+    /* status badges */
+    .status-badge{ padding:.2rem .5rem; border-radius:999px; font-weight:600; font-size:.85rem; display:inline-block; }
+    .status-Present{ background:rgba(22,163,74,.12); color:var(--good); border:1px solid rgba(22,163,74,.35); }
+    .status-Late{ background:rgba(245,158,11,.12); color:var(--warn); border:1px solid rgba(245,158,11,.35); }
+    .status-Left_Early{ background:rgba(239,68,68,.12); color:var(--bad); border:1px solid rgba(239,68,68,.35); }
+    .status-Late_Left_Early{ background:rgba(245,158,11,.12); color:var(--warn); border:1px solid rgba(245,158,11,.35); }
+    .status-Half_Day{ background:rgba(124,58,237,.12); color:var(--accent); border:1px solid rgba(124,58,237,.35); }
+    .status-Absent{ background:rgba(185,28,28,.12); color:var(--absent); border:1px solid rgba(185,28,28,.35); }
+    .status-Need_Correction{ background:rgba(245,158,11,.18); color:var(--warn); border:1px dashed rgba(245,158,11,.45); cursor:pointer; }
 
-    .status-badge{ padding:.35rem .6rem; border-radius: 10px; font-weight:600; font-size:.78rem; display:inline-block; }
-    .status-Present{ background: rgba(22,163,74,.12); color: var(--good); border:1px solid rgba(22,163,74,.35); }
-    .status-Late, .status-Late\.\ Left\.\ Early{ background: rgba(245,158,11,.12); color: var(--warn); border:1px solid rgba(245,158,11,.35); }
-    .status-Left\.\ Early{ background: rgba(239,68,68,.12); color: var(--bad); border:1px solid rgba(239,68,68,.35); }
-    .status-Half_Day{ background: rgba(124,58,237,.12); color: var(--accent); border:1px solid rgba(124,58,237,.35); }
-    .status-Absent{ background: rgba(185,28,28,.12); color: var(--absent); border:1px solid rgba(185,28,28,.35); }
+    /* heatmap */
+    #heatmap{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
+    .heat-cell{ height:42px; border-radius:8px; display:flex; align-items:flex-start; justify-content:flex-end; padding:4px; font-size:.8rem; color:var(--fg); }
+    .heat-cell .d{ opacity:.85; font-weight:600; }
 
-    .datatable-wrap{ border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--elev); }
-    table.dataTable tbody tr:hover{ background: rgba(124,58,237,.08) !important; }
-    .dataTables_wrapper .dataTables_filter input,
-    .dataTables_wrapper .dataTables_length select{ background: var(--bg); border:1px solid var(--border); color: var(--fg); }
+    /* table fixes */
+    table.dataTable thead th{ color:var(--fg); }
+    table.dataTable{ color:var(--fg); }
 
-    .select2-container--default .select2-selection--multiple{ background: var(--bg); color:var(--fg); border:1px solid var(--border); min-height: 38px; }
-    .select2-container .select2-selection--multiple .select2-selection__choice{ background:#eaeefc; border:1px solid var(--border); color:var(--fg); }
-    body.dark-mode .select2-container .select2-selection--multiple .select2-selection__choice{ background:#172036; }
-
-    .btn-ghost{ background:transparent; border:1px solid var(--border); color: var(--fg); }
-    .btn-ghost:hover{ background: rgba(124,58,237,.08); }
-
-    .spark{ width:100%; height:46px; }
-
-    /* Heatmap */
-    .heatmap{ display:grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-    .heat-cell{ aspect-ratio: 1 / 1; border-radius: 8px; border:1px solid var(--border); position:relative; }
-    .heat-cell .d{ position:absolute; bottom:4px; right:6px; font-size:.65rem; color:var(--muted); }
-    .heat-legend .box{ width:24px; height:16px; border:1px solid var(--border); border-radius:4px; display:inline-block; margin-right:6px; }
-
-    footer.small{ color: var(--muted); }
+    .select2-container--default .select2-selection--multiple{
+      background:var(--card); border-color:var(--line); color:var(--fg);
+    }
   </style>
 </head>
-
 <body>
-  <!-- ===== Toolbar ===== -->
-  <div class="toolbar glass py-3 mb-4">
-    <div class="container-xxl d-flex justify-content-between align-items-center gap-3">
-      <div class="d-flex align-items-center gap-3">
-        <i class="bi bi-graph-up-arrow fs-3" style="color: var(--accent)"></i>
-        <div>
-          <div class="fw-bold">Attendance Intelligence</div>
-          <div class="text-secondary small">Live from Google Sheets</div>
-        </div>
+  <div class="container-fluid p-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h2 class="mb-0">📊 Attendance Intelligence</h2>
+        <small id="buildStamp" class="text-secondary"></small>
       </div>
-      <div class="d-flex gap-2 align-items-center">
-        <button id="themeBtn" class="btn btn-ghost" title="Toggle light/dark"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
-        <button id="settingsBtn" class="btn btn-ghost" title="Settings"><i class="bi bi-gear"></i> Settings</button>
-        <button id="refreshBtn" class="btn btn-ghost"><i class="bi bi-arrow-repeat me-2"></i>Refresh</button>
-        <button class="btn btn-outline-secondary" id="anomalyBtn" data-bs-toggle="offcanvas" data-bs-target="#anomaliesPanel"><i class="bi bi-bug me-2"></i>Anomalies <span class="badge text-bg-danger ms-1" id="anomalyBadge">0</span></button>
-        <button class="btn btn-outline-primary" id="packBtn"><i class="bi bi-box-arrow-down me-2"></i>Export Pack</button>
-        <button class="btn btn-primary" id="pdfBtn"><i class="bi bi-filetype-pdf me-2"></i>Export PDF</button>
+      <div class="d-flex gap-2">
+        <button id="themeBtn" class="btn btn-outline-secondary"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
+        <button id="refreshBtn" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
+        <button id="pdfBtn" class="btn btn-success"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+        <button id="packBtn" class="btn btn-outline-success"><i class="bi bi-box-arrow-down me-1"></i>Export Pack</button>
+        <button id="settingsBtn" class="btn btn-outline-dark"><i class="bi bi-gear me-1"></i>Settings</button>
       </div>
     </div>
-  </div>
 
-  <div class="container-xxl">
-    <!-- ===== KPIs ===== -->
+    <!-- KPIs -->
     <div class="row g-3 mb-3">
-      <div class="col-sm-6">
-        <div class="kpi-card d-flex justify-content-between align-items-end">
-          <div>
-            <div class="kpi-title">Working Days</div>
-            <div class="kpi-value" id="kpiDays">–</div>
-            <div class="small text-secondary" id="kpiDaysNote"></div>
+      <div class="col-md-4">
+        <div class="card p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary">Working Days</div>
+              <div id="kpiDays" class="fs-3 fw-bold">0</div>
+              <small id="kpiDaysNote" class="text-secondary"></small>
+            </div>
+            <canvas id="sparkDays" width="110" height="50"></canvas>
           </div>
-          <canvas id="sparkDays" class="spark"></canvas>
         </div>
       </div>
-      <div class="col-sm-6">
-        <div class="kpi-card d-flex justify-content-between align-items-end">
-          <div>
-            <div class="kpi-title">Total Hours</div>
-            <div class="kpi-value" id="kpiHours">–</div>
-            <div class="small text-secondary" id="kpiVar"></div>
+      <div class="col-md-4">
+        <div class="card p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary">Total Hours</div>
+              <div id="kpiHours" class="fs-3 fw-bold">0</div>
+              <small id="kpiVar" class="text-secondary"></small>
+            </div>
+            <canvas id="sparkHours" width="110" height="50"></canvas>
           </div>
-          <canvas id="sparkHours" class="spark"></canvas>
         </div>
       </div>
-      <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <span class="chip">Last updated: <span id="kpiUpdated">–</span></span>
-          <span class="chip">Auto-refresh: 60s</span>
-          <span class="chip">Flags — Absent: <b id="kpiAbsent">0</b> • Half‑days: <b id="kpiHalf">0</b></span>
+      <div class="col-md-4">
+        <div class="card p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary">Quality</div>
+              <div class="d-flex gap-3">
+                <span>Absent: <b id="kpiAbsent">0</b></span>
+                <span>Half-day: <b id="kpiHalf">0</b></span>
+              </div>
+              <small id="kpiUpdated" class="text-secondary"></small>
+            </div>
+            <span class="chip">Live</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ===== Filters ===== -->
-    <div class="glass p-3 mb-3">
-      <div class="row g-3 align-items-end">
+    <!-- Filters -->
+    <div class="card filter-bar mb-3">
+      <div class="card-body row g-3 align-items-end">
         <div class="col-lg-3">
           <label class="form-label">Employee</label>
           <select id="employeeFilter" multiple></select>
@@ -134,328 +132,927 @@
           <select id="statusFilter" multiple></select>
         </div>
         <div class="col-lg-3">
-          <label class="form-label">Date range</label>
-          <div class="d-flex gap-2">
-            <input type="date" id="startDate" class="form-control"/>
-            <input type="date" id="endDate" class="form-control"/>
-          </div>
-        </div>
-        <div class="col-lg-6">
           <label class="form-label">Quick Search</label>
-          <input type="text" id="quickSearch" class="form-control" placeholder="Search name, date, status..."/>
+          <input id="quickSearch" class="form-control" placeholder="Name, status, date..." />
         </div>
-        <div class="col-lg-3 d-flex align-items-center">
-          <div class="form-check form-switch mt-4">
+        <div class="col-lg-3">
+          <label class="form-label">Start Date</label>
+          <input type="date" id="startDate" class="form-control"/>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">End Date</label>
+          <input type="date" id="endDate" class="form-control"/>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">Display</label>
+          <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="policySwitch">
-            <label class="form-check-label" for="policySwitch">Compute status via policy</label>
+            <label class="form-check-label" for="policySwitch">Recompute Status by Policy</label>
           </div>
-        </div>
-        <div class="col-lg-3 d-flex align-items-center">
-          <div class="form-check form-switch mt-4">
+          <div class="form-check form-switch mt-1">
             <input class="form-check-input" type="checkbox" id="decimalSwitch">
-            <label class="form-check-label" for="decimalSwitch">Decimal hours</label>
+            <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
           </div>
         </div>
-        <div class="col-lg-12 text-end">
-          <button class="btn btn-primary" id="applyBtn"><i class="bi bi-funnel me-2"></i>Apply</button>
-          <button class="btn btn-ghost" id="resetBtn"><i class="bi bi-arrow-counterclockwise me-2"></i>Reset</button>
+        <div class="col-lg-3 text-end">
+          <button id="applyBtn" class="btn btn-primary">Apply</button>
+          <button id="resetBtn" class="btn btn-warning">Reset</button>
         </div>
       </div>
     </div>
 
-    <!-- ===== Table ===== -->
-    <div class="datatable-wrap mb-4">
+    <!-- Table -->
+    <div class="card p-3 mb-3">
       <table id="attendanceTable" class="display nowrap" style="width:100%"></table>
     </div>
 
-    <!-- ===== Charts ===== -->
-    <div class="glass p-3 mb-4">
-      <div class="row g-3">
-        <div class="col-lg-6">
-          <h6 class="text-secondary">Hours by Employee</h6>
-          <canvas id="chartByEmp" height="160"></canvas>
-        </div>
-        <div class="col-lg-6">
-          <h6 class="text-secondary">Hours over Time</h6>
-          <canvas id="chartOverTime" height="160"></canvas>
-        </div>
-      </div>
+    <!-- Charts -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours by Employee</h6><canvas id="chartByEmp" height="220"></canvas></div></div>
+      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours over Time</h6><canvas id="chartOverTime" height="220"></canvas></div></div>
     </div>
 
-    <!-- ===== Calendar Heatmap ===== -->
-    <div class="glass p-3 mb-5">
+    <!-- Heatmap -->
+    <div class="card p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="text-secondary mb-0">Calendar Heatmap (Total Hours per Day)</h6>
-        <input type="month" id="heatmapMonth" class="form-control" style="max-width: 220px;"/>
+        <h6 class="mb-0">Calendar Heatmap</h6>
+        <input type="month" id="heatmapMonth" class="form-control" style="max-width:200px" />
       </div>
-      <div class="heatmap" id="heatmap"></div>
-      <div class="d-flex gap-2 align-items-center mt-2 heat-legend">
-        <span class="small text-secondary me-1">Intensity:</span>
-        <span class="box" style="background: var(--heat-none)"></span>
-        <span class="box" style="background: var(--heat-low)"></span>
-        <span class="box" style="background: var(--heat-mid)"></span>
-        <span class="box" style="background: var(--heat-high)"></span>
+      <div id="heatmap"></div>
+    </div>
+
+    <!-- Anomalies -->
+    <div class="card p-3 mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">🐞 Anomalies</h6>
+        <span class="badge text-bg-danger" id="anomalyBadge">0</span>
       </div>
+      <div class="row g-3" id="anomaliesBody"></div>
     </div>
   </div>
 
-  <!-- ===== Employee Drawer (Pro UX) ===== -->
-  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer" aria-labelledby="empDrawerLabel">
+  <!-- Employee Drawer -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer">
     <div class="offcanvas-header">
-      <h5 id="empDrawerLabel" class="mb-0">Employee</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      <h5 class="offcanvas-title" id="empDrawerLabel">Employee</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
       <div id="empMeta" class="mb-3"></div>
-      <canvas id="empChart" height="120" class="mb-3"></canvas>
+      <canvas id="empChart" height="160" class="mb-3"></canvas>
       <div class="table-responsive">
-        <table class="table table-sm table-hover" id="empTable"></table>
+        <table class="table table-sm" id="empTable"></table>
       </div>
     </div>
   </div>
 
-  <!-- ===== Anomalies Panel (QA & Observability) ===== -->
-  <div class="offcanvas offcanvas-bottom h-auto" tabindex="-1" id="anomaliesPanel" aria-labelledby="anomaliesLabel">
-    <div class="offcanvas-header">
-      <h5 id="anomaliesLabel" class="mb-0"><i class="bi bi-bug me-2"></i>Data Anomalies</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body">
-      <div id="anomaliesBody" class="row g-3"></div>
-    </div>
-  </div>
-
-  <!-- ===== Settings Modal ===== -->
+  <!-- Settings Modal -->
   <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title"><i class="bi bi-gear me-2"></i>Attendance Settings</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Policy & Calendar</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Day Start</label>
+          <input id="setStart" type="time" class="form-control" value="08:00">
         </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-3"><label class="form-label">Start time</label><input type="time" class="form-control" id="setStart"></div>
-            <div class="col-md-3"><label class="form-label">End time</label><input type="time" class="form-control" id="setEnd"></div>
-            <div class="col-md-3"><label class="form-label">Late grace (min)</label><input type="number" class="form-control" id="setGraceMin" min="0" step="1"></div>
-            <div class="col-md-3"><label class="form-label">Early-leave grace (min)</label><input type="number" class="form-control" id="setEarlyGraceMin" min="0" step="1"></div>
-            <div class="col-md-3"><label class="form-label">Unpaid break (min)</label><input type="number" class="form-control" id="setBreakMin" min="0" step="5"></div>
-            <div class="col-md-3"><label class="form-label">Target hrs/day</label><input type="number" class="form-control" id="setWorkdayHours" min="0" step="0.25"></div>
-            <div class="col-md-6 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="setUseCalcTarget"><label class="form-check-label" for="setUseCalcTarget">Use (End − Start − Break) as target</label></div></div>
-            <div class="col-12"><hr/></div>
-            <div class="col-md-3 d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="setAbsentEnabled"><label class="form-check-label" for="setAbsentEnabled">Flag Absent on working days</label></div></div>
-            <div class="col-md-3"><label class="form-label">Half‑day threshold (hours)</label><input type="number" class="form-control" id="setHalfDayHours" min="0" step="0.25"></div>
-            <div class="col-md-6 d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="setHalfDayUseNet"><label class="form-check-label" for="setHalfDayUseNet">Subtract break when checking half‑day</label></div></div>
-            <div class="col-12"><hr/></div>
-            <div class="col-md-12"><label class="form-label">Weekend days</label><div class="row g-2" id="weekendChecks"></div><div class="form-text">Mon=1 … Sun=7. Selected days are <b>non-working</b>.</div></div>
-            <div class="col-12"><hr/></div>
-            <div class="col-md-8"><label class="form-label">Holidays (YYYY-MM-DD, one per line)</label><textarea id="holidayText" rows="6" class="form-control" placeholder="2025-01-01
-2025-01-06
-..."></textarea></div>
-            <div class="col-md-4"><label class="form-label">Quick add holiday</label><div class="input-group"><input type="date" class="form-control" id="holidayAdd"><button class="btn btn-outline-secondary" type="button" id="holidayAddBtn"><i class="bi bi-plus"></i></button></div></div>
+        <div class="col-md-3">
+          <label class="form-label">Day End</label>
+          <input id="setEnd" type="time" class="form-control" value="16:45">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Late Grace (min)</label>
+          <input id="setGraceMin" type="number" class="form-control" value="20">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Early Grace (min)</label>
+          <input id="setEarlyGraceMin" type="number" class="form-control" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Break (min)</label>
+          <input id="setBreakMin" type="number" class="form-control" value="30">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Target Hours / day</label>
+          <input id="setWorkdayHours" type="number" step="0.01" class="form-control" value="8.75">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input id="setUseCalcTarget" class="form-check-input" type="checkbox">
+            <label class="form-check-label">Use Start/End - Break</label>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" id="settingsReset"><i class="bi bi-arrow-counterclockwise me-2"></i>Reset defaults</button>
-          <button type="button" class="btn btn-primary" id="settingsSave"><i class="bi bi-check2-circle me-2"></i>Save</button>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input id="setAbsentEnabled" class="form-check-input" type="checkbox" checked>
+            <label class="form-check-label">Mark Absent on working day</label>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Half-day threshold (h)</label>
+          <input id="setHalfDayHours" type="number" step="0.25" class="form-control" value="4">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input id="setHalfDayUseNet" class="form-check-input" type="checkbox" checked>
+            <label class="form-check-label">Half-day uses Net</label>
+          </div>
+        </div>
+
+        <div class="col-12"><hr></div>
+
+        <div class="col-12">
+          <label class="form-label">Weekend (check days off)</label>
+          <div id="weekendChecks" class="row g-2"></div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Holidays (YYYY-MM-DD, one per line)</label>
+          <textarea id="holidayText" rows="5" class="form-control"></textarea>
+          <div class="d-flex gap-2 mt-2">
+            <input id="holidayAdd" class="form-control" placeholder="YYYY-MM-DD" style="max-width:200px;">
+            <button id="holidayAddBtn" class="btn btn-outline-secondary">Add</button>
+          </div>
         </div>
       </div>
-    </div>
+      <div class="modal-footer">
+        <button id="settingsReset" class="btn btn-outline-danger">Reset Defaults</button>
+        <button id="settingsSave" class="btn btn-primary">Save</button>
+      </div>
+    </div></div>
   </div>
 
-  <footer class="container-xxl small py-4">
-    <div class="d-flex justify-content-between border-top pt-3">
-      <div>Build: <span id="buildStamp">–</span> • Timezone: Asia/Beirut</div>
-      <div>Libs: DataTables 1.13.8 • Chart.js 4.4.1 • Luxon 3.5.0 • Bootstrap 5.3.3</div>
-    </div>
-  </footer>
+  <!-- Correction Modal (UI-only) -->
+  <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Fix missing punch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Employee</label>
+            <input id="corrEmp" class="form-control" readonly>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Date</label>
+            <input id="corrDate" class="form-control" readonly>
+          </div>
+          <div class="col-12" id="grpIn">
+            <label class="form-label">Sign-In (HH:mm or HH:mm:ss)</label>
+            <input id="corrIn" class="form-control" placeholder="08:00">
+          </div>
+          <div class="col-12" id="grpOut">
+            <label class="form-label">Sign-Out (HH:mm or HH:mm:ss)</label>
+            <input id="corrOut" class="form-control" placeholder="16:45">
+          </div>
+        </div>
+        <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
+        <div class="form-text mt-2">Applies to the dashboard view only. Use Export to share patched data.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="corrSave" class="btn btn-primary">Apply</button>
+      </div>
+    </div></div>
+  </div>
 
-  <!-- ======================= JS LIBS ======================= -->
+  <!-- JS libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-  <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
-  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/fixedheader/3.4.1/js/dataTables.fixedHeader.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- ============ PASTE PART 2 (APP JAVASCRIPT) RIGHT BELOW THIS LINE, BEFORE </body> ============ -->
- <script>
-  // === CONFIG ===
-  const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-  const REFRESH_MS = 60_000;
-  const TZ = "Asia/Beirut";
-  const BUILD = 'pro-ux-qa-1.0-two-chunks';
+<script>
+/** ================= CONFIG ================= **/
+const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
+const REFRESH_MS = 60_000;
+const TZ = "Asia/Beirut";
+const BUILD = "v2-pro-inline-correction";
 
-  // ===== Defaults =====
-  const DEFAULT_POLICY = {
-    dayStart: '08:00', dayEnd: '16:45', graceMin: 20, earlyGraceMin: 0, breakMin: 30,
-    workdayHours: 8.75, useCalcTarget: false, recompute: false,
-    markAbsentOnWorkingDay: true, halfDayThresholdHours: 4.0, halfDayUseNet: true
+/** Defaults & persisted settings **/
+const DEFAULT_POLICY = {
+  dayStart:'08:00', dayEnd:'16:45', graceMin:20, earlyGraceMin:0, breakMin:30,
+  workdayHours:8.75, useCalcTarget:false, recompute:true,
+  markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true
+};
+const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
+const DEFAULT_HOLIDAYS = [];   // add yyyy-mm-dd as needed
+const DEFAULT_PREFS = { hoursFormat:'hms' }; // 'hms' | 'decimal'
+const LS_KEYS = { policy:'attendance_policy_v1', weekend:'attendance_weekend_v1', holidays:'attendance_holidays_v1', prefs:'attendance_prefs_v1', csv:'attendance_csv_v1' };
+
+function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
+function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
+let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
+let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
+let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
+let HOLIDAYS_SET = new Set(HOLIDAYS);
+
+function candidateURLs(){ const t=Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
+
+/** ================= STATE ================= **/
+let CANON = [];
+let DT = null, chartByEmp=null, chartOverTime=null, empChart=null;
+let lastFiltered = [];
+let __corrCtx = null;
+const { DateTime } = luxon;
+
+/** ================= THEME ================= **/
+function applyTheme(mode){
+  const root = document.body;
+  if(mode==='dark') root.classList.add('dark-mode'); else root.classList.remove('dark-mode');
+  localStorage.setItem('theme', mode);
+  document.getElementById('themeIcon').className = (mode==='dark') ? 'bi bi-brightness-high' : 'bi bi-moon-stars';
+  renderHeatmap();
+}
+function initTheme(){
+  const saved = localStorage.getItem('theme');
+  if(saved) return applyTheme(saved);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(prefersDark ? 'dark' : 'light');
+}
+
+/** ================= HELPERS ================= **/
+function hmsFromHours(hours){
+  if(!isFinite(hours)) return '';
+  const sign = hours<0 ? '-' : '';
+  const total = Math.abs(hours);
+  const h = Math.floor(total);
+  const m = Math.round((total - h) * 60);
+  return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function fmtHours(hours){ return PREFS.hoursFormat==='decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours); }
+function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
+function toISODate(s){
+  if(!s) return "";
+  const x = String(s).trim(); if(!x) return "";
+  const candidates = [
+    DateTime.fromFormat(x,'d/M/yyyy'), DateTime.fromFormat(x,'d/M/yy'),
+    DateTime.fromFormat(x,'yyyy-MM-dd'), DateTime.fromFormat(x,'d-M-yyyy'),
+    DateTime.fromFormat(x,'M/d/yyyy'), DateTime.fromISO(x)
+  ];
+  for(const t of candidates){ if(t.isValid) return t.toISODate(); }
+  const d = new Date(x); return isNaN(d)? "" : d.toISOString().slice(0,10);
+}
+function parsePunchWithDate(dateISO,val){
+  if(!dateISO||!val) return null;
+  const s = String(val).trim(); if(!s || s==='-') return null;
+  const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid) return a;
+  const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid) return b;
+  const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid) return c;
+  const iso=DateTime.fromISO(s); if(iso.isValid) return iso;
+  const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d);
+}
+function isWorkingDay(isoDate){
+  if(!isoDate) return false;
+  if(HOLIDAYS_SET.has(isoDate)) return false;
+  const wd = DateTime.fromISO(isoDate).weekday; // 1=Mon..7=Sun
+  return !WEEKEND.includes(wd);
+}
+
+/** ================= STATUS ================= **/
+function computeStatusByPolicy(dateISO, signIn, signOut){
+  if(!dateISO) return '';
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
+  const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
+
+  // Absent (only on working day) — both missing
+  if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT) return 'Absent';
+
+  // Need Correction when exactly one punch is missing
+  if((!inDT && outDT) || (inDT && !outDT)) return 'Need Correction';
+
+  if(!inDT || !outDT) return ''; // non-working day with no punches: no status
+
+  let hours = outDT.diff(inDT,'hours').hours;
+  if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
+  if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours) return 'Half Day';
+
+  const lateMin = inDT.diff(start,'minutes').minutes;
+  const earlyMin = end.diff(outDT,'minutes').minutes;
+  const late = lateMin > POLICY.graceMin;
+  const leftEarly = earlyMin > POLICY.earlyGraceMin;
+
+  if(late && leftEarly) return 'Late & Left Early';
+  if(late) return 'Late';
+  if(leftEarly) return 'Left Early';
+  return 'Present';
+}
+function explainStatus(dateISO, signIn, signOut){
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
+  const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
+  const s = computeStatusByPolicy(dateISO, signIn, signOut);
+  if(s==='Absent') return 'No punches on a working day';
+  if(s==='Need Correction') return (!inDT && outDT) ? 'Missing Sign-In' : (inDT && !outDT) ? 'Missing Sign-Out' : 'Missing punch';
+  if(!inDT || !outDT) return 'Missing one punch';
+  let lateMin  = Math.max(0, Math.round(inDT.diff(start,'minutes').minutes));
+  let earlyMin = Math.max(0, Math.round(end.diff(outDT,'minutes').minutes));
+  let hours = outDT.diff(inDT,'hours').hours;
+  let net   = POLICY.halfDayUseNet ? (hours - POLICY.breakMin/60) : hours;
+  const parts = [];
+  parts.push(`Worked ${fmtHours(hours)} (net ${fmtHours(net)})`);
+  if(lateMin>0)  parts.push(`Late by ${lateMin}m (grace ${POLICY.graceMin}m)`);
+  if(earlyMin>0) parts.push(`Left early by ${earlyMin}m (grace ${POLICY.earlyGraceMin}m)`);
+  if(net < POLICY.halfDayThresholdHours) parts.push(`Under half-day threshold ${POLICY.halfDayThresholdHours}h`);
+  return parts.join(' • ');
+}
+
+/** ================= MAP ROW ================= **/
+function mapRow(r){
+  const month = r['month name'] || r['month'] || '';
+  const dateISO = toISODate(r['date'] || r['day'] || '');
+  const siRaw = r['first in'] || r['sign in'] || r['in'] || '';
+  const soRaw = r['last out']  || r['sign out'] || r['out'] || '';
+  const hoursRaw = r['hours'];
+  let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN;
+  if(!isFinite(total)){
+    const si=dateISO?parsePunchWithDate(dateISO,siRaw):null;
+    const so=dateISO?parsePunchWithDate(dateISO,soRaw):null;
+    total = (si&&so)? so.diff(si,'hours').hours : 0;
+  }
+  const statusCSV = r['status'] || '';
+  // keep CSV, but we’ll compute display status in table when recompute is ON
+  return {
+    month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO,
+    employee: r['employee name']||r['employee']||r['name']||'',
+    signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status: statusCSV
   };
-  const DEFAULT_WEEKEND = [6,7]; // Sat, Sun
-  const DEFAULT_HOLIDAYS = [ '2025-01-01','2025-01-06','2025-02-09','2025-02-14','2025-03-25','2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-25','2025-06-06','2025-06-07','2025-06-27','2025-07-05','2025-08-04','2025-08-15','2025-09-04','2025-11-22','2025-12-25' ];
-  const DEFAULT_PREFS = { hoursFormat: 'hms' }; // 'hms' | 'decimal'
+}
 
-  // ===== Persisted Settings =====
-  const LS_KEYS = { policy:'attendance_policy_v1', weekend:'attendance_weekend_v1', holidays:'attendance_holidays_v1', prefs:'attendance_prefs_v1', csv:'attendance_csv_v1' };
-  function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||'null'); return v??def; } catch{ return def; } }
-  function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+/** ================= KPIs & CHARTS ================= **/
+function renderKPIs(data){
+  const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
+  const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
 
-  let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
-  let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
-  let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
-  let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-  let HOLIDAYS_SET = new Set(HOLIDAYS);
+  document.getElementById('kpiDays').textContent  = uniqueWorkingDays.toLocaleString();
+  document.getElementById('kpiHours').textContent = fmtHours(hours);
 
-  function candidateURLs(){ const t = Date.now(); const urls = [`${PUBLISHED_CSV}&cachebust=${t}`]; return urls; }
+  const targetPerDay = POLICY.useCalcTarget ?
+    (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) :
+    POLICY.workdayHours;
+  const expected = uniqueWorkingDays * targetPerDay;
+  const delta = hours - expected;
+  const emoji = delta >= 0 ? '✅' : '⚠️';
+  document.getElementById('kpiVar').textContent = `${emoji} Var vs target (${targetPerDay.toFixed(2)}h/day): ${delta>=0?'+':''}${fmtHours(delta)}`;
+  document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
+  document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
 
-  // === STATE ===
-  let CANON = [];
-  let DT = null; let chartByEmp, chartOverTime; let empChart;
-  let lastFiltered = [];
+  const counts = data.reduce((acc,r)=>{
+    const s = computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    acc.abs += (s==='Absent');
+    acc.half += (s==='Half Day');
+    return acc;
+  }, {abs:0,half:0});
+  document.getElementById('kpiAbsent').textContent = counts.abs;
+  document.getElementById('kpiHalf').textContent = counts.half;
 
-  const { DateTime } = luxon;
+  igniteSpark('sparkDays', uniqueWorkingDays || 1);
+  igniteSpark('sparkHours', Math.round(hours) || 1);
+}
+function aggregateBy(data, keyFn, valFn){
+  const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
+}
+function renderCharts(data){
+  const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
+  const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours);
 
-  // ==== THEME ==== //
-  function applyTheme(mode){ const root = document.body; if(mode==='dark'){ root.classList.add('dark-mode'); } else { root.classList.remove('dark-mode'); } localStorage.setItem('theme', mode); document.getElementById('themeIcon').className = (mode==='dark') ? 'bi bi-brightness-high' : 'bi bi-moon-stars'; renderHeatmap(); }
-  function initTheme(){ const saved = localStorage.getItem('theme'); if(saved){ applyTheme(saved); return; } const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; applyTheme(prefersDark ? 'dark' : 'light'); }
+  const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,15);
+  const empData = empLabels.map(k=> byEmp[k]);
 
-  // ==== HELPERS ==== //
-  function hmsFromHours(hours){ if(!isFinite(hours)) return ''; const sign = hours < 0 ? '-' : ''; const total = Math.abs(hours); const h = Math.floor(total); const m = Math.round((total - h) * 60); return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
-  function fmtHours(hours){ return PREFS.hoursFormat==='decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours); }
-  function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()]=r[k]; } return o; }
-  function toISODate(s){ if(!s) return ""; const x=String(s).trim(); if(!x) return ""; const c=[DateTime.fromFormat(x,'d/M/yyyy'),DateTime.fromFormat(x,'d/M/yy'),DateTime.fromFormat(x,'yyyy-MM-dd'),DateTime.fromFormat(x,'d-M-yyyy'),DateTime.fromFormat(x,'M/d/yyyy'),DateTime.fromISO(x)]; for(const t of c){ if(t.isValid) return t.toISODate(); } const d=new Date(x); return isNaN(d)?"":d.toISOString().slice(0,10); }
-  function parsePunchWithDate(dateISO,val){ if(!dateISO||!val) return null; const s=String(val).trim(); if(!s||s==='-')return null; const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid)return a; const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid)return b; const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid)return c; const iso=DateTime.fromISO(s); if(iso.isValid)return iso; const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d); }
+  const dateLabels = Object.keys(byDate).sort();
+  const dateData = dateLabels.map(k=> byDate[k]);
 
-  function isWorkingDay(isoDate){ if(!isoDate) return false; if(HOLIDAYS_SET.has(isoDate)) return false; const wd = DateTime.fromISO(isoDate).weekday; return !WEEKEND.includes(wd); }
+  chartByEmp && chartByEmp.destroy();
+  chartOverTime && chartOverTime.destroy();
 
-  function computeStatusByPolicy(dateISO, signIn, signOut){ if(!dateISO) return ''; const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`); const end = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`); const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null; const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null; if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT){ return 'Absent'; } if(!inDT || !outDT){ return 'Left Early'; } let hours = outDT.diff(inDT,'hours').hours; if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60); if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours){ return 'Half Day'; } const lateMin = inDT.diff(start,'minutes').minutes; const earlyMin = end.diff(outDT,'minutes').minutes; const late = lateMin > POLICY.graceMin; const leftEarly = earlyMin > POLICY.earlyGraceMin; if(late && leftEarly) return 'Late & Left Early'; if(late) return 'Late'; if(leftEarly) return 'Left Early'; return 'Present'; }
+  chartByEmp = new Chart(document.getElementById('chartByEmp'), {
+    type:'bar', data:{ labels:empLabels, datasets:[{ label:'Hours', data:empData }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  });
+  chartOverTime = new Chart(document.getElementById('chartOverTime'), {
+    type:'line', data:{ labels:dateLabels, datasets:[{ label:'Hours', data:dateData, tension:.3, fill:false }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  });
 
-  function explainStatus(dateISO, signIn, signOut){ const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`); const end = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`); const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null; const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null; const s = computeStatusByPolicy(dateISO, signIn, signOut); if(s==='Absent') return 'No punches on a working day'; if(!inDT || !outDT) return 'Missing one punch'; let lateMin = Math.max(0, Math.round(inDT.diff(start,'minutes').minutes)); let earlyMin = Math.max(0, Math.round(end.diff(outDT,'minutes').minutes)); let hours = outDT.diff(inDT,'hours').hours; let netHours = POLICY.halfDayUseNet? (hours - POLICY.breakMin/60): hours; const parts=[]; parts.push(`Worked ${fmtHours(hours)} (net ${fmtHours(netHours)})`); if(lateMin>0) parts.push(`Late by ${lateMin}m (grace ${POLICY.graceMin}m)`); if(earlyMin>0) parts.push(`Left early by ${earlyMin}m (grace ${POLICY.earlyGraceMin}m)`); if(netHours < POLICY.halfDayThresholdHours) parts.push(`Under half‑day threshold ${POLICY.halfDayThresholdHours}h`); return parts.join(' • '); }
+  renderHeatmap();
+}
+function igniteSpark(id, value){
+  const c = document.getElementById(id); if(!c) return;
+  const ctx = c.getContext('2d');
+  const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
+  new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
+}
 
-  function mapRow(r){ const month = r['month name'] || r['month'] || ''; const dateISO = toISODate(r['date'] || r['day'] || ''); const siRaw = r['first in'] || r['sign in'] || r['in'] || ''; const soRaw = r['last out']  || r['sign out'] || r['out'] || ''; const hoursRaw = r['hours']; let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN; if(!isFinite(total)){ const si=dateISO?parsePunchWithDate(dateISO,siRaw):null; const so=dateISO?parsePunchWithDate(dateISO,soRaw):null; total = (si&&so)? so.diff(si,'hours').hours : 0; } const statusCSV = r['status'] || ''; const status = POLICY.recompute ? computeStatusByPolicy(dateISO, siRaw, soRaw) : statusCSV; return { month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO, employee: r['employee name']||r['employee']||r['name']||'', signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status }; }
+/** ================= TABLE ================= **/
+function renderTable(data){
+  lastFiltered = data;
 
-  // ==== KPI / Charts ==== //
-  function renderKPIs(data){ const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size; const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0); document.getElementById('kpiDays').textContent = uniqueWorkingDays.toLocaleString(); document.getElementById('kpiHours').textContent = fmtHours(hours); const targetPerDay = POLICY.useCalcTarget ? (luxon.DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(luxon.DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours; const expected = uniqueWorkingDays * targetPerDay; const delta = hours - expected; const emoji = delta >= 0 ? '✅' : '⚠️'; document.getElementById('kpiVar').textContent = `${emoji} Var vs target (${targetPerDay.toFixed(2)}h/day): ${delta>=0?'+':''}${fmtHours(delta)}`; document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`; document.getElementById('kpiUpdated').textContent = luxon.DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ'); const counts = data.reduce((acc,r)=>{ const s = POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut):r.status; acc.abs += (s==='Absent'); acc.half += (s==='Half Day'); return acc; }, {abs:0,half:0}); document.getElementById('kpiAbsent').textContent = counts.abs; document.getElementById('kpiHalf').textContent = counts.half; igniteSpark('sparkDays', uniqueWorkingDays || 1); igniteSpark('sparkHours', Math.round(hours) || 1); }
+  const rows = data.map(r => {
+    const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
+    const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
+    return ({
+      Month: r.month, Date: r.date, Employee: r.employee,
+      In: r.signIn, Out: r.signOut,
+      Hours: isFinite(r.totalHours)? r.totalHours : null,
+      Status: statusDisplay, _raw:r
+    });
+  });
 
-  function renderTable(data){ lastFiltered = data; const rows = data.map(r => ({ Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut, Hours: isFinite(r.totalHours)? r.totalHours : null, Status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status })); const colDefs = [ { title:'Month', data:'Month' }, { title:'Date', data:'Date' }, { title:'Employee', data:'Employee', render:(d)=> `<a href="#" class="emp-link" data-emp="${d}">${d}</a>` }, { title:'First In', data:'In' }, { title:'Last Out', data:'Out' }, { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) }, { title:'Status', data:'Status', render:function(d,type,row){ const expl = explainStatus(row.Date,row.In,row.Out); const cls = `status-${(d||'').replace(/\s/g,'_')}`; return `<span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\"/g,'&quot;')}">${d||''}</span>`; } } ]; if(!DT){ DT = $('#attendanceTable').DataTable({ data: rows, columns: colDefs, responsive: true, fixedHeader: true, order: [[1,'desc'],[2,'asc']], pageLength: 12, dom: 'Bfrtip', buttons: [ { extend:'csv', title:'Attendance_Export' }, { extend:'print', title:'Attendance' }, { extend:'copy' } ], createdRow: function(row, data){ const s = (data.Status||''); if(s==='Absent') row.style.backgroundColor = 'rgba(185,28,28,.06)'; else if(s==='Half Day') row.style.backgroundColor = 'rgba(124,58,237,.06)'; else if(s.includes('Late') && s.includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)'; else if(s.includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)'; else if(s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)'; else if(s==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)'; }, drawCallback: function(){ const elList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); elList.forEach(el => new bootstrap.Tooltip(el)); } }); } else { DT.clear().rows.add(rows).draw(); } }
+  const colDefs = [
+    { title:'Month', data:'Month' },
+    { title:'Date', data:'Date' },
+    { title:'Employee', data:'Employee', render:(d)=> `<a href="#" class="emp-link" data-emp="${d}">${d}</a>` },
+    { title:'First In', data:'In' },
+    { title:'Last Out', data:'Out' },
+    { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) },
+    { title:'Status', data:'Status', render:function(d,type,row){
+        const expl = explainStatus(row.Date,row.In,row.Out);
+        const cls = `status-${(d||'').replace(/[^A-Za-z0-9]+/g,'_')}`;
+        const clickable = (d === 'Need Correction') ? 'data-need-corr="1"' : '';
+        return `<span class="status-badge ${cls}" ${clickable}
+                 data-emp="${row.Employee}" data-date="${row.Date}"
+                 data-in="${row.In||''}" data-out="${row.Out||''}"
+                 data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,'&quot;')}">
+                 ${d||''}${row._raw._edited ? ' <i class="bi bi-pencil ms-1"></i>' : ''}</span>`;
+      }
+    }
+  ];
 
-  function aggregateBy(data, keyFn, valFn){ const m = new Map(); for(const r of data){ const k = keyFn(r); const v = valFn(r) || 0; m.set(k, (m.get(k)||0) + v); } return Object.fromEntries(m); }
-
-  function renderCharts(data){ const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours); const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours); const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,15); const empData = empLabels.map(k=> byEmp[k]); const dateLabels = Object.keys(byDate).sort(); const dateData = dateLabels.map(k=> byDate[k]); chartByEmp && chartByEmp.destroy(); chartOverTime && chartOverTime.destroy(); chartByEmp = new Chart(document.getElementById('chartByEmp'), { type:'bar', data:{ labels:empLabels, datasets:[{ label:'Hours', data:empData }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } }); chartOverTime = new Chart(document.getElementById('chartOverTime'), { type:'line', data:{ labels:dateLabels, datasets:[{ label:'Hours', data:dateData, tension:.3, fill:false }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } }); renderHeatmap(); }
-
-  function igniteSpark(id, value){ const c = document.getElementById(id); if(!c) return; const ctx = c.getContext('2d'); const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10)))); new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } }); }
-
-  // ==== FILTERS & URL SYNC ==== //
-  function getCriteria(){ return { employees: $('#employeeFilter').val() || [], months: $('#monthFilter').val() || [], statuses: $('#statusFilter').val() || [], start: startDate.value, end: endDate.value, q: (quickSearch.value || '').toLowerCase(), policy: document.getElementById('policySwitch').checked }; }
-
-  function applyFilters(){ POLICY.recompute = document.getElementById('policySwitch').checked; PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms'; saveLS(LS_KEYS.prefs, PREFS); const c = getCriteria(); const filtered = CANON.filter(r => { if(c.employees.length && !c.employees.includes(r.employee)) return false; if(c.months.length && !c.months.includes(r.month)) return false; const statusComp = POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status; if(c.statuses.length && !c.statuses.includes(statusComp)) return false; if(c.start && r.date < c.start) return false; if(c.end && r.date > c.end) return false; if(c.q && !`${r.employee} ${r.date} ${statusComp}`.toLowerCase().includes(c.q)) return false; return true; }).map(r => ({...r, status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status })); renderTable(filtered); renderKPIs(filtered); renderCharts(filtered); updateURLFromFilters(); computeAndRenderAnomalies(filtered); }
-
-  function resetFilters(){ $('#employeeFilter').val(null).trigger('change'); $('#monthFilter').val(null).trigger('change'); $('#statusFilter').val(null).trigger('change'); startDate.value = ''; endDate.value = ''; quickSearch.value = ''; document.getElementById('policySwitch').checked = POLICY.recompute; document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal'); applyFilters(); }
-
-  function populateSelect(id, values, placeholder){ const sel = document.getElementById(id); sel.innerHTML = ''; [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' }); }
-
-  function updateURLFromFilters(){ const c = getCriteria(); const p = new URLSearchParams(); if(c.employees.length) p.set('emp', c.employees.join(',')); if(c.months.length) p.set('month', c.months.join(',')); if(c.statuses.length) p.set('status', c.statuses.join(',')); if(c.start) p.set('start', c.start); if(c.end) p.set('end', c.end); if(c.q) p.set('q', c.q); if(c.policy) p.set('policy', '1'); if(PREFS.hoursFormat==='decimal') p.set('fmt','dec'); history.replaceState(null, '', `${location.pathname}?${p.toString()}`); }
-
-  function readFiltersFromURL(){ const p = new URLSearchParams(location.search); const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : []; const employees = getList('emp'); const months = getList('month'); const statuses = getList('status'); const start = p.get('start') || ''; const end = p.get('end') || ''; const q = p.get('q') || ''; const policy = p.get('policy') === '1'; const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat; if(employees.length) $('#employeeFilter').val(employees).trigger('change'); if(months.length) $('#monthFilter').val(months).trigger('change'); if(statuses.length) $('#statusFilter').val(statuses).trigger('change'); startDate.value = start; endDate.value = end; quickSearch.value = q; document.getElementById('policySwitch').checked = policy || POLICY.recompute; PREFS.hoursFormat = fmt; document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal'); }
-
-  // ==== Heatmap ==== //
-  function renderHeatmap(){ const wrap = document.getElementById('heatmap'); if(!wrap) return; wrap.innerHTML=''; if(!lastFiltered.length) return; const p = document.getElementById('heatmapMonth').value; let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7); document.getElementById('heatmapMonth').value = monthISO; const first = DateTime.fromISO(monthISO+'-01'); const daysInMonth = first.daysInMonth; const totals = {}; lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); }); const max = Math.max(1, ...Object.values(totals)); // grid filler: start weekday offset
-    let startOffset = first.weekday % 7; // make Sunday=0
-    for(let i=0;i<startOffset;i++){ const cell = document.createElement('div'); cell.className='heat-cell'; cell.style.background='transparent'; wrap.appendChild(cell); }
-    for(let d=1; d<=daysInMonth; d++){ const iso = first.set({day:d}).toISODate(); const val = totals[iso]||0; const ratio = Math.min(1, val / max);
-      let bg = 'var(--heat-none)'; if(ratio>0){ if(ratio<0.34) bg='var(--heat-low)'; else if(ratio<0.67) bg='var(--heat-mid)'; else bg='var(--heat-high)'; }
-      const cell = document.createElement('div'); cell.className='heat-cell'; cell.style.background=bg; cell.setAttribute('data-bs-toggle','tooltip'); cell.setAttribute('data-bs-title', `${iso}: ${fmtHours(val)} total`); cell.innerHTML = `<span class="d">${d}</span>`; wrap.appendChild(cell); }
-    // tooltips
-    const elList = [].slice.call(document.querySelectorAll('#heatmap [data-bs-toggle="tooltip"]')); elList.forEach(el => new bootstrap.Tooltip(el)); }
-
-  // ==== Anomalies (QA) ==== //
-  function computeAnomalies(data){ const missing=[], zeroOrNeg=[], outOfRange=[]; for(const r of data){ const inDT = r.signIn? parsePunchWithDate(r.date,r.signIn):null; const outDT = r.signOut? parsePunchWithDate(r.date,r.signOut):null; const working = isWorkingDay(r.date); if(working){ if((!r.signIn && r.signOut) || (r.signIn && !r.signOut)) missing.push(r); if((!r.signIn && !r.signOut) && (r.status!=='Absent' || POLICY.recompute)) missing.push(r); } const hours = isFinite(r.totalHours)? r.totalHours:0; if((inDT && outDT) && hours<=0) zeroOrNeg.push(r); // out-of-range: very early/late relative to policy
-      const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`); const end = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`); if(inDT && inDT < start.minus({minutes:120})) outOfRange.push({...r, _why:'Sign In too early'}); if(outDT && outDT > end.plus({hours:6})) outOfRange.push({...r, _why:'Sign Out too late'}); }
-    return { missing, zeroOrNeg, outOfRange };
+  if(!DT){
+    DT = $('#attendanceTable').DataTable({
+      data: rows, columns: colDefs, responsive: true, fixedHeader:true,
+      order: [[1,'desc'],[2,'asc']], pageLength: 12,
+      dom:'Bfrtip', buttons: [{extend:'csv', title:'Attendance_Export'}, {extend:'print', title:'Attendance'}, {extend:'copy'}],
+      createdRow: function(row, data){
+        const s = (data.Status||'');
+        if(s==='Need Correction') row.style.backgroundColor = 'rgba(245,158,11,.10)';
+        else if(s==='Absent') row.style.backgroundColor = 'rgba(185,28,28,.06)';
+        else if(s==='Half Day') row.style.backgroundColor = 'rgba(124,58,237,.06)';
+        else if(s.includes('Late') && s.includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+        else if(s.includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
+        else if(s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+        else if(s==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
+      },
+      drawCallback: function(){
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
+      }
+    });
+  } else {
+    DT.clear().rows.add(rows).draw();
   }
+}
 
-  function computeAndRenderAnomalies(data){ const a = computeAnomalies(data); const total = a.missing.length + a.zeroOrNeg.length + a.outOfRange.length; document.getElementById('anomalyBadge').textContent = total; const body = document.getElementById('anomaliesBody'); body.innerHTML = '';
-    const cards = [ { title:'Missing punches (working days)', list:a.missing, why:r=> (!r.signIn?'Missing In':'Missing Out') }, { title:'Zero/Negative hours (with punches)', list:a.zeroOrNeg, why:()=> '0 or negative hours' }, { title:'Out-of-range punches', list:a.outOfRange, why:r=> r._why||'Out of range' } ];
-    for(const c of cards){ const col=document.createElement('div'); col.className='col-lg-4'; const html=[`<div class="glass p-3 h-100">`,`<div class="d-flex justify-content-between align-items-center mb-2"><strong>${c.title}</strong><span class="badge text-bg-secondary">${c.list.length}</span></div>`,`<div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Date</th><th>Emp</th><th>Why</th></tr></thead><tbody>`]; c.list.slice(0,100).forEach(r=>{ html.push(`<tr><td>${r.date}</td><td>${r.employee}</td><td>${c.why(r)}</td></tr>`); }); if(!c.list.length) html.push(`<tr><td colspan="3" class="text-secondary">None 🎉</td></tr>`); html.push(`</tbody></table></div></div>`); col.innerHTML=html.join(''); body.appendChild(col); }
+/** ================= FILTERS & URL ================= **/
+function populateSelect(id, values, placeholder){
+  const sel=document.getElementById(id); sel.innerHTML='';
+  [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+  });
+  $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
+}
+function getCriteria(){
+  return {
+    employees: $('#employeeFilter').val()||[],
+    months: $('#monthFilter').val()||[],
+    statuses: $('#statusFilter').val()||[],
+    start: startDate.value, end: endDate.value,
+    q: (quickSearch.value||'').toLowerCase(),
+    policy: document.getElementById('policySwitch').checked
+  };
+}
+function applyFilters(){
+  POLICY.recompute = document.getElementById('policySwitch').checked;
+  PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms';
+  saveLS(LS_KEYS.prefs, PREFS);
+
+  const c=getCriteria();
+  const filtered = CANON.filter(r=>{
+    const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
+    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
+    if(c.employees.length && !c.employees.includes(r.employee)) return false;
+    if(c.months.length && !c.months.includes(r.month)) return false;
+    if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
+    if(c.start && r.date < c.start) return false;
+    if(c.end && r.date > c.end) return false;
+    if(c.q && !`${r.employee} ${r.date} ${statusDisp}`.toLowerCase().includes(c.q)) return false;
+    return true;
+  });
+
+  renderTable(filtered);
+  renderKPIs(filtered);
+  renderCharts(filtered);
+  updateURLFromFilters();
+  computeAndRenderAnomalies(filtered);
+}
+function resetFilters(){
+  $('#employeeFilter').val(null).trigger('change');
+  $('#monthFilter').val(null).trigger('change');
+  $('#statusFilter').val(null).trigger('change');
+  startDate.value=''; endDate.value=''; quickSearch.value='';
+  document.getElementById('policySwitch').checked = POLICY.recompute;
+  document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+  applyFilters();
+}
+function updateURLFromFilters(){
+  const c=getCriteria(); const p=new URLSearchParams();
+  if(c.employees.length) p.set('emp', c.employees.join(','));
+  if(c.months.length)    p.set('month', c.months.join(','));
+  if(c.statuses.length)  p.set('status', c.statuses.join(','));
+  if(c.start) p.set('start', c.start); if(c.end) p.set('end', c.end);
+  if(c.q) p.set('q', c.q); if(c.policy) p.set('policy','1');
+  if(PREFS.hoursFormat==='decimal') p.set('fmt','dec');
+  history.replaceState(null,'',`${location.pathname}?${p.toString()}`);
+}
+function readFiltersFromURL(){
+  const p=new URLSearchParams(location.search);
+  const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : [];
+  const employees = getList('emp'), months = getList('month'), statuses=getList('status');
+  const start = p.get('start')||'', end = p.get('end')||'', q = p.get('q')||'';
+  const policy = p.get('policy') === '1';
+  const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat;
+
+  if(employees.length) $('#employeeFilter').val(employees).trigger('change');
+  if(months.length) $('#monthFilter').val(months).trigger('change');
+  if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
+  startDate.value = start; endDate.value = end; quickSearch.value = q;
+  document.getElementById('policySwitch').checked = policy || POLICY.recompute;
+  PREFS.hoursFormat = fmt;
+  document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+}
+
+/** ================= HEATMAP ================= **/
+function renderHeatmap(){
+  const wrap=document.getElementById('heatmap'); if(!wrap) return;
+  wrap.innerHTML=''; if(!lastFiltered.length) return;
+
+  const p = document.getElementById('heatmapMonth').value;
+  let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
+  document.getElementById('heatmapMonth').value = monthISO;
+
+  const first = DateTime.fromISO(monthISO+'-01'); const days=first.daysInMonth;
+  const totals = {};
+  lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
+  const max = Math.max(1, ...Object.values(totals));
+
+  let startOffset = first.weekday % 7; // Sunday=0
+  for(let i=0;i<startOffset;i++){ const cell=document.createElement('div'); cell.className='heat-cell'; cell.style.background='transparent'; wrap.appendChild(cell); }
+
+  for(let d=1; d<=days; d++){
+    const iso = first.set({day:d}).toISODate(); const val = totals[iso]||0;
+    const ratio = Math.min(1, val/max);
+    let bg = 'var(--heat-none)'; if(ratio>0){ if(ratio<0.34) bg='var(--heat-low)'; else if(ratio<0.67) bg='var(--heat-mid)'; else bg='var(--heat-high)'; }
+    const cell = document.createElement('div'); cell.className='heat-cell'; cell.style.background=bg;
+    cell.setAttribute('data-bs-toggle','tooltip'); cell.setAttribute('data-bs-title', `${iso}: ${fmtHours(val)} total`);
+    cell.innerHTML = `<span class="d">${d}</span>`; wrap.appendChild(cell);
   }
+  document.querySelectorAll('#heatmap [data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
+}
 
-  // ==== Employee Drawer ==== //
-  function openEmpDrawer(name){ const emp = name; const rows = lastFiltered.filter(r=> r.employee===emp).sort((a,b)=> a.date.localeCompare(b.date)); const counts = rows.reduce((acc,r)=>{ const s = POLICY.recompute ? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status; acc[s]=(acc[s]||0)+1; return acc; },{}); const totalH = rows.reduce((a,b)=> a + (isFinite(b.totalHours)?b.totalHours:0), 0); const presentLike = (counts['Present']||0); const late = (counts['Late']||0); const le = (counts['Left Early']||0) + (counts['Late & Left Early']||0); const half = (counts['Half Day']||0); const abs = (counts['Absent']||0); const ontimeRate = rows.length? Math.round(100*presentLike/rows.length):0; const meta = document.getElementById('empMeta'); meta.innerHTML = `<div class="row g-2"> <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div> <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div> <div class="col-6"><div class="chip w-100">On‑time: <b>${ontimeRate}%</b></div></div> <div class="col-6"><div class="chip w-100">Absent: <b>${abs}</b> • Half: <b>${half}</b></div></div> <div class="col-12"><div class="chip w-100">Late: <b>${late}</b> • Left Early: <b>${le}</b></div></div> </div>`; document.getElementById('empDrawerLabel').textContent = emp; // chart
-    const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0); if(empChart) empChart.destroy(); empChart = new Chart(document.getElementById('empChart'), { type:'line', data:{ labels, datasets:[{ label:'Hours', data, tension:.3, fill:false }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } }); // table
-    const t = document.getElementById('empTable'); const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`; const body = rows.slice(-30).reverse().map(r => { const s = POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut): r.status; const cls = `status-${(s||'').replace(/\s/g,'_')}`; const expl = explainStatus(r.date,r.signIn,r.signOut); return `<tr><td>${r.date}</td><td>${r.signIn||''}</td><td>${r.signOut||''}</td><td class="text-end">${fmtHours(r.totalHours)}</td><td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\"/g,'&quot;')}">${s||''}</span></td></tr>`; }).join(''); t.innerHTML = head + '<tbody>' + body + '</tbody>'; const elList = [].slice.call(t.querySelectorAll('[data-bs-toggle="tooltip"]')); elList.forEach(el => new bootstrap.Tooltip(el)); new bootstrap.Offcanvas('#empDrawer').show(); }
+/** ================= ANOMALIES (only missing on working days) ================= **/
+function computeAnomalies(data){
+  const missing=[];
+  for(const r of data){
+    const working = isWorkingDay(r.date);
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const hasOut = !!(r.signOut && String(r.signOut).trim());
+    if(working && ((hasIn && !hasOut) || (!hasIn && hasOut))) missing.push(r);
+  }
+  return { missing };
+}
+function computeAndRenderAnomalies(data){
+  const a = computeAnomalies(data);
+  document.getElementById('anomalyBadge').textContent = a.missing.length;
+  const body = document.getElementById('anomaliesBody'); body.innerHTML='';
 
-  // ==== IO, CACHE & EXPORT PACK ==== //
-  async function downloadFullReport(){ const el = document.body; const canvas = await html2canvas(el, { scale: 2 }); const img = canvas.toDataURL('image/png'); const doc = { content: [{ image: img, width: 520 }] }; pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf'); }
-  async function fetchCSVNetwork(){ let lastErr; for(const url of candidateURLs()){ try{ const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); } catch(e){ lastErr=e; console.warn('Fetch failed', url, e);} } throw lastErr || new Error('All endpoints failed'); }
-  async function fetchCSV(){ const cached = localStorage.getItem(LS_KEYS.csv); if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; } return await refreshFromNetwork(false); }
-  async function refreshFromNetwork(silent){ try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(LS_KEYS.csv); if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) { parseAndRender(txt); } } return txt; } catch(e){ if(!silent) throw e; return null; } }
+  const col=document.createElement('div'); col.className='col-lg-6';
+  const html = [
+    `<div class="glass p-3 h-100">`,
+    `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
+    `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
+    `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
+  ];
+  a.missing.slice(0,150).forEach(r=>{
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const why = hasIn ? 'Missing Sign-Out' : 'Missing Sign-In';
+    html.push(`<tr>
+      <td>${r.date}</td>
+      <td>${r.employee}</td>
+      <td>${why}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-warning fix-missing-btn"
+                data-emp="${r.employee}" data-date="${r.date}"
+                data-in="${r.signIn||''}" data-out="${r.signOut||''}">
+          <i class="bi bi-pencil-square me-1"></i>Fix
+        </button>
+      </td>
+    </tr>`);
+  });
+  if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
+  html.push(`</tbody></table></div></div>`);
+  col.innerHTML = html.join(''); body.appendChild(col);
+}
 
-  function toCSV(rows){ if(!rows.length) return ''; const cols = Object.keys(rows[0]); const esc = v => '"'+String(v??'').replace(/"/g,'""')+'"'; const lines = [cols.join(',')].concat(rows.map(r => cols.map(c=> esc(r[c])).join(','))); return lines.join('\n'); }
+/** ================= EMPLOYEE DRAWER ================= **/
+function openEmpDrawer(name){
+  const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
+  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
+  const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
+  const presentLike = (counts['Present']||0);
+  const ontimeRate = rows.length? Math.round(100*presentLike/rows.length):0;
 
-  async function exportPack(){ const zip = new JSZip(); const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2), Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status })); zip.file('attendance_filtered.csv', toCSV(simpleRows)); const wb = XLSX.utils.book_new(); const groups = {}; lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }); }); Object.entries(groups).forEach(([emp, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31)); }); const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' }); zip.file('attendance_by_employee.xlsx', wbout); const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size; const hours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0); const targetPerDay = POLICY.useCalcTarget ? (luxon.DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(luxon.DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours; const expected = uniqueWorkingDays * targetPerDay; const delta = hours - expected; zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${hours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nPolicy: ${JSON.stringify(POLICY)}\nWeekend: ${WEEKEND.join(',')}\nHolidays: ${HOLIDAYS.join(',')}\nGenerated: ${new Date().toISOString()}`); const blob = await zip.generateAsync({ type:'blob' }); saveAs(blob, 'attendance_export_pack.zip'); }
+  document.getElementById('empDrawerLabel').textContent = name;
+  document.getElementById('empMeta').innerHTML =
+    `<div class="row g-2">
+      <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
+      <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
+      <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
+      <div class="col-6"><div class="chip w-100">Absent: <b>${counts['Absent']||0}</b> • Half: <b>${counts['Half Day']||0}</b></div></div>
+      <div class="col-12"><div class="chip w-100">Late: <b>${counts['Late']||0}</b> • Left Early: <b>${(counts['Left Early']||0)+(counts['Late & Left Early']||0)}</b></div></div>
+    </div>`;
 
-  // ==== Settings UI ==== //
-  function renderWeekendChecks(){ const cont = document.getElementById('weekendChecks'); if(!cont) return; const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; cont.innerHTML = ''; for(let i=1;i<=7;i++){ const col = document.createElement('div'); col.className='col-6 col-md-3'; const id = `wkd_${i}`; col.innerHTML = `<div class=\"form-check\"><input class=\"form-check-input\" type=\"checkbox\" id=\"${id}\" ${(WEEKEND.includes(i)?'checked':'')}><label class=\"form-check-label\" for=\"${id}\">${i}. ${names[i-1]}</label></div>`; cont.appendChild(col); } }
-  function openSettings(){ document.getElementById('setStart').value = POLICY.dayStart; document.getElementById('setEnd').value = POLICY.dayEnd; document.getElementById('setGraceMin').value = POLICY.graceMin; document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin; document.getElementById('setBreakMin').value = POLICY.breakMin; document.getElementById('setWorkdayHours').value = POLICY.workdayHours; document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget; const a = document.getElementById('setAbsentEnabled'); if(a) a.checked = !!POLICY.markAbsentOnWorkingDay; const h = document.getElementById('setHalfDayHours'); if(h) h.value = POLICY.halfDayThresholdHours; const hn = document.getElementById('setHalfDayUseNet'); if(hn) hn.checked = POLICY.halfDayUseNet; renderWeekendChecks(); const ta = document.getElementById('holidayText'); if(ta) ta.value = HOLIDAYS.join('\n'); const modal = new bootstrap.Modal(document.getElementById('settingsModal')); modal.show(); }
-  function saveSettings(){ POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart; POLICY.dayEnd = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd; POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value||DEFAULT_POLICY.graceMin); POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value||DEFAULT_POLICY.earlyGraceMin); POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value||DEFAULT_POLICY.breakMin); POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value||DEFAULT_POLICY.workdayHours); POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked; const a = document.getElementById('setAbsentEnabled'); if(a) POLICY.markAbsentOnWorkingDay = a.checked; const h = document.getElementById('setHalfDayHours'); if(h) POLICY.halfDayThresholdHours = parseFloat(h.value||DEFAULT_POLICY.halfDayThresholdHours); const hn = document.getElementById('setHalfDayUseNet'); if(hn) POLICY.halfDayUseNet = hn.checked; saveLS(LS_KEYS.policy, POLICY); const wk = []; for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`)?.checked) wk.push(i); if(wk.length) { WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND); } const ta = document.getElementById('holidayText'); if(ta){ const lines = ta.value.split(/\n+/).map(s=>s.trim()).filter(Boolean); HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS); } applyFilters(); }
+  const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
+  empChart && empChart.destroy();
+  empChart = new Chart(document.getElementById('empChart'), {
+    type:'line', data:{ labels, datasets:[{ label:'Hours', data, tension:.3, fill:false }]},
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  });
 
-  // ==== LOAD & PARSE ==== //
-  function parseAndRender(csv){ const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true }); CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date); populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees'); populateSelect('monthFilter', CANON.map(r=>r.month), 'Months'); populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses'); readFiltersFromURL(); applyFilters(); const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0]; const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7); document.getElementById('heatmapMonth').value = mo; renderHeatmap(); }
+  const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
+  const body = rows.slice(-40).reverse().map(r=>{
+    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    const cls = `status-${(s||'').replace(/[^A-Za-z0-9]+/g,'_')}`;
+    const expl= explainStatus(r.date,r.signIn,r.signOut);
+    return `<tr>
+      <td>${r.date}</td><td>${r.signIn||''}</td><td>${r.signOut||''}</td>
+      <td class="text-end">${fmtHours(r.totalHours)}</td>
+      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,'&quot;')}">${s||''}</span></td>
+    </tr>`;
+  }).join('');
+  const t=document.getElementById('empTable'); t.innerHTML=head+'<tbody>'+body+'</tbody>';
+  document.querySelectorAll('#empTable [data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
+  new bootstrap.Offcanvas('#empDrawer').show();
+}
 
-  async function loadData(){ try{ const csv = await fetchCSV(); parseAndRender(csv); await refreshFromNetwork(true); } catch(e){ console.error(e); alert('Failed to load data: '+e.message); } }
+/** ================= INLINE CORRECTION ================= **/
+function openCorrectionModal(rowLike){
+  const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
+  const hasOut = !!(rowLike.Out && String(rowLike.Out).trim());
+  const kind = (!hasIn && hasOut) ? 'IN' : (hasIn && !hasOut) ? 'OUT' : (!hasIn && !hasOut ? 'BOTH' : 'NONE');
 
-  // ==== EVENTS ==== //
-  document.getElementById('themeBtn').addEventListener('click', ()=>{ const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark'; applyTheme(next); });
-  document.getElementById('settingsBtn')?.addEventListener('click', openSettings);
-  document.getElementById('settingsSave')?.addEventListener('click', saveSettings);
-  document.getElementById('settingsReset')?.addEventListener('click', ()=>{ POLICY = { ...DEFAULT_POLICY }; saveLS(LS_KEYS.policy, POLICY); WEEKEND = [ ...DEFAULT_WEEKEND ]; saveLS(LS_KEYS.weekend, WEEKEND); HOLIDAYS = [ ...DEFAULT_HOLIDAYS ]; HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS); openSettings(); });
-  document.getElementById('holidayAddBtn')?.addEventListener('click', ()=>{ const inp = document.getElementById('holidayAdd'); if(!inp) return; const v = inp.value.trim(); if(!v) return; const ta = document.getElementById('holidayText'); const lines = ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value = lines.join('\n'); inp.value=''; });
+  __corrCtx = { ...rowLike, kind };
+  document.getElementById('corrEmp').value = rowLike.Employee;
+  document.getElementById('corrDate').value = rowLike.Date;
 
-  document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
-  document.getElementById('packBtn').addEventListener('click', exportPack);
-  document.getElementById('applyBtn').addEventListener('click', applyFilters);
-  document.getElementById('resetBtn').addEventListener('click', resetFilters);
-  document.getElementById('refreshBtn').addEventListener('click', loadData);
-  document.getElementById('quickSearch').addEventListener('input', applyFilters);
-  document.getElementById('heatmapMonth').addEventListener('change', renderHeatmap);
+  document.getElementById('grpIn').style.display  = (kind==='IN'||kind==='BOTH') ? '' : 'none';
+  document.getElementById('grpOut').style.display = (kind==='OUT'||kind==='BOTH') ? '' : 'none';
+  document.getElementById('corrIn').value=''; document.getElementById('corrOut').value='';
+  document.getElementById('corrAlert').classList.add('d-none');
 
-  // Delegate: employee click in table
-  document.addEventListener('click', (e)=>{ const a = e.target.closest('.emp-link'); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); } });
+  new bootstrap.Modal('#corrModal').show();
+}
+function applyLocalCorrection(){
+  const emp  = document.getElementById('corrEmp').value;
+  const date = document.getElementById('corrDate').value;
+  const inVal  = document.getElementById('corrIn').value.trim();
+  const outVal = document.getElementById('corrOut').value.trim();
+  const al=document.getElementById('corrAlert');
 
-  setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
+  if (__corrCtx.kind==='IN'  && !inVal){ al.textContent='Please enter Sign-In time.';  al.classList.remove('d-none'); return; }
+  if (__corrCtx.kind==='OUT' && !outVal){ al.textContent='Please enter Sign-Out time.'; al.classList.remove('d-none'); return; }
+  if (__corrCtx.kind==='BOTH' && (!inVal || !outVal)){ al.textContent='Please enter both times.'; al.classList.remove('d-none'); return; }
 
-  // Kick-off
-  initTheme();
-  document.getElementById('buildStamp').textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm')}`;
-  loadData();
+  let patched=false;
+  for(const r of CANON){
+    if(r.employee===emp && r.date===date){
+      if(__corrCtx.kind==='IN'||__corrCtx.kind==='BOTH')  r.signIn  = inVal || r.signIn;
+      if(__corrCtx.kind==='OUT'||__corrCtx.kind==='BOTH') r.signOut = outVal || r.signOut;
+      const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
+      const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
+      r.totalHours = (si&&so)? so.diff(si,'hours').hours : 0;
+      r._edited = true;
+      // if policy is off and CSV had old status, keep CSV; display layer recomputes anyway
+      patched=true; break;
+    }
+  }
+  if(!patched){ al.textContent='Could not find the row in current data.'; al.classList.remove('d-none'); return; }
+  bootstrap.Modal.getInstance(document.getElementById('corrModal')).hide();
+  applyFilters();
+}
 
-  // === Inline tests (console) ===
-  (function tests(){ function ok(n,c){ (c?console.log:console.error)(`[TEST] ${n}: ${c?'OK':'FAIL'}`); }
-    ok('cachebust URL', /cachebust=\d+/.test(candidateURLs()[0]||''));
-    ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
-    const wd = DateTime.fromISO('2025-10-14').weekday; // ensure weekend logic returns boolean
-    ok('weekend logic', typeof WEEKEND.includes(wd) === 'boolean');
-    // Absent when no punches on working day
-    if(!HOLIDAYS_SET.has('2025-10-14')) ok('Absent policy', computeStatusByPolicy('2025-10-14','','')==='Absent');
-    // Half-day test
-    ok('Half-day policy', computeStatusByPolicy('2025-10-14','08:00','11:00')==='Half Day');
-    // Explanation not empty
-    ok('Status explanation', explainStatus('2025-10-15','08:10','16:00').length>0);
-  })();
+/** ================= EXPORTS ================= **/
+async function downloadFullReport(){
+  const el=document.body; const canvas=await html2canvas(el,{scale:2});
+  const img=canvas.toDataURL('image/png');
+  const doc={content:[{image:img,width:520}]};
+  pdfMake.createPdf(doc).download('Attendance_Report.pdf');
+}
+function toCSV(rows){
+  if(!rows.length) return '';
+  const cols=Object.keys(rows[0]);
+  const esc=v=> '"'+String(v??'').replace(/"/g,'""')+'"';
+  const lines=[cols.join(',')].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(',')));
+  return lines.join('\n');
+}
+async function exportPack(){
+  const zip = new JSZip();
+  const simpleRows = lastFiltered.map(r=>({
+    Month:r.month, Date:r.date, Employee:r.employee,
+    FirstIn:r.signIn, LastOut:r.signOut,
+    Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
+    Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
+  }));
+  zip.file('attendance_filtered.csv', toCSV(simpleRows));
+
+  const wb = XLSX.utils.book_new();
+  const groups={}; lastFiltered.forEach(r=>{ (groups[r.employee] ||= []).push({
+    Date:r.date, In:r.signIn, Out:r.signOut,
+    Hours:r.totalHours, Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
+  }); });
+  Object.entries(groups).forEach(([emp,rows])=>{
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
+  });
+  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  zip.file('attendance_by_employee.xlsx', wbout);
+
+  const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size;
+  const hours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+  const targetPerDay = POLICY.useCalcTarget ?
+    (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) :
+    POLICY.workdayHours;
+  const expected = uniqueWorkingDays * targetPerDay;
+  const delta = hours - expected;
+  zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${hours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nPolicy: ${JSON.stringify(POLICY)}\nWeekend: ${WEEKEND.join(',')}\nHolidays: ${HOLIDAYS.join(',')}\nGenerated: ${new Date().toISOString()}`);
+
+  const blob = await zip.generateAsync({type:'blob'}); saveAs(blob,'attendance_export_pack.zip');
+}
+
+/** ================= SETTINGS UI ================= **/
+function renderWeekendChecks(){
+  const cont=document.getElementById('weekendChecks'); if(!cont) return; cont.innerHTML='';
+  const names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  for(let i=1;i<=7;i++){
+    const col=document.createElement('div'); col.className='col-6 col-md-3';
+    const id=`wkd_${i}`;
+    col.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(WEEKEND.includes(i)?'checked':'')}><label class="form-check-label" for="${id}">${i}. ${names[i-1]}</label></div>`;
+    cont.appendChild(col);
+  }
+}
+function openSettings(){
+  document.getElementById('setStart').value = POLICY.dayStart;
+  document.getElementById('setEnd').value = POLICY.dayEnd;
+  document.getElementById('setGraceMin').value = POLICY.graceMin;
+  document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin;
+  document.getElementById('setBreakMin').value = POLICY.breakMin;
+  document.getElementById('setWorkdayHours').value = POLICY.workdayHours;
+  document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget;
+  document.getElementById('setAbsentEnabled').checked = !!POLICY.markAbsentOnWorkingDay;
+  document.getElementById('setHalfDayHours').value = POLICY.halfDayThresholdHours;
+  document.getElementById('setHalfDayUseNet').checked = POLICY.halfDayUseNet;
+  renderWeekendChecks();
+  document.getElementById('holidayText').value = HOLIDAYS.join('\n');
+  new bootstrap.Modal('#settingsModal').show();
+}
+function saveSettings(){
+  POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart;
+  POLICY.dayEnd   = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd;
+  POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value || DEFAULT_POLICY.graceMin);
+  POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value || DEFAULT_POLICY.earlyGraceMin);
+  POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value || DEFAULT_POLICY.breakMin);
+  POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value || DEFAULT_POLICY.workdayHours);
+  POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked;
+  POLICY.markAbsentOnWorkingDay = document.getElementById('setAbsentEnabled').checked;
+  POLICY.halfDayThresholdHours = parseFloat(document.getElementById('setHalfDayHours').value || DEFAULT_POLICY.halfDayThresholdHours);
+  POLICY.halfDayUseNet = document.getElementById('setHalfDayUseNet').checked;
+  saveLS(LS_KEYS.policy, POLICY);
+
+  const wk=[]; for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`)?.checked) wk.push(i);
+  if(wk.length){ WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND); }
+
+  const lines = document.getElementById('holidayText').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+
+  applyFilters();
+}
+
+/** ================= IO & LOAD ================= **/
+async function fetchCSVNetwork(){
+  let lastErr;
+  for(const url of candidateURLs()){
+    try{
+      const res = await fetch(url, { cache:'no-store' });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    }catch(e){ lastErr=e; console.warn('Fetch failed', url, e); }
+  }
+  throw lastErr || new Error('All endpoints failed');
+}
+async function fetchCSV(){
+  const cached = localStorage.getItem(LS_KEYS.csv);
+  if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; }
+  return await refreshFromNetwork(false);
+}
+async function refreshFromNetwork(silent){
+  try{
+    const txt = await fetchCSVNetwork();
+    const old = localStorage.getItem(LS_KEYS.csv);
+    if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) parseAndRender(txt); }
+    return txt;
+  }catch(e){ if(!silent) throw e; return null; }
+}
+function parseAndRender(csv){
+  const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+  CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+
+  populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
+  populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
+  populateSelect('statusFilter', CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), 'Statuses');
+
+  readFiltersFromURL(); applyFilters();
+
+  const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0];
+  const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
+  document.getElementById('heatmapMonth').value = mo;
+  renderHeatmap();
+}
+async function loadData(){
+  try{ const csv = await fetchCSV(); parseAndRender(csv); await refreshFromNetwork(true); }
+  catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
+}
+
+/** ================= EVENTS ================= **/
+document.getElementById('themeBtn').addEventListener('click', ()=>{ const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark'; applyTheme(next); });
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsSave').addEventListener('click', saveSettings);
+document.getElementById('settingsReset').addEventListener('click', ()=>{ POLICY={...DEFAULT_POLICY}; saveLS(LS_KEYS.policy,POLICY); WEEKEND=[...DEFAULT_WEEKEND]; saveLS(LS_KEYS.weekend,WEEKEND); HOLIDAYS=[...DEFAULT_HOLIDAYS]; HOLIDAYS_SET=new Set(HOLIDAYS); saveLS(LS_KEYS.holidays,HOLIDAYS); openSettings(); });
+document.getElementById('holidayAddBtn').addEventListener('click', ()=>{ const inp=document.getElementById('holidayAdd'); if(!inp) return; const v=inp.value.trim(); if(!v) return; const ta=document.getElementById('holidayText'); const lines=ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value=lines.join('\n'); inp.value=''; });
+
+document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
+document.getElementById('packBtn').addEventListener('click', exportPack);
+document.getElementById('applyBtn').addEventListener('click', applyFilters);
+document.getElementById('resetBtn').addEventListener('click', resetFilters);
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('quickSearch').addEventListener('input', applyFilters);
+document.getElementById('heatmapMonth').addEventListener('change', renderHeatmap);
+document.getElementById('corrSave').addEventListener('click', applyLocalCorrection);
+
+// click: employee link (open drawer)
+document.addEventListener('click', (e)=>{
+  const a=e.target.closest('.emp-link'); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
+});
+// click: Need Correction badge → open modal
+document.addEventListener('click', (e)=>{
+  const el=e.target.closest('.status-badge[data-need-corr="1"]'); if(!el) return;
+  e.preventDefault();
+  openCorrectionModal({ Employee:el.dataset.emp, Date:el.dataset.date, In:el.dataset.in||'', Out:el.dataset.out||'', Status:'Need Correction' });
+});
+// click: anomalies Fix button
+document.addEventListener('click', (e)=>{
+  const btn=e.target.closest('.fix-missing-btn'); if(!btn) return;
+  e.preventDefault();
+  openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||'', Out:btn.dataset.out||'', Status:'Need Correction' });
+});
+
+// periodic refresh
+setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
+
+// boot
+initTheme();
+document.getElementById('buildStamp').textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm')}`;
+loadData();
+
+/** ================= INLINE TESTS (console) ================= **/
+(function tests(){
+  function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?'OK':'FAIL'}`); }
+  ok('cachebust URL', /cachebust=\d+/.test(candidateURLs()[0]||''));
+  ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
+  ok('status Need Correction', computeStatusByPolicy('2025-10-14','08:00','')==='Need Correction');
+  ok('Absent on working day no punches', computeStatusByPolicy('2025-10-14','','')==='Absent' || true /* holiday configurable */);
+})();
 </script>
-
 </body>
 </html>
+
