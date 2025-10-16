@@ -15,7 +15,7 @@
 
   <style>
     :root{
-      --bg: #f8fafc; --fg: #0f172a; --muted:#64748b;
+      --bg:#f8fafc; --fg:#0f172a; --muted:#64748b;
       --card:#ffffff; --line:#e2e8f0;
       --good:#16a34a; --warn:#f59e0b; --bad:#ef4444; --accent:#7c3aed; --absent:#b91c1c;
       --heat-none:#e2e8f0; --heat-low:#c7d2fe; --heat-mid:#93c5fd; --heat-high:#60a5fa;
@@ -67,6 +67,7 @@
       <div class="d-flex gap-2">
         <button id="themeBtn" class="btn btn-outline-secondary"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
         <button id="refreshBtn" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
+        <button id="syncBtn" class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Sync Now</button>
         <button id="pdfBtn" class="btn btn-success"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
         <button id="packBtn" class="btn btn-outline-success"><i class="bi bi-box-arrow-down me-1"></i>Export Pack</button>
         <button id="settingsBtn" class="btn btn-outline-dark"><i class="bi bi-gear me-1"></i>Settings</button>
@@ -320,39 +321,40 @@
     </div></div>
   </div>
 
-  <!-- JS libs -->
+  <!-- JS libs (order matters for DataTables exports) -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
   <script src="https://cdn.datatables.net/fixedheader/3.4.1/js/dataTables.fixedHeader.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script>
+  <!-- Part 2 (script) goes here -->
+<script>
 /** ================= CONFIG ================= **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 60_000;
 const TZ = "Asia/Beirut";
-const BUILD = "v2-pro-inline-correction-writeback";
+const BUILD = "v2-pro-inline-correction-writeback+sync";
 
-/** Writeback API — uses your deployed URL + shared token **/
+/** Writeback & Sync API **/
 const WRITEBACK = {
   url: 'https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec',
   token: '3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11'
 };
-// Use text/plain to avoid preflight; token in querystring.
-async function sendWriteback(kind, payload){ // kind: 'IN'|'OUT'
+// Avoid CORS preflight: text/plain + token in query
+async function sendWriteback(kind, payload){
   if (!WRITEBACK.url || !WRITEBACK.token) throw new Error('writeback_not_configured');
   const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
   const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
@@ -367,10 +369,34 @@ async function sendWriteback(kind, payload){ // kind: 'IN'|'OUT'
     cache: 'no-store',
     redirect: 'follow'
   });
-  const txt = await res.text();
-  let j = {}; try { j = JSON.parse(txt); } catch {}
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
   if (!j.ok) throw new Error(j.error || 'writeback_failed');
   return j;
+}
+// Sync Now → run mergeAttendanceSheets() on server, then pull fresh CSV
+async function sendSync(){
+  if (!WRITEBACK.url || !WRITEBACK.token) throw new Error('sync_not_configured');
+  const qs = new URLSearchParams({ token: WRITEBACK.token, action: 'sync' });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: '{}'
+  });
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || 'sync_failed');
+  return j;
+}
+async function syncNow(btn){
+  const el = btn || document.getElementById('syncBtn');
+  const old = el.innerHTML; el.disabled = true;
+  el.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Syncing...`;
+  try{
+    await sendSync();
+    const fresh = await fetchCSVNetwork(); // get new CSV immediately
+    localStorage.setItem(LS_KEYS.csv, fresh);
+    parseAndRender(fresh);
+  }catch(e){ console.error(e); alert('Sync failed: '+e.message); }
+  finally{ el.disabled=false; el.innerHTML = old; }
 }
 
 /** Defaults & persisted settings **/
@@ -463,13 +489,9 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
-  // Absent (only on working day)
   if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT) return 'Absent';
-
-  // Need Correction when exactly one punch is missing (on any day)
   if((!inDT && outDT) || (inDT && !outDT)) return 'Need Correction';
-
-  if(!inDT || !outDT) return ''; // non-working day no punches => blank
+  if(!inDT || !outDT) return '';
 
   let hours = outDT.diff(inDT,'hours').hours;
   if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
@@ -631,13 +653,18 @@ function renderTable(data){
     DT = $('#attendanceTable').DataTable({
       data: rows, columns: colDefs, responsive: true, fixedHeader:true,
       order: [[1,'desc'],[2,'asc']], pageLength: 12,
-      dom:'Bfrtip', buttons: [{extend:'csv', title:'Attendance_Export'}, {extend:'print', title:'Attendance'}, {extend:'copy'}],
+      dom:'Bfrtip',
+      buttons: [
+        {extend:'csv', title:'Attendance_Export'},
+        {extend:'print', title:'Attendance'},
+        {extend:'copy'}
+      ],
       createdRow: function(row, data){
         const s = (data.Status||'');
         if(s==='Need Correction') row.style.backgroundColor = 'rgba(245,158,11,.10)';
         else if(s==='Absent') row.style.backgroundColor = 'rgba(185,28,28,.06)';
         else if(s==='Half Day') row.style.backgroundColor = 'rgba(124,58,237,.06)';
-        else if(s.includes('Late') && s.includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+        else if(s.includes('Left Early') && s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
         else if(s.includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
         else if(s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
         else if(s==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
@@ -757,7 +784,7 @@ function renderHeatmap(){
   document.querySelectorAll('#heatmap [data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
 }
 
-/** ================= ANOMALIES (only missing on working days) ================= **/
+/** ================= ANOMALIES (missing punch on working days only) ================= **/
 function computeAnomalies(data){
   const missing=[];
   for(const r of data){
@@ -872,19 +899,13 @@ async function applyLocalCorrection(){
 
   const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || '', Out: outVal || __corrCtx.Out || '' };
 
-  // Write back to Apps Script (SignIn / SignOut)
   try {
-    if (__corrCtx.kind === 'IN' || __corrCtx.kind === 'BOTH') {
-      await sendWriteback('IN', { ...rowLike, In: inVal });
-    }
-    if (__corrCtx.kind === 'OUT' || __corrCtx.kind === 'BOTH') {
-      await sendWriteback('OUT', { ...rowLike, Out: outVal });
-    }
+    if (__corrCtx.kind === 'IN' || __corrCtx.kind === 'BOTH')  await sendWriteback('IN',  { ...rowLike, In: inVal });
+    if (__corrCtx.kind === 'OUT' || __corrCtx.kind === 'BOTH') await sendWriteback('OUT', { ...rowLike, Out: outVal });
   } catch (e) {
     console.warn('Writeback failed:', e);
     al.textContent = 'Saved locally, but write-back to Google Sheets failed. You can export now, or try again.';
     al.classList.remove('d-none');
-    // continue with local patch
   }
 
   // Local patch for instant UX
@@ -903,7 +924,7 @@ async function applyLocalCorrection(){
   if(!patched){ al.textContent='Could not find the row in current data.'; al.classList.remove('d-none'); return; }
 
   bootstrap.Modal.getInstance(document.getElementById('corrModal')).hide();
-  applyFilters(); // refresh table/charts/anomalies
+  applyFilters();
 }
 
 /** ================= EXPORTS ================= **/
@@ -1003,6 +1024,7 @@ function saveSettings(){
 }
 
 /** ================= IO & LOAD ================= **/
+function candidateURLs(){ const t=Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
 async function fetchCSVNetwork(){
   let lastErr;
   for(const url of candidateURLs()){
@@ -1059,6 +1081,7 @@ document.getElementById('packBtn').addEventListener('click', exportPack);
 document.getElementById('applyBtn').addEventListener('click', applyFilters);
 document.getElementById('resetBtn').addEventListener('click', resetFilters);
 document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('syncBtn').addEventListener('click', (e)=> syncNow(e.currentTarget));
 document.getElementById('quickSearch').addEventListener('input', applyFilters);
 document.getElementById('heatmapMonth').addEventListener('change', renderHeatmap);
 document.getElementById('corrSave').addEventListener('click', applyLocalCorrection);
@@ -1094,9 +1117,8 @@ loadData();
   ok('cachebust URL', /cachebust=\d+/.test(candidateURLs()[0]||''));
   ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
   ok('status Need Correction', computeStatusByPolicy('2025-10-14','08:00','')==='Need Correction');
-  ok('Absent on working day no punches', computeStatusByPolicy('2025-10-14','','')==='Absent' || true);
+  ok('Absent on working day if no punches', computeStatusByPolicy('2025-10-14','','')==='Absent' || true);
 })();
 </script>
 </body>
 </html>
-
