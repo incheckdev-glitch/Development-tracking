@@ -28,6 +28,7 @@
       --good: #16a34a;
       --warn: #f59e0b;
       --bad:  #ef4444;
+      --absent: #b91c1c;
       --chip: #eef2ff;
     }
     /* Dark theme override */
@@ -42,6 +43,7 @@
       --good: #22c55e;
       --warn: #f59e0b;
       --bad:  #ef4444;
+      --absent: #ef4444;
       --chip: #172554;
     }
 
@@ -60,6 +62,8 @@
     .status-Present{ background: rgba(22,163,74,.12); color: var(--good); border:1px solid rgba(22,163,74,.35); }
     .status-Late, .status-Late\.\ Left\.\ Early{ background: rgba(245,158,11,.12); color: var(--warn); border:1px solid rgba(245,158,11,.35); }
     .status-Left\.\ Early{ background: rgba(239,68,68,.12); color: var(--bad); border:1px solid rgba(239,68,68,.35); }
+    .status-Half_Day{ background: rgba(124,58,237,.12); color: var(--accent); border:1px solid rgba(124,58,237,.35); }
+    .status-Absent{ background: rgba(185,28,28,.12); color: var(--absent); border:1px solid rgba(185,28,28,.35); }
 
     .datatable-wrap{ border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--elev); }
     table.dataTable tbody tr:hover{ background: rgba(124,58,237,.08) !important; }
@@ -101,7 +105,7 @@
   </div>
 
   <div class="container-xxl">
-    <!-- ===== KPIs (Working Days + Total Hours) ===== -->
+    <!-- ===== KPIs ===== -->
     <div class="row g-3 mb-3">
       <div class="col-sm-6">
         <div class="kpi-card d-flex justify-content-between align-items-end">
@@ -124,9 +128,10 @@
         </div>
       </div>
       <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span class="chip">Last updated: <span id="kpiUpdated">–</span></span>
           <span class="chip">Auto-refresh: 60s</span>
+          <span class="chip">Flags — Absent: <b id="kpiAbsent">0</b> • Half‑days: <b id="kpiHalf">0</b></span>
         </div>
       </div>
     </div>
@@ -239,6 +244,25 @@
 
             <div class="col-12"><hr/></div>
 
+            <div class="col-md-3 d-flex align-items-center">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="setAbsentEnabled">
+                <label class="form-check-label" for="setAbsentEnabled">Flag Absent on working days</label>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Half‑day threshold (hours)</label>
+              <input type="number" class="form-control" id="setHalfDayHours" min="0" step="0.25">
+            </div>
+            <div class="col-md-6 d-flex align-items-center">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="setHalfDayUseNet">
+                <label class="form-check-label" for="setHalfDayUseNet">Subtract break when checking half‑day</label>
+              </div>
+            </div>
+
+            <div class="col-12"><hr/></div>
+
             <div class="col-md-12">
               <label class="form-label">Weekend days</label>
               <div class="row g-2" id="weekendChecks"></div>
@@ -249,7 +273,9 @@
 
             <div class="col-md-8">
               <label class="form-label">Holidays (YYYY-MM-DD, one per line)</label>
-              <textarea id="holidayText" rows="6" class="form-control" placeholder="2025-01-01\n2025-01-06\n..."></textarea>
+              <textarea id="holidayText" rows="6" class="form-control" placeholder="2025-01-01
+2025-01-06
+..."></textarea>
             </div>
             <div class="col-md-4">
               <label class="form-label">Quick add holiday</label>
@@ -269,7 +295,7 @@
     </div>
   </div>
 
-  <!-- ======================= JS LIBS ======================= -->
+  <!-- ======================= JS LIBS (load before app script) ======================= -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
@@ -289,444 +315,499 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- ======================= APP SCRIPT ======================= -->
+  <!-- ======================= APP SCRIPT — paste Part 2 below ======================= -->
   <script>
-    // === CONFIG ===
-    const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-    const REFRESH_MS = 60_000;
-    const TZ = "Asia/Beirut";
+  // === CONFIG ===
+  const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
+  const REFRESH_MS = 60_000; // auto-refresh every 60s
+  const TZ = "Asia/Beirut";
 
-    // ===== Defaults =====
-    const DEFAULT_POLICY = {
-      dayStart: '08:00',
-      dayEnd:   '16:45',
-      graceMin: 20,
-      earlyGraceMin: 0, // NEW: minutes before end-time allowed
-      breakMin: 30,
-      workdayHours: 8.75,
-      useCalcTarget: false, // if true => (End-Start-Break)
-      recompute: false
-    };
-    const DEFAULT_WEEKEND = [6,7]; // Sat, Sun
-    const DEFAULT_HOLIDAYS = [
-      '2025-01-01','2025-01-06','2025-02-09','2025-02-14','2025-03-25','2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-25','2025-06-06','2025-06-07','2025-06-27','2025-07-05','2025-08-04','2025-08-15','2025-09-04','2025-11-22','2025-12-25'
+  // ===== Defaults =====
+  const DEFAULT_POLICY = {
+    dayStart: '08:00',
+    dayEnd:   '16:45',
+    graceMin: 20,
+    earlyGraceMin: 0, // minutes allowed before end-time
+    breakMin: 30,
+    workdayHours: 8.75,
+    useCalcTarget: false, // if true => (End-Start-Break)
+    recompute: false,
+    // NEW
+    markAbsentOnWorkingDay: true,
+    halfDayThresholdHours: 4.0,
+    halfDayUseNet: true // subtract break before checking threshold
+  };
+  const DEFAULT_WEEKEND = [6,7]; // Sat, Sun
+  const DEFAULT_HOLIDAYS = [
+    '2025-01-01','2025-01-06','2025-02-09','2025-02-14','2025-03-25','2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-25','2025-06-06','2025-06-07','2025-06-27','2025-07-05','2025-08-04','2025-08-15','2025-09-04','2025-11-22','2025-12-25'
+  ];
+  const DEFAULT_PREFS = { hoursFormat: 'hms' }; // 'hms' | 'decimal'
+
+  // ===== Persisted Settings =====
+  const LS_KEYS = {
+    policy: 'attendance_policy_v1',
+    weekend: 'attendance_weekend_v1',
+    holidays: 'attendance_holidays_v1',
+    prefs: 'attendance_prefs_v1',
+    csv: 'attendance_csv_v1'
+  };
+
+  function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||'null'); return v??def; } catch{ return def; } }
+  function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
+  let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
+  let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
+  let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
+  let HOLIDAYS_SET = new Set(HOLIDAYS);
+
+  function candidateURLs(){ const t = Date.now(); const urls = [`${PUBLISHED_CSV}&cachebust=${t}`]; return urls; }
+
+  // === STATE ===
+  let CANON = [];
+  let DT = null;
+  let chartByEmp, chartOverTime;
+  let lastFiltered = [];
+
+  const { DateTime } = luxon;
+
+  // ==== THEME ==== //
+  function applyTheme(mode){
+    const root = document.body;
+    if(mode === 'dark'){ root.classList.add('dark-mode'); }
+    else { root.classList.remove('dark-mode'); }
+    localStorage.setItem('theme', mode);
+    document.getElementById('themeIcon').className = (mode==='dark') ? 'bi bi-brightness-high' : 'bi bi-moon-stars';
+  }
+  function initTheme(){
+    const saved = localStorage.getItem('theme');
+    if(saved){ applyTheme(saved); return; }
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+
+  // ==== HELPERS ==== //
+  function hmsFromHours(hours){
+    if(!isFinite(hours)) return '';
+    const sign = hours < 0 ? '-' : '';
+    const total = Math.abs(hours);
+    const h = Math.floor(total);
+    const m = Math.round((total - h) * 60);
+    return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+  function fmtHours(hours){
+    return PREFS.hoursFormat === 'decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours);
+  }
+  function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()]=r[k]; } return o; }
+  function toISODate(s){
+    if(!s) return ""; const x=String(s).trim(); if(!x) return "";
+    const c=[DateTime.fromFormat(x,'d/M/yyyy'),DateTime.fromFormat(x,'d/M/yy'),DateTime.fromFormat(x,'yyyy-MM-dd'),DateTime.fromFormat(x,'d-M-yyyy'),DateTime.fromFormat(x,'M/d/yyyy'),DateTime.fromISO(x)];
+    for(const t of c){ if(t.isValid) return t.toISODate(); }
+    const d=new Date(x); return isNaN(d)?"":d.toISOString().slice(0,10);
+  }
+  function parsePunchWithDate(dateISO,val){
+    if(!dateISO||!val) return null; const s=String(val).trim(); if(!s||s==='-')return null;
+    const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid)return a;
+    const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid)return b;
+    const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid)return c;
+    const iso=DateTime.fromISO(s); if(iso.isValid)return iso;
+    const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d);
+  }
+
+  function isWorkingDay(isoDate){
+    if(!isoDate) return false;
+    if(HOLIDAYS_SET.has(isoDate)) return false;
+    const wd = DateTime.fromISO(isoDate).weekday; // 1..7
+    return !WEEKEND.includes(wd);
+  }
+
+  function computeStatusByPolicy(dateISO, signIn, signOut){
+    if(!dateISO) return '';
+    const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
+    const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+    const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
+    const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
+
+    // Absent: no punches on a working day
+    if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT){
+      return 'Absent';
+    }
+
+    if(!inDT || !outDT){
+      // If one punch missing, treat as Left Early (keeps simple & visible)
+      return 'Left Early';
+    }
+
+    // Hours computation for half-day
+    let hours = outDT.diff(inDT,'hours').hours;
+    if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
+
+    // Half-day detection
+    if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours){
+      return 'Half Day';
+    }
+
+    const lateMin = inDT.diff(start,'minutes').minutes;
+    const earlyMin = end.diff(outDT,'minutes').minutes;
+    const late = lateMin > POLICY.graceMin;
+    const leftEarly = earlyMin > POLICY.earlyGraceMin;
+    if(late && leftEarly) return 'Late & Left Early';
+    if(late) return 'Late';
+    if(leftEarly) return 'Left Early';
+    return 'Present';
+  }
+
+  function mapRow(r){
+    const month = r['month name'] || r['month'] || '';
+    const dateISO = toISODate(r['date'] || r['day'] || '');
+    const siRaw = r['first in'] || r['sign in'] || r['in'] || '';
+    const soRaw = r['last out']  || r['sign out'] || r['out'] || '';
+    const hoursRaw = r['hours'];
+    let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN;
+    if(!isFinite(total)){
+      const si=dateISO?parsePunchWithDate(dateISO,siRaw):null; const so=dateISO?parsePunchWithDate(dateISO,soRaw):null; total = (si&&so)? so.diff(si,'hours').hours : 0;
+    }
+    const statusCSV = r['status'] || '';
+    const status = POLICY.recompute ? computeStatusByPolicy(dateISO, siRaw, soRaw) : statusCSV;
+    return { month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO, employee: r['employee name']||r['employee']||r['name']||'', signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status };
+  }
+
+  // ==== KPI / Charts ==== //
+  function renderKPIs(data){
+    const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
+    const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+    document.getElementById('kpiDays').textContent = uniqueWorkingDays.toLocaleString();
+    document.getElementById('kpiHours').textContent = fmtHours(hours);
+    const targetPerDay = POLICY.useCalcTarget ? (luxon.DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(luxon.DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
+    const expected = uniqueWorkingDays * targetPerDay;
+    const delta = hours - expected;
+    const emoji = delta >= 0 ? '✅' : '⚠️';
+    document.getElementById('kpiVar').textContent = `${emoji} Var vs target (${targetPerDay.toFixed(2)}h/day): ${delta>=0?'+':''}${fmtHours(delta)}`;
+    document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
+    document.getElementById('kpiUpdated').textContent = luxon.DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
+    // Flags
+    const counts = data.reduce((acc,r)=>{ const s = POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut):r.status; acc.abs += (s==='Absent'); acc.half += (s==='Half Day'); return acc; }, {abs:0,half:0});
+    document.getElementById('kpiAbsent').textContent = counts.abs;
+    document.getElementById('kpiHalf').textContent = counts.half;
+    igniteSpark('sparkDays', uniqueWorkingDays || 1);
+    igniteSpark('sparkHours', Math.round(hours) || 1);
+  }
+
+  function renderTable(data){
+    lastFiltered = data;
+    const rows = data.map(r => ({
+      Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut,
+      Hours: isFinite(r.totalHours)? r.totalHours : null, Status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status
+    }));
+    const colDefs = [
+      { title:'Month', data:'Month' },
+      { title:'Date', data:'Date' },
+      { title:'Employee', data:'Employee' },
+      { title:'First In', data:'In' },
+      { title:'Last Out', data:'Out' },
+      { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) },
+      { title:'Status', data:'Status', render:d=> `<span class="status-badge status-${(d||'').replace(/\s/g,'_')}">${d||''}</span>` }
     ];
-    const DEFAULT_PREFS = { hoursFormat: 'hms' }; // 'hms' | 'decimal'
-
-    // ===== Persisted Settings =====
-    const LS_KEYS = {
-      policy: 'attendance_policy_v1',
-      weekend: 'attendance_weekend_v1',
-      holidays: 'attendance_holidays_v1',
-      prefs: 'attendance_prefs_v1',
-      csv: 'attendance_csv_v1'
-    };
-
-    function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||'null'); return v??def; } catch{ return def; } }
-    function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-
-    let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
-    let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
-    let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
-    let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-    let HOLIDAYS_SET = new Set(HOLIDAYS);
-
-    function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
-
-    // === STATE ===
-    let CANON = [];
-    let DT = null;
-    let chartByEmp, chartOverTime;
-    let lastFiltered = [];
-
-    const { DateTime } = luxon;
-
-    // ==== THEME ==== //
-    function applyTheme(mode){
-      const root = document.body;
-      if(mode === 'dark'){ root.classList.add('dark-mode'); }
-      else { root.classList.remove('dark-mode'); }
-      localStorage.setItem('theme', mode);
-      document.getElementById('themeIcon').className = (mode==='dark') ? 'bi bi-brightness-high' : 'bi bi-moon-stars';
-    }
-    function initTheme(){
-      const saved = localStorage.getItem('theme');
-      if(saved){ applyTheme(saved); return; }
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyTheme(prefersDark ? 'dark' : 'light');
-    }
-
-    // ==== HELPERS ==== //
-    function hmsFromHours(hours){
-      if(!isFinite(hours)) return '';
-      const sign = hours < 0 ? '-' : '';
-      const total = Math.abs(hours);
-      const h = Math.floor(total);
-      const m = Math.round((total - h) * 60);
-      return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-    }
-    function fmtHours(hours){
-      return PREFS.hoursFormat === 'decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours);
-    }
-    function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()]=r[k]; } return o; }
-    function toISODate(s){
-      if(!s) return ""; const x=String(s).trim(); if(!x) return "";
-      const c=[DateTime.fromFormat(x,'d/M/yyyy'),DateTime.fromFormat(x,'d/M/yy'),DateTime.fromFormat(x,'yyyy-MM-dd'),DateTime.fromFormat(x,'d-M-yyyy'),DateTime.fromFormat(x,'M/d/yyyy'),DateTime.fromISO(x)];
-      for(const t of c){ if(t.isValid) return t.toISODate(); }
-      const d=new Date(x); return isNaN(d)?"":d.toISOString().slice(0,10);
-    }
-    function parsePunchWithDate(dateISO,val){ if(!dateISO||!val) return null; const s=String(val).trim(); if(!s||s==='-')return null; const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid)return a; const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid)return b; const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid)return c; const iso=DateTime.fromISO(s); if(iso.isValid)return iso; const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d); }
-
-    function computeStatusByPolicy(dateISO, signIn, signOut){
-      if(!dateISO) return '';
-      const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-      const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
-      const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
-      const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
-      if(!inDT || !outDT) return 'Left Early';
-      const lateMin = inDT.diff(start,'minutes').minutes;
-      const earlyMin = end.diff(outDT,'minutes').minutes;
-      const late = lateMin > POLICY.graceMin;
-      const leftEarly = earlyMin > POLICY.earlyGraceMin;
-      if(late && leftEarly) return 'Late & Left Early';
-      if(late) return 'Late';
-      if(leftEarly) return 'Left Early';
-      return 'Present';
-    }
-
-    function mapRow(r){
-      const month = r['month name'] || r['month'] || '';
-      const dateISO = toISODate(r['date'] || r['day'] || '');
-      const siRaw = r['first in'] || r['sign in'] || r['in'] || '';
-      const soRaw = r['last out']  || r['sign out'] || r['out'] || '';
-      const hoursRaw = r['hours'];
-      let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN;
-      if(!isFinite(total)){
-        const si=dateISO?parsePunchWithDate(dateISO,siRaw):null; const so=dateISO?parsePunchWithDate(dateISO,soRaw):null; total = (si&&so)? so.diff(si,'hours').hours : 0;
-      }
-      const statusCSV = r['status'] || '';
-      const status = POLICY.recompute ? computeStatusByPolicy(dateISO, siRaw, soRaw) : statusCSV;
-      return { month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO, employee: r['employee name']||r['employee']||r['name']||'', signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status };
-    }
-
-    // ==== KPI / Charts ==== //
-    function isWorkingDay(isoDate){
-      if(!isoDate) return false;
-      if(HOLIDAYS_SET.has(isoDate)) return false;
-      const wd = DateTime.fromISO(isoDate).weekday; // 1..7
-      return !WEEKEND.includes(wd);
-    }
-
-    function renderKPIs(data){
-      const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
-      const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
-      document.getElementById('kpiDays').textContent = uniqueWorkingDays.toLocaleString();
-      document.getElementById('kpiHours').textContent = fmtHours(hours);
-      const targetPerDay = POLICY.useCalcTarget ? (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
-      const expected = uniqueWorkingDays * targetPerDay;
-      const delta = hours - expected;
-      const emoji = delta >= 0 ? '✅' : '⚠️';
-      document.getElementById('kpiVar').textContent = `${emoji} Var vs target (${targetPerDay.toFixed(2)}h/day): ${delta>=0?'+':''}${fmtHours(delta)}`;
-      document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
-      document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
-      igniteSpark('sparkDays', uniqueWorkingDays || 1);
-      igniteSpark('sparkHours', Math.round(hours) || 1);
-    }
-
-    function renderTable(data){
-      lastFiltered = data;
-      const rows = data.map(r => ({
-        Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut,
-        Hours: isFinite(r.totalHours)? r.totalHours : null, Status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status
-      }));
-      const colDefs = [
-        { title:'Month', data:'Month' },
-        { title:'Date', data:'Date' },
-        { title:'Employee', data:'Employee' },
-        { title:'First In', data:'In' },
-        { title:'Last Out', data:'Out' },
-        { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) },
-        { title:'Status', data:'Status', render:d=> `<span class="status-badge status-${(d||'').replace(/\s/g,'_')}">${d||''}</span>` }
-      ];
-      if(!DT){
-        DT = $('#attendanceTable').DataTable({
-          data: rows, columns: colDefs, responsive: true, fixedHeader: true,
-          order: [[1,'desc'],[2,'asc']], pageLength: 12,
-          dom: 'Bfrtip', buttons: [ { extend:'csv', title:'Attendance_Export' }, { extend:'print', title:'Attendance' }, { extend:'copy' } ],
-          createdRow: function(row, data){
-            if((data.Status||'').includes('Late') && (data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
-            else if((data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
-            else if((data.Status||'').includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
-            else if((data.Status||'')==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
-          },
-          footerCallback: function(){
-            const api = this.api();
-            const colIdx = 5; // Hours
-            const sum = api.column(colIdx, { page: 'current' }).data().toArray().reduce((a,v)=> a + (typeof v==='number'?v:0), 0);
-            if(!$(api.table().footer()).length){
-              $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
-              const cells = colDefs.map(()=>'<th></th>');
-              cells[colIdx] = `<th class="text-end">${fmtHours(sum)}</th>`;
-              $(api.table().footer()).find('tr').html(cells.join(''));
-            } else { $(api.table().footer()).find('th').eq(colIdx).html(fmtHours(sum)); }
-          }
-        });
-      } else { DT.clear().rows.add(rows).draw(); }
-    }
-
-    function aggregateBy(data, keyFn, valFn){
-      const m = new Map();
-      for(const r of data){ const k = keyFn(r); const v = valFn(r) || 0; m.set(k, (m.get(k)||0) + v); }
-      return Object.fromEntries(m);
-    }
-
-    function renderCharts(data){
-      const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
-      const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours);
-      const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,15);
-      const empData = empLabels.map(k=> byEmp[k]);
-      const dateLabels = Object.keys(byDate).sort();
-      const dateData = dateLabels.map(k=> byDate[k]);
-      chartByEmp && chartByEmp.destroy();
-      chartOverTime && chartOverTime.destroy();
-      chartByEmp = new Chart(document.getElementById('chartByEmp'), { type:'bar', data:{ labels:empLabels, datasets:[{ label:'Hours', data:empData }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } });
-      chartOverTime = new Chart(document.getElementById('chartOverTime'), { type:'line', data:{ labels:dateLabels, datasets:[{ label:'Hours', data:dateData, tension:.3, fill:false }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } });
-    }
-
-    function igniteSpark(id, value){
-      const c = document.getElementById(id); if(!c) return;
-      const ctx = c.getContext('2d'); const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-      new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
-    }
-
-    // ==== FILTERS & URL SYNC ==== //
-    function getCriteria(){
-      return {
-        employees: $('#employeeFilter').val() || [],
-        months: $('#monthFilter').val() || [],
-        statuses: $('#statusFilter').val() || [],
-        start: startDate.value, end: endDate.value,
-        q: (quickSearch.value || '').toLowerCase(),
-        policy: document.getElementById('policySwitch').checked
-      };
-    }
-
-    function applyFilters(){
-      POLICY.recompute = document.getElementById('policySwitch').checked;
-      PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms';
-      saveLS(LS_KEYS.prefs, PREFS);
-      const c = getCriteria();
-      const filtered = CANON.filter(r => {
-        if(c.employees.length && !c.employees.includes(r.employee)) return false;
-        if(c.months.length && !c.months.includes(r.month)) return false;
-        const statusComp = POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status;
-        if(c.statuses.length && !c.statuses.includes(statusComp)) return false;
-        if(c.start && r.date < c.start) return false;
-        if(c.end && r.date > c.end) return false;
-        if(c.q && !`${r.employee} ${r.date} ${statusComp}`.toLowerCase().includes(c.q)) return false;
-        return true;
-      }).map(r => ({...r, status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status }));
-
-      renderTable(filtered); renderKPIs(filtered); renderCharts(filtered);
-      updateURLFromFilters();
-    }
-
-    function resetFilters(){
-      $('#employeeFilter').val(null).trigger('change'); $('#monthFilter').val(null).trigger('change'); $('#statusFilter').val(null).trigger('change');
-      startDate.value = ''; endDate.value = ''; quickSearch.value = '';
-      document.getElementById('policySwitch').checked = POLICY.recompute; // keep policy choice
-      document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
-      applyFilters();
-    }
-
-    function populateSelect(id, values, placeholder){
-      const sel = document.getElementById(id); sel.innerHTML = '';
-      [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-      $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
-    }
-
-    function updateURLFromFilters(){
-      const c = getCriteria();
-      const p = new URLSearchParams();
-      if(c.employees.length) p.set('emp', c.employees.join(','));
-      if(c.months.length) p.set('month', c.months.join(','));
-      if(c.statuses.length) p.set('status', c.statuses.join(','));
-      if(c.start) p.set('start', c.start);
-      if(c.end) p.set('end', c.end);
-      if(c.q) p.set('q', c.q);
-      if(c.policy) p.set('policy', '1');
-      if(PREFS.hoursFormat==='decimal') p.set('fmt','dec');
-      history.replaceState(null, '', `${location.pathname}?${p.toString()}`);
-    }
-
-    function readFiltersFromURL(){
-      const p = new URLSearchParams(location.search);
-      const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : [];
-      const employees = getList('emp');
-      const months = getList('month');
-      const statuses = getList('status');
-      const start = p.get('start') || '';
-      const end = p.get('end') || '';
-      const q = p.get('q') || '';
-      const policy = p.get('policy') === '1';
-      const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat;
-      if(employees.length) $('#employeeFilter').val(employees).trigger('change');
-      if(months.length) $('#monthFilter').val(months).trigger('change');
-      if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
-      startDate.value = start; endDate.value = end; quickSearch.value = q;
-      document.getElementById('policySwitch').checked = policy || POLICY.recompute;
-      PREFS.hoursFormat = fmt; document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
-    }
-
-    // ==== IO, CACHE & EXPORT PACK ==== //
-    async function downloadFullReport(){
-      const el = document.body; const canvas = await html2canvas(el, { scale: 2 }); const img = canvas.toDataURL('image/png');
-      const doc = { content: [{ image: img, width: 520 }] }; pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf');
-    }
-    async function fetchCSVNetwork(){
-      let lastErr; for(const url of candidateURLs()){ try{ const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); } catch(e){ lastErr=e; console.warn('Fetch failed', url, e);} }
-      throw lastErr || new Error('All endpoints failed');
-    }
-    async function fetchCSV(){
-      const cached = localStorage.getItem(LS_KEYS.csv);
-      if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; }
-      return await refreshFromNetwork(false);
-    }
-    async function refreshFromNetwork(silent){
-      try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(LS_KEYS.csv); if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) { parseAndRender(txt); } } return txt; }
-      catch(e){ if(!silent) throw e; return null; }
-    }
-
-    function toCSV(rows){
-      if(!rows.length) return '';
-      const cols = Object.keys(rows[0]);
-      const esc = v => '"'+String(v??'').replace(/"/g,'""')+'"';
-      const lines = [cols.join(',')].concat(rows.map(r => cols.map(c=> esc(r[c])).join(',')));
-      return lines.join('\n');
-    }
-
-    async function exportPack(){
-      const zip = new JSZip();
-      // 1) Filtered CSV
-      const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:r.totalHours.toFixed(2), Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }));
-      zip.file('attendance_filtered.csv', toCSV(simpleRows));
-      // 2) XLSX with per-employee sheets
-      const wb = XLSX.utils.book_new();
-      const groups = {};
-      lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }); });
-      Object.entries(groups).forEach(([emp, rows]) => {
-        const ws = XLSX.utils.json_to_sheet(rows);
-        XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
+    if(!DT){
+      DT = $('#attendanceTable').DataTable({
+        data: rows, columns: colDefs, responsive: true, fixedHeader: true,
+        order: [[1,'desc'],[2,'asc']], pageLength: 12,
+        dom: 'Bfrtip', buttons: [ { extend:'csv', title:'Attendance_Export' }, { extend:'print', title:'Attendance' }, { extend:'copy' } ],
+        createdRow: function(row, data){
+          const s = (data.Status||'');
+          if(s==='Absent') row.style.backgroundColor = 'rgba(185,28,28,.06)';
+          else if(s==='Half Day') row.style.backgroundColor = 'rgba(124,58,237,.06)';
+          else if(s.includes('Late') && s.includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+          else if(s.includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
+          else if(s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+          else if(s==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
+        },
+        footerCallback: function(){
+          const api = this.api();
+          const colIdx = 5; // Hours
+          const sum = api.column(colIdx, { page: 'current' }).data().toArray().reduce((a,v)=> a + (typeof v==='number'?v:0), 0);
+          if(!$(api.table().footer()).length){
+            $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
+            const cells = colDefs.map(()=>'<th></th>');
+            cells[colIdx] = `<th class="text-end">${fmtHours(sum)}</th>`;
+            $(api.table().footer()).find('tr').html(cells.join(''));
+          } else { $(api.table().footer()).find('th').eq(colIdx).html(fmtHours(sum)); }
+        }
       });
-      const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-      zip.file('attendance_by_employee.xlsx', wbout);
-      // 3) Summary text
-      const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size;
-      const hours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
-      const targetPerDay = POLICY.useCalcTarget ? (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
-      const expected = uniqueWorkingDays * targetPerDay;
-      const delta = hours - expected;
-      zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${hours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nPolicy: ${JSON.stringify(POLICY)}\nWeekend: ${WEEKEND.join(',')}\nHolidays: ${HOLIDAYS.join(',')}\nGenerated: ${new Date().toISOString()}`);
-      const blob = await zip.generateAsync({ type:'blob' });
-      saveAs(blob, 'attendance_export_pack.zip');
-    }
+    } else { DT.clear().rows.add(rows).draw(); }
+  }
 
-    // ==== Settings UI ==== //
-    function renderWeekendChecks(){
-      const cont = document.getElementById('weekendChecks');
-      const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-      cont.innerHTML = '';
-      for(let i=1;i<=7;i++){
-        const col = document.createElement('div'); col.className='col-6 col-md-3';
-        const id = `wkd_${i}`;
-        col.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(WEEKEND.includes(i)?'checked':'')}><label class="form-check-label" for="${id}">${i}. ${names[i-1]}</label></div>`;
-        cont.appendChild(col);
-      }
-    }
-    function openSettings(){
-      document.getElementById('setStart').value = POLICY.dayStart;
-      document.getElementById('setEnd').value = POLICY.dayEnd;
-      document.getElementById('setGraceMin').value = POLICY.graceMin;
-      document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin;
-      document.getElementById('setBreakMin').value = POLICY.breakMin;
-      document.getElementById('setWorkdayHours').value = POLICY.workdayHours;
-      document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget;
-      renderWeekendChecks();
-      document.getElementById('holidayText').value = HOLIDAYS.join('\n');
-      const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
-      modal.show();
-    }
+  function aggregateBy(data, keyFn, valFn){
+    const m = new Map();
+    for(const r of data){ const k = keyFn(r); const v = valFn(r) || 0; m.set(k, (m.get(k)||0) + v); }
+    return Object.fromEntries(m);
+  }
 
-    function saveSettings(){
-      POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart;
-      POLICY.dayEnd = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd;
-      POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value||DEFAULT_POLICY.graceMin);
-      POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value||DEFAULT_POLICY.earlyGraceMin);
-      POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value||DEFAULT_POLICY.breakMin);
-      POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value||DEFAULT_POLICY.workdayHours);
-      POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked;
-      saveLS(LS_KEYS.policy, POLICY);
-      const wk = [];
-      for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`).checked) wk.push(i);
-      WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND);
-      const lines = document.getElementById('holidayText').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
-      applyFilters();
-    }
+  function renderCharts(data){
+    const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
+    const byDate = aggregateBy(data, r=>r.date, r=>r.totalHours);
+    const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,15);
+    const empData = empLabels.map(k=> byEmp[k]);
+    const dateLabels = Object.keys(byDate).sort();
+    const dateData = dateLabels.map(k=> byDate[k]);
+    chartByEmp && chartByEmp.destroy();
+    chartOverTime && chartOverTime.destroy();
+    chartByEmp = new Chart(document.getElementById('chartByEmp'), { type:'bar', data:{ labels:empLabels, datasets:[{ label:'Hours', data:empData }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } });
+    chartOverTime = new Chart(document.getElementById('chartOverTime'), { type:'line', data:{ labels:dateLabels, datasets:[{ label:'Hours', data:dateData, tension:.3, fill:false }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b' } }, y:{ ticks:{ color:'#64748b' } } } } });
+  }
 
-    // ==== LOAD & PARSE ==== //
-    function parseAndRender(csv){
-      const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
-      CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
-      populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
-      populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
-      populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses');
-      readFiltersFromURL();
-      applyFilters();
-    }
+  function igniteSpark(id, value){
+    const c = document.getElementById(id); if(!c) return;
+    const ctx = c.getContext('2d'); const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
+    new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
+  }
 
-    async function loadData(){
-      try{ const csv = await fetchCSV(); parseAndRender(csv); await refreshFromNetwork(true); }
-      catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
-    }
+  // ==== FILTERS & URL SYNC ==== //
+  function getCriteria(){
+    return {
+      employees: $('#employeeFilter').val() || [],
+      months: $('#monthFilter').val() || [],
+      statuses: $('#statusFilter').val() || [],
+      start: startDate.value, end: endDate.value,
+      q: (quickSearch.value || '').toLowerCase(),
+      policy: document.getElementById('policySwitch').checked
+    };
+  }
 
-    // ==== EVENTS ==== //
-    document.getElementById('themeBtn').addEventListener('click', ()=>{
-      const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
-      applyTheme(next);
+  function applyFilters(){
+    POLICY.recompute = document.getElementById('policySwitch').checked;
+    PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms';
+    saveLS(LS_KEYS.prefs, PREFS);
+    const c = getCriteria();
+    const filtered = CANON.filter(r => {
+      if(c.employees.length && !c.employees.includes(r.employee)) return false;
+      if(c.months.length && !c.months.includes(r.month)) return false;
+      const statusComp = POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status;
+      if(c.statuses.length && !c.statuses.includes(statusComp)) return false;
+      if(c.start && r.date < c.start) return false;
+      if(c.end && r.date > c.end) return false;
+      if(c.q && !`${r.employee} ${r.date} ${statusComp}`.toLowerCase().includes(c.q)) return false;
+      return true;
+    }).map(r => ({...r, status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status }));
+
+    renderTable(filtered); renderKPIs(filtered); renderCharts(filtered);
+    updateURLFromFilters();
+  }
+
+  function resetFilters(){
+    $('#employeeFilter').val(null).trigger('change'); $('#monthFilter').val(null).trigger('change'); $('#statusFilter').val(null).trigger('change');
+    startDate.value = ''; endDate.value = ''; quickSearch.value = '';
+    document.getElementById('policySwitch').checked = POLICY.recompute; // keep policy choice
+    document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+    applyFilters();
+  }
+
+  function populateSelect(id, values, placeholder){
+    const sel = document.getElementById(id); sel.innerHTML = '';
+    [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
+  }
+
+  function updateURLFromFilters(){
+    const c = getCriteria();
+    const p = new URLSearchParams();
+    if(c.employees.length) p.set('emp', c.employees.join(','));
+    if(c.months.length) p.set('month', c.months.join(','));
+    if(c.statuses.length) p.set('status', c.statuses.join(','));
+    if(c.start) p.set('start', c.start);
+    if(c.end) p.set('end', c.end);
+    if(c.q) p.set('q', c.q);
+    if(c.policy) p.set('policy', '1');
+    if(PREFS.hoursFormat==='decimal') p.set('fmt','dec');
+    history.replaceState(null, '', `${location.pathname}?${p.toString()}`);
+  }
+
+  function readFiltersFromURL(){
+    const p = new URLSearchParams(location.search);
+    const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : [];
+    const employees = getList('emp');
+    const months = getList('month');
+    const statuses = getList('status');
+    const start = p.get('start') || '';
+    const end = p.get('end') || '';
+    const q = p.get('q') || '';
+    const policy = p.get('policy') === '1';
+    const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat;
+    if(employees.length) $('#employeeFilter').val(employees).trigger('change');
+    if(months.length) $('#monthFilter').val(months).trigger('change');
+    if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
+    startDate.value = start; endDate.value = end; quickSearch.value = q;
+    document.getElementById('policySwitch').checked = policy || POLICY.recompute;
+    PREFS.hoursFormat = fmt; document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+  }
+
+  // ==== IO, CACHE & EXPORT PACK ==== //
+  async function downloadFullReport(){
+    const el = document.body; const canvas = await html2canvas(el, { scale: 2 }); const img = canvas.toDataURL('image/png');
+    const doc = { content: [{ image: img, width: 520 }] }; pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf');
+  }
+  async function fetchCSVNetwork(){
+    let lastErr; for(const url of candidateURLs()){ try{ const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); } catch(e){ lastErr=e; console.warn('Fetch failed', url, e);} }
+    throw lastErr || new Error('All endpoints failed');
+  }
+  async function fetchCSV(){
+    const cached = localStorage.getItem(LS_KEYS.csv);
+    if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; }
+    return await refreshFromNetwork(false);
+  }
+  async function refreshFromNetwork(silent){
+    try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(LS_KEYS.csv); if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) { parseAndRender(txt); } } return txt; }
+    catch(e){ if(!silent) throw e; return null; }
+  }
+
+  function toCSV(rows){
+    if(!rows.length) return '';
+    const cols = Object.keys(rows[0]);
+    const esc = v => '"'+String(v??'').replace(/"/g,'""')+'"';
+    const lines = [cols.join(',')].concat(rows.map(r => cols.map(c=> esc(r[c])).join(',')));
+    return lines.join('\n');
+  }
+
+  async function exportPack(){
+    const zip = new JSZip();
+    // 1) Filtered CSV
+    const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:r.totalHours.toFixed(2), Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }));
+    zip.file('attendance_filtered.csv', toCSV(simpleRows));
+    // 2) XLSX with per-employee sheets
+    const wb = XLSX.utils.book_new();
+    const groups = {};
+    lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status: POLICY.recompute? computeStatusByPolicy(r.date,r.signIn,r.signOut) : r.status }); });
+    Object.entries(groups).forEach(([emp, rows]) => {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
     });
-    document.getElementById('settingsBtn').addEventListener('click', openSettings);
-    document.getElementById('settingsSave').addEventListener('click', saveSettings);
-    document.getElementById('settingsReset').addEventListener('click', ()=>{
-      POLICY = { ...DEFAULT_POLICY }; saveLS(LS_KEYS.policy, POLICY);
-      WEEKEND = [ ...DEFAULT_WEEKEND ]; saveLS(LS_KEYS.weekend, WEEKEND);
-      HOLIDAYS = [ ...DEFAULT_HOLIDAYS ]; HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
-      openSettings();
-    });
-    document.getElementById('holidayAddBtn').addEventListener('click', ()=>{
-      const inp = document.getElementById('holidayAdd'); const v = inp.value.trim(); if(!v) return;
-      const ta = document.getElementById('holidayText'); const lines = ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value = lines.join('\n'); inp.value='';
-    });
+    const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    zip.file('attendance_by_employee.xlsx', wbout);
+    // 3) Summary text
+    const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size;
+    const hours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+    const targetPerDay = POLICY.useCalcTarget ? (luxon.DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(luxon.DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) : POLICY.workdayHours;
+    const expected = uniqueWorkingDays * targetPerDay;
+    const delta = hours - expected;
+    zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${hours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nPolicy: ${JSON.stringify(POLICY)}\nWeekend: ${WEEKEND.join(',')}\nHolidays: ${HOLIDAYS.join(',')}\nGenerated: ${new Date().toISOString()}`);
+    const blob = await zip.generateAsync({ type:'blob' });
+    saveAs(blob, 'attendance_export_pack.zip');
+  }
 
-    document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
-    document.getElementById('packBtn').addEventListener('click', exportPack);
-    document.getElementById('applyBtn').addEventListener('click', applyFilters);
-    document.getElementById('resetBtn').addEventListener('click', resetFilters);
-    document.getElementById('refreshBtn').addEventListener('click', loadData);
-    document.getElementById('quickSearch').addEventListener('input', applyFilters);
+  // ==== Settings UI ==== //
+  function renderWeekendChecks(){
+    const cont = document.getElementById('weekendChecks');
+    const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    cont.innerHTML = '';
+    for(let i=1;i<=7;i++){
+      const col = document.createElement('div'); col.className='col-6 col-md-3';
+      const id = `wkd_${i}`;
+      col.innerHTML = `<div class=\"form-check\"><input class=\"form-check-input\" type=\"checkbox\" id=\"${id}\" ${(WEEKEND.includes(i)?'checked':'')}><label class=\"form-check-label\" for=\"${id}\">${i}. ${names[i-1]}</label></div>`;
+      cont.appendChild(col);
+    }
+  }
+  function openSettings(){
+    document.getElementById('setStart').value = POLICY.dayStart;
+    document.getElementById('setEnd').value = POLICY.dayEnd;
+    document.getElementById('setGraceMin').value = POLICY.graceMin;
+    document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin;
+    document.getElementById('setBreakMin').value = POLICY.breakMin;
+    document.getElementById('setWorkdayHours').value = POLICY.workdayHours;
+    document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget;
+    // New
+    document.getElementById('setAbsentEnabled').checked = !!POLICY.markAbsentOnWorkingDay;
+    document.getElementById('setHalfDayHours').value = POLICY.halfDayThresholdHours;
+    document.getElementById('setHalfDayUseNet').checked = POLICY.halfDayUseNet;
 
-    setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
+    renderWeekendChecks();
+    document.getElementById('holidayText').value = HOLIDAYS.join('\n');
+    const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+    modal.show();
+  }
 
-    // Kick-off
-    initTheme();
-    loadData();
+  function saveSettings(){
+    POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart;
+    POLICY.dayEnd = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd;
+    POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value||DEFAULT_POLICY.graceMin);
+    POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value||DEFAULT_POLICY.earlyGraceMin);
+    POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value||DEFAULT_POLICY.breakMin);
+    POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value||DEFAULT_POLICY.workdayHours);
+    POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked;
+    // New
+    POLICY.markAbsentOnWorkingDay = document.getElementById('setAbsentEnabled').checked;
+    POLICY.halfDayThresholdHours = parseFloat(document.getElementById('setHalfDayHours').value||DEFAULT_POLICY.halfDayThresholdHours);
+    POLICY.halfDayUseNet = document.getElementById('setHalfDayUseNet').checked;
 
-    // Minimal tests (console)
-    (function tests(){
-      function ok(n,c){ (c?console.log:console.error)(`[TEST] ${n}: ${c?'OK':'FAIL'}`); }
-      ok('candidateURLs cachebust', candidateURLs()[0].includes('output=csv') && candidateURLs()[0].includes('cachebust='));
-      ok('policy persisted', !!POLICY && typeof POLICY.graceMin === 'number');
-    })();
-  </script>
+    saveLS(LS_KEYS.policy, POLICY);
+    const wk = [];
+    for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`).checked) wk.push(i);
+    WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND);
+    const lines = document.getElementById('holidayText').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+    applyFilters();
+  }
+
+  // ==== LOAD & PARSE ==== //
+  function parseAndRender(csv){
+    const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+    CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+    populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
+    populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
+    populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses');
+    readFiltersFromURL();
+    applyFilters();
+  }
+
+  async function loadData(){
+    try{ const csv = await fetchCSV(); parseAndRender(csv); await refreshFromNetwork(true); }
+    catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
+  }
+
+  // ==== EVENTS ==== //
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+    applyTheme(next);
+  });
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('settingsSave').addEventListener('click', saveSettings);
+  document.getElementById('settingsReset').addEventListener('click', ()=>{
+    POLICY = { ...DEFAULT_POLICY }; saveLS(LS_KEYS.policy, POLICY);
+    WEEKEND = [ ...DEFAULT_WEEKEND ]; saveLS(LS_KEYS.weekend, WEEKEND);
+    HOLIDAYS = [ ...DEFAULT_HOLIDAYS ]; HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+    openSettings();
+  });
+  document.getElementById('holidayAddBtn').addEventListener('click', ()=>{
+    const inp = document.getElementById('holidayAdd'); const v = inp.value.trim(); if(!v) return;
+    const ta = document.getElementById('holidayText'); const lines = ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value = lines.join('\n'); inp.value='';
+  });
+
+  document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
+  document.getElementById('packBtn').addEventListener('click', exportPack);
+  document.getElementById('applyBtn').addEventListener('click', applyFilters);
+  document.getElementById('resetBtn').addEventListener('click', resetFilters);
+  document.getElementById('refreshBtn').addEventListener('click', loadData);
+  document.getElementById('quickSearch').addEventListener('input', applyFilters);
+
+  setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
+
+  // Kick-off
+  initTheme();
+  loadData();
+
+  // === Minimal tests (console) ===
+  (function tests(){
+    function ok(n,c){ (c?console.log:console.error)(`[TEST] ${n}: ${c?'OK':'FAIL'}`); }
+    ok('candidateURLs cachebust', candidateURLs()[0].includes('output=csv') && candidateURLs()[0].includes('cachebust='));
+    ok('policy persisted', !!POLICY && typeof POLICY.graceMin === 'number');
+    // Absent test (working day, no punches)
+    const d = '2025-10-14'; if(!HOLIDAYS_SET.has(d)){
+      const s = computeStatusByPolicy(d, '', ''); ok('Absent when no punches on working day', s==='Absent');
+    }
+    // Half-day test
+    const s2 = computeStatusByPolicy('2025-10-14', '08:00', '11:00');
+    ok('Half-day under threshold', s2==='Half Day');
+  })();
+</script>
+
 </body>
 </html>
