@@ -6,22 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- ======================= CSS LIBS ======================= -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
   <!-- ======================= PAGE STYLES ======================= -->
   <style>
-    body.dark-mode { background: #181a1f; color: #eee; }
-    .card { transition: all 0.3s ease; }
-    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); }
-    .filter-bar { position: sticky; top: 0; z-index: 10; background: inherit; padding: 10px; }
+    :root{
+      --bg: #ffffff;
+      --fg: #111827;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --accent: #0d6efd;
+      --border: #e5e7eb;
+    }
+    body.dark-mode {
+      --bg: #0f1115;
+      --fg: #e5e7eb;
+      --muted: #9ca3af;
+      --card: #161a22;
+      --accent: #22c55e;
+      --border: #222633;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    body { background: var(--bg); color: var(--fg); }
+    .card { background: var(--card); border-color: var(--border); transition: all 0.2s ease; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.08); }
+    .filter-bar { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 10px; border: 1px solid var(--border); border-radius: .75rem; }
+    .muted { color: var(--muted); }
     #loadingOverlay {
-      display:none; position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.5); color:#fff; font-size:2rem;
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); color:#fff; font-size:1.25rem;
       display:flex; justify-content:center; align-items:center; z-index:2000;
     }
+    .select2-container--default .select2-selection--multiple { background: var(--card); border-color: var(--border); color: var(--fg); }
+    .select2-container--default .select2-results>.select2-results__options { color: #111; }
+    /* DataTables tweaks for dark mode */
+    body.dark-mode table.dataTable { color: var(--fg); }
+    body.dark-mode .dataTables_wrapper .dataTables_filter input,
+    body.dark-mode .dataTables_wrapper .dataTables_length select { background: #0b0d12; border: 1px solid #2a3142; color: var(--fg); }
   </style>
 </head>
 
@@ -29,17 +53,77 @@
   <div id="loadingOverlay">⏳ Loading...</div>
 
   <div class="container-fluid p-4" id="reportArea">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>📊 Attendance Dashboard</h2>
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
       <div>
-        <button class="btn btn-outline-secondary me-2" onclick="toggleDark()">🌙/☀️</button>
-        <button class="btn btn-success" onclick="downloadFullReport()">Download PDF</button>
+        <h2 class="mb-0">📊 Attendance Dashboard</h2>
+        <small class="muted">Synced from Google Sheets (auto-refresh)</small>
+      </div>
+      <div class="d-flex gap-2">
+        <button id="darkBtn" class="btn btn-outline-secondary" title="Toggle theme">🌙/☀️</button>
+        <button id="refreshBtn" class="btn btn-outline-primary">Refresh</button>
+        <button class="btn btn-success" id="pdfBtn">Download PDF</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="muted">Rows</div>
+                <div class="fs-4" id="kpiRows">–</div>
+              </div>
+              <span class="badge text-bg-primary">All</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="muted">Employees</div>
+                <div class="fs-4" id="kpiEmployees">–</div>
+              </div>
+              <span class="badge text-bg-info">Unique</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="muted">Total Hours</div>
+                <div class="fs-4" id="kpiHours">–</div>
+              </div>
+              <span class="badge text-bg-success">Sum</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="muted">Last Updated</div>
+                <div class="fs-6" id="kpiUpdated">–</div>
+              </div>
+              <span class="badge text-bg-secondary">Auto</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- FILTERS -->
-    <div class="card shadow filter-bar mb-4">
-      <div class="card-body row g-3 align-items-end">
+    <div class="filter-bar mb-4">
+      <div class="row g-3 align-items-end">
         <div class="col-lg-3">
           <label class="form-label">Employee</label>
           <select id="employeeFilter" multiple></select>
@@ -56,15 +140,15 @@
           <label class="form-label">Quick Search</label>
           <input type="text" id="quickSearch" class="form-control" placeholder="Search..."/>
         </div>
-        <div class="col-12 text-end mt-3">
-          <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
-          <button class="btn btn-warning" onclick="resetFilters()">Reset</button>
+        <div class="col-12 text-end mt-2">
+          <button class="btn btn-primary" id="applyBtn">Apply Filters</button>
+          <button class="btn btn-warning" id="resetBtn">Reset</button>
         </div>
       </div>
     </div>
 
     <!-- TABLE -->
-    <div class="card shadow mb-4">
+    <div class="card shadow-sm mb-4">
       <div class="card-body">
         <table id="attendanceTable" class="display nowrap table table-striped" style="width:100%"></table>
       </div>
@@ -74,88 +158,171 @@
   <!-- ======================= JS LIBS ======================= -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
 
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/export?format=csv&gid=390845393";
-    let CANON = [], DT = null;
+    // === CONFIG ===
+    // Replace with your own GSheet export link (published or anyone-with-link viewable):
+    const SHEET_GID = 390845393; // tab GID
+    const SHEET_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/export?format=csv&gid=";
+    const CSV_URL = () => `${SHEET_BASE}${SHEET_GID}&cachebust=${Date.now()}`; // prevent stale cache
+    const REFRESH_MS = 60_000; // auto-refresh every 60s (tune as needed)
+
+    const TZ = "Asia/Beirut"; // used for display; parsing relies on local unless explicit
+
+    // === STATE ===
+    let CANON = [];
+    let DT = null;
+
+    // === HELPERS ===
+    const { DateTime } = luxon;
 
     function toggleDark(){ document.body.classList.toggle("dark-mode"); }
 
-    function normalizeHeaders(r){ const o={}; for(let k in r) o[k.trim().toLowerCase()]=r[k]; return o; }
-    function normalizeDate(d){
-      if(!d) return "";
-      const s = String(d).trim();
-      if(s.includes("/")){
-        const parts = s.split("/");
-        if(parts[0].length===4) return s; // already yyyy/mm/dd
-        const [dd,mm,yy]=parts;
-        return `${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-      }
-      return s;
+    function normalizeHeaders(r){
+      const o={};
+      for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; }
+      return o;
     }
-    function parsePunchWithDate(dateISO,val){
-      if(!val) return null;
-      const s=String(val).trim();
-      if(!s||s=="-") return null;
-      if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)){
-        const t=s.length===5?s+":00":s;
-        const dt=new Date(`${dateISO}T${t}`);
-        return isNaN(dt)?null:dt;
-      }
-      const dt=new Date(s);
-      return isNaN(dt)?null:dt;
+
+    function toISODate(s){
+      if(!s) return "";
+      const x = String(s).trim();
+      if(!x) return "";
+      // Try common patterns: dd/mm/yyyy, yyyy-mm-dd, dd-mm-yyyy, mm/dd/yyyy
+      // Prefer explicit parse with Luxon to avoid locale confusion.
+      const candidates = [
+        DateTime.fromFormat(x, 'd/M/yyyy'),
+        DateTime.fromFormat(x, 'd/M/yy'),
+        DateTime.fromFormat(x, 'yyyy-MM-dd'),
+        DateTime.fromFormat(x, 'd-M-yyyy'),
+        DateTime.fromFormat(x, 'M/d/yyyy'),
+        DateTime.fromISO(x)
+      ];
+      for(const c of candidates){ if(c.isValid) return c.toISODate(); }
+      // Fallback: native Date
+      const d = new Date(x);
+      if(!isNaN(d)) return d.toISOString().slice(0,10);
+      return "";
+    }
+
+    function parsePunchWithDate(dateISO, val){
+      if(!dateISO || !val) return null;
+      const s = String(val).trim();
+      if(!s || s === '-') return null;
+      // Accept HH:mm[:ss], hh:mm AM/PM, or full ISO
+      const hm = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm');
+      if(hm.isValid) return hm;
+      const hms = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd H:mm:ss');
+      if(hms.isValid) return hms;
+      const ampm = DateTime.fromFormat(`${dateISO} ${s}`, 'yyyy-MM-dd h:mm a');
+      if(ampm.isValid) return ampm;
+      const iso = DateTime.fromISO(s);
+      if(iso.isValid) return iso;
+      // Last resort: native Date
+      const d = new Date(`${dateISO}T${s.length===5? s+':00' : s}`);
+      return isNaN(d) ? null : DateTime.fromJSDate(d);
+    }
+
+    function hmsFromHours(hours){
+      if(!isFinite(hours)) return '';
+      const sign = hours < 0 ? '-' : '';
+      const total = Math.abs(hours);
+      const h = Math.floor(total);
+      const m = Math.round((total - h) * 60);
+      return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     }
 
     function mapRow(r){
-      const dateISO = normalizeDate(r["date"]||r["day"]||"");
-      const siRaw = r["sign in"]||r["in"]||r["first in"];
-      const soRaw = r["sign out"]||r["out"]||r["last out"];
+      const dateISO = toISODate(r['date'] || r['day'] || r['attendance date'] || '');
+      const siRaw = r['sign in'] || r['in'] || r['first in'] || r['signin'] || '';
+      const soRaw = r['sign out'] || r['out'] || r['last out'] || r['signout'] || '';
       const siDT = dateISO ? parsePunchWithDate(dateISO, siRaw) : null;
       const soDT = dateISO ? parsePunchWithDate(dateISO, soRaw) : null;
-      const total = siDT && soDT ? (soDT - siDT)/36e5 : 0;
+
+      let total = 0;
+      if(siDT && soDT){ total = soDT.diff(siDT, 'hours').hours; }
+
       return {
         date: dateISO,
-        employee: r["employee"]||r["name"]||r["employee name"]||"",
-        signIn: siRaw||"",
-        signOut: soRaw||"",
-        totalHours: total,
-        status: r["status"]||""
+        employee: r['employee'] || r['name'] || r['employee name'] || '',
+        signIn: siRaw || '',
+        signOut: soRaw || '',
+        totalHours: isFinite(total) ? total : 0,
+        status: r['status'] || r['remarks'] || ''
       };
     }
 
+    function renderKPIs(data){
+      const rows = data.length;
+      const emps = new Set(data.map(d => d.employee).filter(Boolean)).size;
+      const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+      document.getElementById('kpiRows').textContent = rows.toLocaleString();
+      document.getElementById('kpiEmployees').textContent = emps.toLocaleString();
+      document.getElementById('kpiHours').textContent = hmsFromHours(hours);
+      document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
+    }
+
     function renderTable(data){
-      const rows = data.map(r=>[
-        r.date,
-        r.employee,
-        r.signIn,
-        r.signOut,
-        isFinite(r.totalHours)?r.totalHours.toFixed(2):"",
-        r.status
-      ]);
+      const rows = data.map(r => ({
+        Date: r.date,
+        Employee: r.employee,
+        'Sign In': r.signIn,
+        'Sign Out': r.signOut,
+        Hours: isFinite(r.totalHours) ? r.totalHours : null,
+        Status: r.status
+      }));
+
+      const columns = [
+        { title: 'Date', data: 'Date' },
+        { title: 'Employee', data: 'Employee' },
+        { title: 'Sign In', data: 'Sign In' },
+        { title: 'Sign Out', data: 'Sign Out' },
+        { title: 'Hours', data: 'Hours', render: (d)=> d==null? '' : hmsFromHours(d) },
+        { title: 'Status', data: 'Status' }
+      ];
 
       if(!DT){
-        DT = $("#attendanceTable").DataTable({
+        DT = $('#attendanceTable').DataTable({
           data: rows,
-          columns: [
-            { title: "Date" },
-            { title: "Employee" },
-            { title: "Sign In" },
-            { title: "Sign Out" },
-            { title: "Hours" },
-            { title: "Status" }
+          columns,
+          order: [[0,'desc']],
+          responsive: true,
+          pageLength: 10,
+          dom: 'Bfrtip',
+          buttons: [
+            { extend: 'csv', title: 'Attendance_Export' },
+            { extend: 'print', title: 'Attendance' },
+            { extend: 'copy' }
           ],
-          dom: "Bfrtip",
-          buttons: ["csv", "excel", "pdf", "print"],
-          pageLength: 10
+          footerCallback: function(row, data){
+            const api = this.api();
+            const colIdx = 4; // Hours
+            const sum = api
+              .column(colIdx, { page: 'current' })
+              .data()
+              .toArray()
+              .reduce((a,v)=> a + (typeof v === 'number' ? v : 0), 0);
+            // Create/ensure footer
+            if(!$(api.table().footer()).length){
+              $(api.table().node()).append('<tfoot><tr></tr></tfoot>');
+              const tfootRow = columns.map(()=>'');
+              tfootRow[colIdx] = hmsFromHours(sum);
+              $(api.table().footer()).find('tr').html(tfootRow.map(c=>`<th>${c}</th>`).join(''));
+            } else {
+              const cells = $(api.table().footer()).find('th');
+              cells.eq(colIdx).text(hmsFromHours(sum));
+            }
+          }
         });
       } else {
         DT.clear().rows.add(rows).draw();
@@ -164,69 +331,97 @@
 
     function getCriteria(){
       return {
-        employees: $("#employeeFilter").val()||[],
+        employees: $('#employeeFilter').val() || [],
         start: startDate.value,
         end: endDate.value,
-        q: (quickSearch.value||"").toLowerCase()
+        q: (quickSearch.value || '').toLowerCase()
       };
     }
 
     function applyFilters(){
-      const c=getCriteria();
-      const filtered = CANON.filter(r=>{
+      const c = getCriteria();
+      const filtered = CANON.filter(r => {
         if(c.employees.length && !c.employees.includes(r.employee)) return false;
         if(c.start && r.date < c.start) return false;
         if(c.end && r.date > c.end) return false;
-        if(c.q && !`${r.employee} ${r.date}`.toLowerCase().includes(c.q)) return false;
+        if(c.q && !`${r.employee} ${r.date} ${r.status}`.toLowerCase().includes(c.q)) return false;
         return true;
       });
       renderTable(filtered);
+      renderKPIs(filtered);
     }
 
     function resetFilters(){
-      $("#employeeFilter").val(null).trigger("change");
-      startDate.value="";
-      endDate.value="";
-      quickSearch.value="";
+      $('#employeeFilter').val(null).trigger('change');
+      startDate.value = '';
+      endDate.value = '';
+      quickSearch.value = '';
       applyFilters();
     }
 
     function populateEmployeeFilter(){
-      const sel=document.getElementById("employeeFilter");
-      sel.innerHTML="";
-      [...new Set(CANON.map(r=>r.employee).filter(Boolean))].sort().forEach(emp=>{
-        const o=document.createElement("option");
-        o.value=emp; o.textContent=emp;
-        sel.appendChild(o);
-      });
-      $("#employeeFilter").select2({placeholder:"Select employees...",allowClear:true,width:"100%"});
+      const sel = document.getElementById('employeeFilter');
+      sel.innerHTML = '';
+      [...new Set(CANON.map(r => r.employee).filter(Boolean))]
+        .sort((a,b)=> a.localeCompare(b))
+        .forEach(emp => {
+          const o = document.createElement('option');
+          o.value = emp; o.textContent = emp;
+          sel.appendChild(o);
+        });
+      $('#employeeFilter').select2({ placeholder: 'Select employees...', allowClear: true, width: '100%' });
     }
 
     async function downloadFullReport(){
-      const el=document.getElementById("reportArea");
-      const canvas=await html2canvas(el,{scale:2});
-      const img=canvas.toDataURL("image/png");
-      const doc={content:[{image:img,width:500}]};
-      pdfMake.createPdf(doc).download("Attendance_Report.pdf");
+      const el = document.getElementById('reportArea');
+      const canvas = await html2canvas(el, { scale: 2 });
+      const img = canvas.toDataURL('image/png');
+      const doc = { content: [{ image: img, width: 520 }] };
+      pdfMake.createPdf(doc).download('Attendance_Report.pdf');
+    }
+
+    async function fetchCSV(){
+      const res = await fetch(CSV_URL());
+      if(!res.ok) throw new Error(`Failed to load CSV (${res.status})`);
+      return await res.text();
     }
 
     async function loadData(){
-      document.getElementById("loadingOverlay").style.display="flex";
+      document.getElementById('loadingOverlay').style.display = 'flex';
       try{
-        const res=await fetch(CSV_URL);
-        if(!res.ok) throw new Error("Failed to load CSV");
-        const csv=await res.text();
-        const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
-        CANON=parsed.data.map(r=>mapRow(normalizeHeaders(r))).filter(r=>r.employee && r.date);
+        const csv = await fetchCSV();
+        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+        CANON = parsed.data
+          .map(r => mapRow(normalizeHeaders(r)))
+          .filter(r => r.employee && r.date);
         populateEmployeeFilter();
         applyFilters();
-      }catch(e){
-        alert("Error: " + e.message);
-      }finally{
-        document.getElementById("loadingOverlay").style.display="none";
+      } catch(e){
+        alert('Error: ' + e.message);
+        console.error(e);
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
       }
     }
 
+    // === EVENTS ===
+    document.getElementById('darkBtn').addEventListener('click', toggleDark);
+    document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
+    document.getElementById('applyBtn').addEventListener('click', applyFilters);
+    document.getElementById('resetBtn').addEventListener('click', resetFilters);
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
+    document.getElementById('quickSearch').addEventListener('input', function(){
+      // Live text filter without pressing Apply
+      applyFilters();
+    });
+
+    // Auto refresh
+    setInterval(() => {
+      // Only refresh if the page is visible to avoid unnecessary loads
+      if(document.visibilityState === 'visible') loadData();
+    }, REFRESH_MS);
+
+    // Initial load
     loadData();
   </script>
 </body>
