@@ -176,9 +176,21 @@
   <script>
     // === CONFIG ===
     // Replace with your own GSheet export link (published or anyone-with-link viewable):
-    const SHEET_GID = ""; // not used with Apps Script web app // tab GID
-    const SHEET_BASE = "https://script.google.com/macros/s/AKfycbw9S1Ic5kuUPcUi7yAbXpoZgKFIycfj8_jvBA1SpHiH58i6wdzAZupsibBjHbIXoe9bLg/exec?format=csv";
-    const CSV_URL = () => `${SHEET_BASE}&cachebust=${Date.now()}`; // prevent stale cache // prevent stale cache
+    // Optional secondary endpoint (Google export). Fill SHEET_ID to enable fallback.
+    const SHEET_ID = ""; // e.g. 1AbCDEF... from https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit
+    const GID = 390845393;
+    const APPS_SCRIPT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
+    const GS_EXPORT_URL = SHEET_ID ? `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}` : null;
+    function candidateURLs(){
+      const t = Date.now();
+      // Use the Published-to-web CSV first (CORS-safe), then optional Google export fallback
+      const urls = [`${APPS_SCRIPT_URL}&cachebust=${t}`];
+      if (GS_EXPORT_URL) urls.push(`${GS_EXPORT_URL}&cachebust=${t}`);
+      return urls;
+    }&cachebust=${t}`];
+      if (GS_EXPORT_URL) urls.push(`${GS_EXPORT_URL}&cachebust=${t}`);
+      return urls;
+    } // prevent stale cache // prevent stale cache
     const REFRESH_MS = 60_000; // auto-refresh every 60s (tune as needed)
 
     const TZ = "Asia/Beirut"; // used for display
@@ -415,28 +427,19 @@
     }
 
     async function fetchCSV(){
-      const res = await fetch(CSV_URL());
-      if(!res.ok) throw new Error(`Failed to load CSV (${res.status})`);
-      return await res.text();
-    }
-
-    async function loadData(){
-      document.getElementById('loadingOverlay').style.display = 'flex';
-      try{
-        const csv = await fetchCSV();
-        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-        CANON = parsed.data
-          .map(r => mapRow(normalizeHeaders(r)))
-          .filter(r => r.employee && r.date);
-        populateEmployeeFilter();
-        populateMonthFilter();
-        applyFilters();
-      } catch(e){
-        alert('Error: ' + e.message);
-        console.error(e);
-      } finally {
-        document.getElementById('loadingOverlay').style.display = 'none';
+      const urls = candidateURLs();
+      let lastErr;
+      for (const url of urls){
+        try{
+          const res = await fetch(url, { cache: 'no-store' });
+          if(!res.ok) throw new Error(`HTTP ${res.status} at ${url}`);
+          return await res.text();
+        } catch(e){
+          console.warn('Fetch failed:', e);
+          lastErr = e;
+        }
       }
+      throw new Error(`All endpoints failed. Last error: ${lastErr}`);
     }
 
     // === EVENTS ===
