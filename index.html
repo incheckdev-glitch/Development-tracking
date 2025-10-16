@@ -93,19 +93,21 @@
       <div class="d-flex gap-2">
         <button id="themeBtn" class="btn btn-ghost" title="Toggle light/dark"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
         <button id="refreshBtn" class="btn btn-ghost"><i class="bi bi-arrow-repeat me-2"></i>Refresh</button>
+        <button class="btn btn-outline-primary" id="packBtn"><i class="bi bi-box-arrow-down me-2"></i>Export Pack</button>
         <button class="btn btn-primary" id="pdfBtn"><i class="bi bi-filetype-pdf me-2"></i>Export PDF</button>
       </div>
     </div>
   </div>
 
   <div class="container-xxl">
-    <!-- ===== KPIs (only Working Days + Total Hours) ===== -->
+    <!-- ===== KPIs (Working Days + Total Hours) ===== -->
     <div class="row g-3 mb-3">
       <div class="col-sm-6">
         <div class="kpi-card d-flex justify-content-between align-items-end">
           <div>
             <div class="kpi-title">Working Days</div>
             <div class="kpi-value" id="kpiDays">–</div>
+            <div class="small text-secondary" id="kpiDaysNote"></div>
           </div>
           <canvas id="sparkDays" class="spark"></canvas>
         </div>
@@ -115,6 +117,7 @@
           <div>
             <div class="kpi-title">Total Hours</div>
             <div class="kpi-value" id="kpiHours">–</div>
+            <div class="small text-secondary" id="kpiVar"></div>
           </div>
           <canvas id="sparkHours" class="spark"></canvas>
         </div>
@@ -153,7 +156,13 @@
           <label class="form-label">Quick Search</label>
           <input type="text" id="quickSearch" class="form-control" placeholder="Search name, date, status..."/>
         </div>
-        <div class="col-lg-6 text-end">
+        <div class="col-lg-3 d-flex align-items-center">
+          <div class="form-check form-switch mt-4">
+            <input class="form-check-input" type="checkbox" id="policySwitch">
+            <label class="form-check-label" for="policySwitch">Compute status via policy</label>
+          </div>
+        </div>
+        <div class="col-lg-3 text-end">
           <button class="btn btn-primary" id="applyBtn"><i class="bi bi-funnel me-2"></i>Apply</button>
           <button class="btn btn-ghost" id="resetBtn"><i class="bi bi-arrow-counterclockwise me-2"></i>Reset</button>
         </div>
@@ -195,6 +204,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
   <!-- ======================= APP SCRIPT ======================= -->
   <script>
@@ -202,6 +214,21 @@
     const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
     const REFRESH_MS = 60_000;
     const TZ = "Asia/Beirut";
+
+    // Business policy (edit if needed)
+    const POLICY = {
+      dayStart: '08:00',     // expected start time
+      dayEnd:   '17:00',     // expected end time
+      graceMin: 15,          // grace period for late
+      breakMin: 0,           // unpaid break minutes included in expected day
+      workdayHours: 8,       // target hours per working day
+      recompute: false       // if true, replace CSV Status with computed
+    };
+    // Weekends and holidays (Luxon weekday: Mon=1..Sun=7). Default Sat+Sun
+    const WEEKEND = [6,7];
+    const HOLIDAYS = new Set([
+      // Add company holidays like '2025-01-01', '2025-04-22', ...
+    ]);
 
     function candidateURLs(){
       const t = Date.now();
@@ -211,7 +238,8 @@
     // === STATE ===
     let CANON = [];
     let DT = null;
-    let chartByEmp, chartOverTime, sparkDays, sparkHours;
+    let chartByEmp, chartOverTime;
+    let lastFiltered = [];
 
     const { DateTime } = luxon;
 
@@ -248,6 +276,23 @@
     }
     function parsePunchWithDate(dateISO,val){ if(!dateISO||!val) return null; const s=String(val).trim(); if(!s||s==='-')return null; const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid)return a; const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid)return b; const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid)return c; const iso=DateTime.fromISO(s); if(iso.isValid)return iso; const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d); }
 
+    function computeStatusByPolicy(dateISO, signIn, signOut){
+      if(!dateISO) return '';
+      const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
+      const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+      const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
+      const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
+      if(!inDT || !outDT) return 'Left Early';
+      const lateMin = inDT.diff(start,'minutes').minutes;
+      const earlyMin = end.diff(outDT,'minutes').minutes;
+      const late = lateMin > POLICY.graceMin;
+      const leftEarly = earlyMin > 0; // any early leave
+      if(late && leftEarly) return 'Late & Left Early';
+      if(late) return 'Late';
+      if(leftEarly) return 'Left Early';
+      return 'Present';
+    }
+
     function mapRow(r){
       const month = r['month name'] || r['month'] || '';
       const dateISO = toISODate(r['date'] || r['day'] || '');
@@ -258,22 +303,36 @@
       if(!isFinite(total)){
         const si=dateISO?parsePunchWithDate(dateISO,siRaw):null; const so=dateISO?parsePunchWithDate(dateISO,soRaw):null; total = (si&&so)? so.diff(si,'hours').hours : 0;
       }
-      const status = r['status'] || '';
+      const statusCSV = r['status'] || '';
+      const status = POLICY.recompute ? computeStatusByPolicy(dateISO, siRaw, soRaw) : statusCSV;
       return { month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO, employee: r['employee name']||r['employee']||r['name']||'', signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status };
     }
 
-    // ==== RENDER ==== //
+    // ==== KPI / Charts ==== //
+    function isWorkingDay(isoDate){
+      if(!isoDate) return false;
+      if(HOLIDAYS.has(isoDate)) return false;
+      const wd = DateTime.fromISO(isoDate).weekday; // 1..7
+      return !WEEKEND.includes(wd);
+    }
+
     function renderKPIs(data){
-      const uniqueDays = new Set(data.map(d=>d.date).filter(Boolean)).size;
+      const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
       const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
-      document.getElementById('kpiDays').textContent = uniqueDays.toLocaleString();
+      document.getElementById('kpiDays').textContent = uniqueWorkingDays.toLocaleString();
       document.getElementById('kpiHours').textContent = hmsFromHours(hours);
+      const expected = uniqueWorkingDays * POLICY.workdayHours;
+      const delta = hours - expected;
+      const emoji = delta >= 0 ? '✅' : '⚠️';
+      document.getElementById('kpiVar').textContent = `${emoji} Var vs target: ${delta>=0?'+':''}${hmsFromHours(delta)}`;
+      document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS.size} holidays`;
       document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
-      igniteSpark('sparkDays', uniqueDays || 1);
+      igniteSpark('sparkDays', uniqueWorkingDays || 1);
       igniteSpark('sparkHours', Math.round(hours) || 1);
     }
 
     function renderTable(data){
+      lastFiltered = data;
       const rows = data.map(r => ({
         Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut,
         Hours: isFinite(r.totalHours)? r.totalHours : null, Status: r.status
@@ -293,9 +352,10 @@
           order: [[1,'desc'],[2,'asc']], pageLength: 12,
           dom: 'Bfrtip', buttons: [ { extend:'csv', title:'Attendance_Export' }, { extend:'print', title:'Attendance' }, { extend:'copy' } ],
           createdRow: function(row, data){
-            if((data.Status||'').includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
-            if((data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
-            if((data.Status||'')==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
+            if((data.Status||'').includes('Late') && (data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+            else if((data.Status||'').includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
+            else if((data.Status||'').includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
+            else if((data.Status||'')==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
           },
           footerCallback: function(){
             const api = this.api();
@@ -337,57 +397,144 @@
       new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
     }
 
-    // ==== FILTERS ==== //
+    // ==== FILTERS & URL SYNC ==== //
     function getCriteria(){
       return {
         employees: $('#employeeFilter').val() || [],
         months: $('#monthFilter').val() || [],
         statuses: $('#statusFilter').val() || [],
         start: startDate.value, end: endDate.value,
-        q: (quickSearch.value || '').toLowerCase()
+        q: (quickSearch.value || '').toLowerCase(),
+        policy: document.getElementById('policySwitch').checked
       };
     }
+
     function applyFilters(){
+      POLICY.recompute = document.getElementById('policySwitch').checked;
       const c = getCriteria();
       const filtered = CANON.filter(r => {
         if(c.employees.length && !c.employees.includes(r.employee)) return false;
         if(c.months.length && !c.months.includes(r.month)) return false;
-        if(c.statuses.length && !c.statuses.includes(r.status)) return false;
+        const statusComp = POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status;
+        if(c.statuses.length && !c.statuses.includes(statusComp)) return false;
         if(c.start && r.date < c.start) return false;
         if(c.end && r.date > c.end) return false;
-        if(c.q && !`${r.employee} ${r.date} ${r.status}`.toLowerCase().includes(c.q)) return false;
+        if(c.q && !`${r.employee} ${r.date} ${statusComp}`.toLowerCase().includes(c.q)) return false;
         return true;
-      });
+      }).map(r => ({...r, status: POLICY.recompute ? computeStatusByPolicy(r.date, r.signIn, r.signOut) : r.status }));
+
       renderTable(filtered); renderKPIs(filtered); renderCharts(filtered);
+      updateURLFromFilters();
     }
+
     function resetFilters(){
       $('#employeeFilter').val(null).trigger('change'); $('#monthFilter').val(null).trigger('change'); $('#statusFilter').val(null).trigger('change');
-      startDate.value = ''; endDate.value = ''; quickSearch.value = ''; applyFilters();
+      startDate.value = ''; endDate.value = ''; quickSearch.value = ''; document.getElementById('policySwitch').checked = false; applyFilters();
     }
+
     function populateSelect(id, values, placeholder){
       const sel = document.getElementById(id); sel.innerHTML = '';
       [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
       $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
     }
 
-    // ==== IO ==== //
+    function updateURLFromFilters(){
+      const c = getCriteria();
+      const p = new URLSearchParams();
+      if(c.employees.length) p.set('emp', c.employees.join(','));
+      if(c.months.length) p.set('month', c.months.join(','));
+      if(c.statuses.length) p.set('status', c.statuses.join(','));
+      if(c.start) p.set('start', c.start);
+      if(c.end) p.set('end', c.end);
+      if(c.q) p.set('q', c.q);
+      if(c.policy) p.set('policy', '1');
+      history.replaceState(null, '', `${location.pathname}?${p.toString()}`);
+    }
+
+    function readFiltersFromURL(){
+      const p = new URLSearchParams(location.search);
+      const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : [];
+      const employees = getList('emp');
+      const months = getList('month');
+      const statuses = getList('status');
+      const start = p.get('start') || '';
+      const end = p.get('end') || '';
+      const q = p.get('q') || '';
+      const policy = p.get('policy') === '1';
+      if(employees.length) $('#employeeFilter').val(employees).trigger('change');
+      if(months.length) $('#monthFilter').val(months).trigger('change');
+      if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
+      startDate.value = start; endDate.value = end; quickSearch.value = q; document.getElementById('policySwitch').checked = policy;
+    }
+
+    // ==== IO, CACHE & EXPORT PACK ==== //
+    const CACHE_KEY = 'attendance_csv_v1';
     async function downloadFullReport(){
       const el = document.body; const canvas = await html2canvas(el, { scale: 2 }); const img = canvas.toDataURL('image/png');
       const doc = { content: [{ image: img, width: 520 }] }; pdfMake.createPdf(doc).download('Attendance_Pro_Report.pdf');
     }
-    async function fetchCSV(){
+    async function fetchCSVNetwork(){
       let lastErr; for(const url of candidateURLs()){ try{ const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); } catch(e){ lastErr=e; console.warn('Fetch failed', url, e);} }
       throw lastErr || new Error('All endpoints failed');
     }
+    async function fetchCSV(){
+      // SWR: render from cache first, then update in background
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){ setTimeout(()=>refreshFromNetwork(true), 0); return cached; }
+      return await refreshFromNetwork(false);
+    }
+    async function refreshFromNetwork(silent){
+      try{ const txt = await fetchCSVNetwork(); const old = localStorage.getItem(CACHE_KEY); if(!old || old !== txt){ localStorage.setItem(CACHE_KEY, txt); if(silent) { parseAndRender(txt); } } return txt; }
+      catch(e){ if(!silent) throw e; return null; }
+    }
+
+    function toCSV(rows){
+      if(!rows.length) return '';
+      const cols = Object.keys(rows[0]);
+      const esc = v => '"'+String(v??'').replace(/"/g,'""')+'"';
+      const lines = [cols.join(',')].concat(rows.map(r => cols.map(c=> esc(r[c])).join(',')));
+      return lines.join('\n');
+    }
+
+    async function exportPack(){
+      const zip = new JSZip();
+      // 1) Filtered CSV
+      const simpleRows = lastFiltered.map(r => ({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:r.totalHours.toFixed(2), Status:r.status }));
+      zip.file('attendance_filtered.csv', toCSV(simpleRows));
+      // 2) XLSX with per-employee sheets
+      const wb = XLSX.utils.book_new();
+      const groups = {};
+      lastFiltered.forEach(r => { (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status:r.status }); });
+      Object.entries(groups).forEach(([emp, rows]) => {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
+      });
+      const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+      zip.file('attendance_by_employee.xlsx', wbout);
+      // 3) Summary text
+      const uniqueWorkingDays = new Set(lastFiltered.map(d=>d.date).filter(isWorkingDay)).size;
+      const totalHours = lastFiltered.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
+      const expected = uniqueWorkingDays * POLICY.workdayHours;
+      const delta = totalHours - expected;
+      zip.file('summary.txt', `Working days: ${uniqueWorkingDays}\nTotal hours: ${totalHours.toFixed(2)}\nTarget hours: ${expected.toFixed(2)}\nVariance: ${(delta>=0?'+':'')+delta.toFixed(2)}\nGenerated: ${new Date().toISOString()}`);
+      const blob = await zip.generateAsync({ type:'blob' });
+      saveAs(blob, 'attendance_export_pack.zip');
+    }
+
+    // ==== LOAD & PARSE ==== //
+    function parseAndRender(csv){
+      const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+      CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+      populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
+      populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
+      populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses');
+      readFiltersFromURL();
+      applyFilters();
+    }
+
     async function loadData(){
-      try{
-        const csv = await fetchCSV(); const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
-        CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
-        populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
-        populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
-        populateSelect('statusFilter', CANON.map(r=>r.status), 'Statuses');
-        applyFilters();
-      } catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
+      try{ const csv = await fetchCSV(); parseAndRender(csv); await refreshFromNetwork(true); }
+      catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
     }
 
     // ==== EVENTS ==== //
@@ -396,12 +543,13 @@
       applyTheme(next);
     });
     document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
+    document.getElementById('packBtn').addEventListener('click', exportPack);
     document.getElementById('applyBtn').addEventListener('click', applyFilters);
     document.getElementById('resetBtn').addEventListener('click', resetFilters);
     document.getElementById('refreshBtn').addEventListener('click', loadData);
     document.getElementById('quickSearch').addEventListener('input', applyFilters);
 
-    setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, 60_000);
+    setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
 
     // Kick-off
     initTheme();
