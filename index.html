@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <title>Attendance Intelligence</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- CSS libs -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
-  <link href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" rel="stylesheet"/>
-  <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css" rel="stylesheet"/>
-  <link href="https://cdn.datatables.net/fixedheader/3.4.1/css/fixedHeader.dataTables.min.css" rel="stylesheet"/>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.1/css/fixedHeader.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"/>
 
   <style>
     :root{
@@ -39,7 +39,6 @@
     .status-Half_Day{ background:rgba(124,58,237,.12); color:var(--accent); border:1px solid rgba(124,58,237,.35); }
     .status-Absent{ background:rgba(185,28,28,.12); color:var(--absent); border:1px solid rgba(185,28,28,.35); }
     .status-Need_Correction{ background:rgba(245,158,11,.18); color:var(--warn); border:1px dashed rgba(245,158,11,.45); cursor:pointer; }
-    .status-Leave{ background: rgba(56,189,248,.16); color:#0891b2; border:1px solid rgba(56,189,248,.35); }
 
     #heatmap{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
     .heat-cell{ height:42px; border-radius:8px; display:flex; align-items:flex-start; justify-content:flex-end; padding:4px; font-size:.8rem; color:var(--fg); }
@@ -110,16 +109,40 @@
     <!-- Filters -->
     <div class="card filter-bar mb-3">
       <div class="card-body row g-3 align-items-end">
-        <div class="col-lg-3"><label class="form-label">Employee</label><select id="employeeFilter" multiple></select></div>
-        <div class="col-lg-3"><label class="form-label">Month</label><select id="monthFilter" multiple></select></div>
-        <div class="col-lg-3"><label class="form-label">Status</label><select id="statusFilter" multiple></select></div>
-        <div class="col-lg-3"><label class="form-label">Quick Search</label><input id="quickSearch" class="form-control" placeholder="Name, status, date..." /></div>
-        <div class="col-lg-3"><label class="form-label">Start Date</label><input type="date" id="startDate" class="form-control"/></div>
-        <div class="col-lg-3"><label class="form-label">End Date</label><input type="date" id="endDate" class="form-control"/></div>
+        <div class="col-lg-3">
+          <label class="form-label">Employee</label>
+          <select id="employeeFilter" multiple></select>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">Month</label>
+          <select id="monthFilter" multiple></select>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">Status</label>
+          <select id="statusFilter" multiple></select>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">Quick Search</label>
+          <input id="quickSearch" class="form-control" placeholder="Name, status, date..." />
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">Start Date</label>
+          <input type="date" id="startDate" class="form-control"/>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label">End Date</label>
+          <input type="date" id="endDate" class="form-control"/>
+        </div>
         <div class="col-lg-3">
           <label class="form-label">Display</label>
-          <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="policySwitch"><label class="form-check-label" for="policySwitch">Recompute Status by Policy</label></div>
-          <div class="form-check form-switch mt-1"><input class="form-check-input" type="checkbox" id="decimalSwitch"><label class="form-check-label" for="decimalSwitch">Hours in Decimals</label></div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="policySwitch">
+            <label class="form-check-label" for="policySwitch">Recompute Status by Policy</label>
+          </div>
+          <div class="form-check form-switch mt-1">
+            <input class="form-check-input" type="checkbox" id="decimalSwitch">
+            <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
+          </div>
         </div>
         <div class="col-lg-3 text-end">
           <button id="applyBtn" class="btn btn-primary">Apply</button>
@@ -139,7 +162,7 @@
     <!-- Charts -->
     <div class="row g-3 mb-3">
       <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours by Employee</h6><canvas id="chartByEmp" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours over Working Days</h6><canvas id="chartOverTime" height="220"></canvas></div></div>
+      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours over Time</h6><canvas id="chartOverTime" height="220"></canvas></div></div>
       <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Over/Under Time by Employee</h6><canvas id="chartOverUnder" height="220"></canvas></div></div>
       <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Late vs Early Minutes (Employee)</h6><canvas id="chartLateEarly" height="220"></canvas></div></div>
     </div>
@@ -199,6 +222,21 @@
 
         <div class="col-12"><hr></div>
 
+        <!-- Approval controls (kept as-is) -->
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="form-check">
+            <input id="setRequireApproval" class="form-check-input" type="checkbox">
+            <label class="form-check-label">Corrections require approval</label>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Approval Password</label>
+          <input id="setApprovalPass" class="form-control" type="password" placeholder="Enter to override queue">
+          <div class="form-text">Password to bypass queue when approval is ON (default: 12345678).</div>
+        </div>
+
+        <div class="col-12"><hr></div>
+
         <div class="col-12">
           <label class="form-label">Weekend (check days off)</label>
           <div id="weekendChecks" class="row g-2"></div>
@@ -233,9 +271,13 @@
           <div class="col-12"><label class="form-label">Date</label><input id="corrDate" class="form-control" readonly></div>
           <div class="col-12" id="grpIn"><label class="form-label">Sign-In (HH:mm or HH:mm:ss)</label><input id="corrIn" class="form-control" placeholder="08:00"></div>
           <div class="col-12" id="grpOut"><label class="form-label">Sign-Out (HH:mm or HH:mm:ss)</label><input id="corrOut" class="form-control" placeholder="16:45"></div>
+          <div class="col-12 d-flex align-items-center gap-2 mt-2">
+            <input id="corrApprovalPass" type="password" class="form-control" placeholder="Approval password to save immediately (optional)">
+            <span class="badge bg-secondary" id="approvalModeBadge">Queue</span>
+          </div>
         </div>
         <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
-        <div class="form-text mt-2">Writes back to Google Sheets immediately.</div>
+        <div class="form-text mt-2">Writes back to Google Sheets or queues for approval (based on Settings).</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -243,6 +285,7 @@
       </div>
     </div></div>
   </div>
+
   <!-- JS libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -262,61 +305,97 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+  <!-- Part 2 (script) next -->
+  <!-- Part 2 (script) -->
+  <script>
 /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-const REFRESH_MS = 300_000; // 5 min
+const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4-leave-support-workingday-charts";
+const BUILD = "v3.1-charts-skip-nonworking";
 
-/** Writeback API (Apps Script web app you deployed) **/
+/** (Optional) Writeback & Queue API — leave as-is if you’re not using corrections now **/
 const WRITEBACK = {
-  url: 'https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec',
-  token: 'b7c9c0a8f0f84d8e8f0a28d2e85503e6'
+  url: "https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec",
+  token: "3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11"
 };
-// write IN/OUT into SignIn/SignOut
 async function sendWriteback(kind, payload){
   const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
   const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({
       kind,
       employee: payload.Employee,
       date: payload.Date,
-      time: (kind==='IN' ? payload.In : payload.Out)
+      time: (kind === "IN" ? payload.In : payload.Out)
     }),
-    cache: 'no-store'
+    cache: "no-store"
   });
   const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || 'writeback_failed');
+  if (!j.ok) throw new Error(j.error || "writeback_failed");
+  return j;
+}
+async function sendQueue(payload, reason=""){
+  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      employee: payload.Employee,
+      date: payload.Date,
+      in: payload.In || "",
+      out: payload.Out || "",
+      reason: reason || "Missing punch fix"
+    }),
+    cache: "no-store"
+  });
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || "queue_failed");
   return j;
 }
 
 /** Defaults & persisted settings **/
 const DEFAULT_POLICY = {
-  dayStart:'08:00', dayEnd:'16:45', graceMin:20, earlyGraceMin:0, breakMin:30,
+  dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30,
   workdayHours:8.75, useCalcTarget:false, recompute:true,
-  markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true
+  markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true,
+  requireApproval:false, approvalPass:"12345678"
 };
 const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
 const DEFAULT_HOLIDAYS = [];
-const DEFAULT_PREFS = { hoursFormat:'hms' };
+// NEW: chart knobs (no UI switches added — defaults applied)
+const DEFAULT_PREFS = {
+  hoursFormat:"hms",
+  chartsSkipNonWorkingDays: true,          // exclude weekends/holidays from charts
+  includeWeekendOvertimeInTotals: false    // do not add weekend OT to per-emp totals
+};
 const LS_KEYS = {
-  policy:'attendance_policy_v3', weekend:'attendance_weekend_v1',
-  holidays:'attendance_holidays_v1', prefs:'attendance_prefs_v1', csv:'attendance_csv_v1'
+  policy:"attendance_policy_v2",
+  weekend:"attendance_weekend_v1",
+  holidays:"attendance_holidays_v1",
+  prefs:"attendance_prefs_v2",
+  csv:"attendance_csv_v1"
 };
 
 function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 
-let POLICY = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
-let WEEKEND = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
+let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
+let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
-let PREFS = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
+let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
+// Ensure new keys exist
+PREFS.chartsSkipNonWorkingDays = PREFS.chartsSkipNonWorkingDays ?? true;
+PREFS.includeWeekendOvertimeInTotals = PREFS.includeWeekendOvertimeInTotals ?? false;
+saveLS(LS_KEYS.prefs, PREFS);
+
 let HOLIDAYS_SET = new Set(HOLIDAYS);
 
-function candidateURLs(){ const t=Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
+function candidateURLs(){
+  const t = Date.now();
+  return [`${PUBLISHED_CSV}&cachebust=${t}`];
+}
 
 /** ============== STATE ============== **/
 let CANON = [];
@@ -326,46 +405,54 @@ const { DateTime } = luxon;
 
 /** ============== THEME ============== **/
 function applyTheme(mode){
-  document.body.classList.toggle('dark-mode', mode==='dark');
-  localStorage.setItem('theme', mode);
-  document.getElementById('themeIcon').className = (mode==='dark') ? 'bi bi-brightness-high' : 'bi bi-moon-stars';
+  document.body.classList.toggle("dark-mode", mode === "dark");
+  localStorage.setItem("theme", mode);
+  document.getElementById("themeIcon").className = (mode === "dark") ? "bi bi-brightness-high" : "bi bi-moon-stars";
   renderHeatmap();
 }
 function initTheme(){
-  const saved = localStorage.getItem('theme');
-  if(saved) applyTheme(saved); else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const saved = localStorage.getItem("theme");
+  if (saved) applyTheme(saved);
+  else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
 
 /** ============== HELPERS ============== **/
 function hmsFromHours(hours){
-  if(!isFinite(hours)) return '';
-  const sign = hours<0 ? '-' : '';
+  if(!isFinite(hours)) return "";
+  const sign = hours<0 ? "-" : "";
   const total = Math.abs(hours);
   const h = Math.floor(total);
   const m = Math.round((total - h) * 60);
-  return `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  return `${sign}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
-function fmtHours(hours){ return PREFS.hoursFormat==='decimal' ? (isFinite(hours)? hours.toFixed(2): '') : hmsFromHours(hours); }
-function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
+function fmtHours(hours){
+  return PREFS.hoursFormat === "decimal"
+    ? (isFinite(hours) ? hours.toFixed(2) : "")
+    : hmsFromHours(hours);
+}
+function normalizeHeaders(r){
+  const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o;
+}
 function toISODate(s){
   if(!s) return "";
   const x = String(s).trim(); if(!x) return "";
   const candidates = [
-    DateTime.fromFormat(x,'d/M/yyyy'), DateTime.fromFormat(x,'d/M/yy'),
-    DateTime.fromFormat(x,'yyyy-MM-dd'), DateTime.fromFormat(x,'d-M-yyyy'),
-    DateTime.fromFormat(x,'M/d/yyyy'), DateTime.fromISO(x)
+    DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"),
+    DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"),
+    DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x)
   ];
   for(const t of candidates){ if(t.isValid) return t.toISODate(); }
-  const d = new Date(x); return isNaN(d)? "" : d.toISOString().slice(0,10);
+  const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
-  const s = String(val).trim(); if(!s || s==='-') return null;
-  const a=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm'); if(a.isValid) return a;
-  const b=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd H:mm:ss'); if(b.isValid) return b;
-  const c=DateTime.fromFormat(`${dateISO} ${s}`,'yyyy-MM-dd h:mm a'); if(c.isValid) return c;
-  const iso=DateTime.fromISO(s); if(iso.isValid) return iso;
-  const d=new Date(`${dateISO}T${s.length===5?s+':00':s}`); return isNaN(d)?null:DateTime.fromJSDate(d);
+  const s = String(val).trim(); if(!s || s === "-") return null;
+  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm"); if(a.isValid) return a;
+  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss"); if(b.isValid) return b;
+  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a"); if(c.isValid) return c;
+  const iso = DateTime.fromISO(s); if(iso.isValid) return iso;
+  const d = new Date(`${dateISO}T${s.length===5 ? (s+":00") : s}`);
+  return isNaN(d) ? null : DateTime.fromJSDate(d);
 }
 function isWorkingDay(isoDate){
   if(!isoDate) return false;
@@ -376,30 +463,29 @@ function isWorkingDay(isoDate){
 
 /** ============== STATUS & METRICS ============== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
-  if(!dateISO) return '';
+  if(!dateISO) return "";
   const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
   const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
-  // NOTE: If CSV brings 'Leave: X', we will honor it later (UI layer).
-  if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT) return 'Absent';
-  if((!inDT && outDT) || (inDT && !outDT)) return 'Need Correction';
-  if(!inDT || !outDT) return '';
+  if(POLICY.markAbsentOnWorkingDay && isWorkingDay(dateISO) && !inDT && !outDT) return "Absent";
+  if((!inDT && outDT) || (inDT && !outDT)) return "Need Correction";
+  if(!inDT || !outDT) return "";
 
-  let hours = outDT.diff(inDT,'hours').hours;
+  let hours = outDT.diff(inDT,"hours").hours;
   if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
-  if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours) return 'Half Day';
+  if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours) return "Half Day";
 
-  const lateMin = inDT.diff(start,'minutes').minutes;
-  const earlyMin = end.diff(outDT,'minutes').minutes;
+  const lateMin  = inDT.diff(start,"minutes").minutes;
+  const earlyMin = end.diff(outDT,"minutes").minutes;
   const late = lateMin > POLICY.graceMin;
   const leftEarly = earlyMin > POLICY.earlyGraceMin;
 
-  if(late && leftEarly) return 'Late & Left Early';
-  if(late) return 'Late';
-  if(leftEarly) return 'Left Early';
-  return 'Present';
+  if(late && leftEarly) return "Late & Left Early";
+  if(late) return "Late";
+  if(leftEarly) return "Left Early";
+  return "Present";
 }
 function explainStatus(dateISO, signIn, signOut){
   const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
@@ -407,19 +493,19 @@ function explainStatus(dateISO, signIn, signOut){
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   const s = computeStatusByPolicy(dateISO, signIn, signOut);
-  if(s==='Absent') return 'No punches on a working day';
-  if(s==='Need Correction') return (!inDT && outDT) ? 'Missing Sign-In' : (inDT && !outDT) ? 'Missing Sign-Out' : 'Missing punch';
-  if(!inDT || !outDT) return 'Missing one punch';
-  let lateMin  = Math.max(0, Math.round(inDT.diff(start,'minutes').minutes));
-  let earlyMin = Math.max(0, Math.round(end.diff(outDT,'minutes').minutes));
-  let hours = outDT.diff(inDT,'hours').hours;
+  if(s === "Absent") return "No punches on a working day";
+  if(s === "Need Correction") return (!inDT && outDT) ? "Missing Sign-In" : (inDT && !outDT) ? "Missing Sign-Out" : "Missing punch";
+  if(!inDT || !outDT) return "Missing one punch";
+  let lateMin  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
+  let earlyMin = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
+  let hours = outDT.diff(inDT,"hours").hours;
   let net   = POLICY.halfDayUseNet ? (hours - POLICY.breakMin/60) : hours;
   const parts = [];
   parts.push(`Worked ${fmtHours(hours)} (net ${fmtHours(net)})`);
   if(lateMin>0)  parts.push(`Late by ${lateMin}m (grace ${POLICY.graceMin}m)`);
   if(earlyMin>0) parts.push(`Left early by ${earlyMin}m (grace ${POLICY.earlyGraceMin}m)`);
   if(net < POLICY.halfDayThresholdHours) parts.push(`Under half-day threshold ${POLICY.halfDayThresholdHours}h`);
-  return parts.join(' • ');
+  return parts.join(" • ");
 }
 function lateEarlyMinutes(dateISO, signIn, signOut){
   const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
@@ -427,29 +513,33 @@ function lateEarlyMinutes(dateISO, signIn, signOut){
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   let lateM=0, earlyM=0;
-  if(inDT)  lateM  = Math.max(0, Math.round(inDT.diff(start,'minutes').minutes));
-  if(outDT) earlyM = Math.max(0, Math.round(end.diff(outDT,'minutes').minutes));
+  if(inDT)  lateM  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
+  if(outDT) earlyM = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
   return {lateM, earlyM};
 }
 
 /** ============== MAP ROW ============== **/
 function mapRow(r){
-  const month = r['month name'] || r['month'] || '';
-  const dateISO = toISODate(r['date'] || r['day'] || '');
-  const siRaw = r['first in'] || r['sign in'] || r['in'] || '';
-  const soRaw = r['last out']  || r['sign out'] || r['out'] || '';
-  const hoursRaw = r['hours'];
+  const month = r["month name"] || r["month"] || "";
+  const dateISO = toISODate(r["date"] || r["day"] || "");
+  const siRaw = r["first in"] || r["sign in"] || r["in"] || "";
+  const soRaw = r["last out"] || r["sign out"] || r["out"] || "";
+  const hoursRaw = r["hours"];
   let total = !isNaN(parseFloat(hoursRaw)) ? parseFloat(hoursRaw) : NaN;
   if(!isFinite(total)){
     const si=dateISO?parsePunchWithDate(dateISO,siRaw):null;
     const so=dateISO?parsePunchWithDate(dateISO,soRaw):null;
-    total = (si&&so)? so.diff(si,'hours').hours : 0;
+    total = (si&&so)? so.diff(si,"hours").hours : 0;
   }
-  const statusCSV = r['status'] || '';
+  const statusCSV = r["status"] || "";
   return {
-    month: month || (dateISO?DateTime.fromISO(dateISO).toFormat('LLLL'):''), date: dateISO,
-    employee: r['employee name']||r['employee']||r['name']||'',
-    signIn: siRaw||'', signOut: soRaw||'', totalHours: total, status: statusCSV
+    month: month || (dateISO?DateTime.fromISO(dateISO).toFormat("LLLL"):""),
+    date: dateISO,
+    employee: r["employee name"]||r["employee"]||r["name"]||"",
+    signIn: siRaw||"",
+    signOut: soRaw||"",
+    totalHours: total,
+    status: statusCSV
   };
 }
 
@@ -457,28 +547,24 @@ function mapRow(r){
 function aggregateBy(data, keyFn, valFn){
   const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
 }
-function monthKey(iso){ return (iso||'').slice(0,7); }
-
+function monthKey(iso){ return (iso||"").slice(0,7); }
 function computeCohorts(data){
   const months = Array.from(new Set(data.map(r=>monthKey(r.date)).filter(Boolean))).sort();
   const curr = months.slice(-1)[0]; const prev = months.slice(-2)[0];
   function metrics(rows){
     const wd = new Set(rows.map(d=>d.date).filter(isWorkingDay)).size;
     const hours = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0),0);
-    const statusCounts = rows.reduce((acc,r)=>{ 
-      const raw=(r.status||''); const s = raw.startsWith('Leave:')?raw:computeStatusByPolicy(r.date,r.signIn,r.signOut);
-      acc[s]=(acc[s]||0)+1; return acc; 
-    },{});
-    const ontime = (rows.length? Math.round(100*(statusCounts['Present']||0)/rows.length) : 0);
+    const statusCounts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
+    const ontime = (rows.length? Math.round(100*(statusCounts["Present"]||0)/rows.length) : 0);
     return {wd, hours, ontime};
   }
   const rowsCurr = data.filter(r=> monthKey(r.date)===curr);
   const rowsPrev = data.filter(r=> monthKey(r.date)===prev);
   return {curr, prev, mc:metrics(rowsCurr), mp:metrics(rowsPrev)};
 }
-function arrowDelta(curr, prev, suffix=''){
-  if(prev===0 || prev===undefined || isNaN(prev)) return '';
-  const diff = curr - prev; const sign = diff>0 ? '▲' : diff<0 ? '▼' : '•';
+function arrowDelta(curr, prev, suffix=""){
+  if(prev===0 || prev===undefined || isNaN(prev)) return "";
+  const diff = curr - prev; const sign = diff>0 ? "▲" : diff<0 ? "▼" : "•";
   const pct = prev!==0 ? Math.round((diff/prev)*100) : 0;
   return `${sign} ${pct}%${suffix}`;
 }
@@ -487,10 +573,10 @@ function renderKPIs(data){
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
   const counts = data.reduce((acc,r)=>{
-    const raw=(r.status||''); const s = raw.startsWith('Leave:')?raw:computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    acc.abs += (s==='Absent');
-    acc.half += (s==='Half Day');
-    if(s==='Present') acc.present++;
+    const s = computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    acc.abs += (s==="Absent");
+    acc.half += (s==="Half Day");
+    if(s==="Present") acc.present++;
     acc.total++;
     const m = lateEarlyMinutes(r.date,r.signIn,r.signOut);
     acc.lateM += m.lateM; acc.earlyM += m.earlyM;
@@ -498,58 +584,63 @@ function renderKPIs(data){
   }, {abs:0,half:0, present:0, total:0, lateM:0, earlyM:0});
   const ontimeRate = counts.total? Math.round(100*counts.present/counts.total) : 0;
 
-  document.getElementById('kpiDays').textContent  = uniqueWorkingDays.toLocaleString();
-  document.getElementById('kpiHours').textContent = fmtHours(hours);
-  document.getElementById('kpiAbsent').textContent = counts.abs;
-  document.getElementById('kpiHalf').textContent = counts.half;
-  document.getElementById('kpiOntime').textContent = `${ontimeRate}%`;
-  document.getElementById('kpiLateM').textContent = counts.lateM;
-  document.getElementById('kpiEarlyM').textContent = counts.earlyM;
+  document.getElementById("kpiDays").textContent  = uniqueWorkingDays.toLocaleString();
+  document.getElementById("kpiHours").textContent = fmtHours(hours);
+  document.getElementById("kpiAbsent").textContent = counts.abs;
+  document.getElementById("kpiHalf").textContent = counts.half;
+  document.getElementById("kpiOntime").textContent = `${ontimeRate}%`;
+  document.getElementById("kpiLateM").textContent = counts.lateM;
+  document.getElementById("kpiEarlyM").textContent = counts.earlyM;
 
   const targetPerDay = POLICY.useCalcTarget ?
-    (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) :
+    (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
     POLICY.workdayHours;
   const expected = uniqueWorkingDays * targetPerDay;
   const delta = hours - expected;
-  const emoji = delta >= 0 ? '✅' : '⚠️';
-  document.getElementById('kpiVar').textContent = `${emoji} ${delta>=0?'+':''}${fmtHours(delta)}`;
-  document.getElementById('kpiDaysNote').textContent = `Excludes weekends (${WEEKEND.join(',')}) and ${HOLIDAYS_SET.size} holidays`;
-  document.getElementById('kpiUpdated').textContent = DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm:ss ZZZZ');
+  const emoji = delta >= 0 ? "✅" : "⚠️";
+  document.getElementById("kpiVar").textContent = `${emoji} ${delta>=0?"+":""}${fmtHours(delta)}`;
+  document.getElementById("kpiDaysNote").textContent = `Excludes weekends (${WEEKEND.join(",")}) and ${HOLIDAYS_SET.size} holidays`;
+  document.getElementById("kpiUpdated").textContent = DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm:ss ZZZZ");
 
-  // Cohorts
+  // Cohorts (current vs previous month)
   const cohorts = computeCohorts(data);
   if(cohorts.prev){
-    document.getElementById('kpiHoursVar').textContent = arrowDelta(cohorts.mc.hours, cohorts.mp.hours);
-    document.getElementById('kpiOntimeVar').textContent = arrowDelta(cohorts.mc.ontime, cohorts.mp.ontime, '');
+    document.getElementById("kpiHoursVar").textContent = arrowDelta(cohorts.mc.hours, cohorts.mp.hours);
+    document.getElementById("kpiOntimeVar").textContent = arrowDelta(cohorts.mc.ontime, cohorts.mp.ontime, "");
   } else {
-    document.getElementById('kpiHoursVar').textContent = '';
-    document.getElementById('kpiOntimeVar').textContent = '';
+    document.getElementById("kpiHoursVar").textContent = "";
+    document.getElementById("kpiOntimeVar").textContent = "";
   }
 
   // Sticky totals
-  document.getElementById('stickyTotals').textContent =
+  document.getElementById("stickyTotals").textContent =
     `Rows: ${data.length} • Hours: ${fmtHours(hours)} • On-time: ${ontimeRate}%`;
 
-  igniteSpark('sparkDays', uniqueWorkingDays || 1);
-  igniteSpark('sparkHours', Math.round(hours) || 1);
+  igniteSpark("sparkDays", uniqueWorkingDays || 1);
+  igniteSpark("sparkHours", Math.round(hours) || 1);
 }
 
 function renderCharts(data){
-  // Hours by employee
-  const byEmp = aggregateBy(data, r=>r.employee, r=>r.totalHours);
+  // NEW: Optionally exclude non-working days from charts
+  const chartRows = PREFS.chartsSkipNonWorkingDays
+    ? data.filter(r => isWorkingDay(r.date))
+    : data;
+
+  // Hours by employee — optionally exclude weekend OT from totals
+  const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
+  const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
   const empData = empLabels.map(k=> byEmp[k]);
 
-  // Hours over time (ONLY working days)
-  const byDate = {};
-  data.forEach(r=>{ if(isWorkingDay(r.date)) byDate[r.date]=(byDate[r.date]||0)+(isFinite(r.totalHours)?r.totalHours:0); });
+  // Hours over time — uses chartRows (no weekends/holidays if enabled)
+  const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
 
   // Over/Under bands
-  const perEmpDays = aggregateBy(data, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
+  const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
-    (DateTime.fromFormat(POLICY.dayEnd,'H:mm').diff(DateTime.fromFormat(POLICY.dayStart,'H:mm'),'hours').hours - (POLICY.breakMin/60)) :
+    (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
     POLICY.workdayHours;
   const over = [], under = [];
   empLabels.forEach(emp=>{
@@ -576,48 +667,52 @@ function renderCharts(data){
   chartOverUnder && chartOverUnder.destroy();
   chartLateEarly && chartLateEarly.destroy();
 
-  chartByEmp = new Chart(document.getElementById('chartByEmp'), {
-    type:'bar', data:{ labels:empLabels, datasets:[{ label:'Hours', data:empData }] },
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  chartByEmp = new Chart(document.getElementById("chartByEmp"), {
+    type:"bar",
+    data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverTime = new Chart(document.getElementById('chartOverTime'), {
-    type:'line', data:{ labels:dateLabels, datasets:[{ label:'Hours', data:dateData, tension:.3, fill:false }] },
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  chartOverTime = new Chart(document.getElementById("chartOverTime"), {
+    type:"line",
+    data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverUnder = new Chart(document.getElementById('chartOverUnder'), {
-    type:'bar',
+  chartOverUnder = new Chart(document.getElementById("chartOverUnder"), {
+    type:"bar",
     data:{ labels:empLabels, datasets:[
-      { label:'Overtime', data:over, stack:'x' },
-      { label:'Undertime', data:under, stack:'x' }
+      { label:"Overtime", data:over, stack:"x" },
+      { label:"Undertime", data:under, stack:"x" }
     ]},
-    options:{ plugins:{ legend:{ position:'bottom' }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
+    options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
   });
-  chartLateEarly = new Chart(document.getElementById('chartLateEarly'), {
-    type:'bar',
+  chartLateEarly = new Chart(document.getElementById("chartLateEarly"), {
+    type:"bar",
     data:{ labels:leLabels, datasets:[
-      { label:'Late minutes', data:lateVals },
-      { label:'Early minutes', data:earlyVals }
+      { label:"Late minutes", data:lateVals },
+      { label:"Early minutes", data:earlyVals }
     ]},
-    options:{ plugins:{ legend:{ position:'bottom' } } }
+    options:{ plugins:{ legend:{ position:"bottom" } } }
   });
 
   renderHeatmap();
 }
 function igniteSpark(id, value){
   const c = document.getElementById(id); if(!c) return;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext("2d");
   const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-  new Chart(ctx, { type:'line', data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
+  new Chart(ctx, {
+    type:"line",
+    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+  });
 }
 
 /** ============== TABLE ============== **/
 function renderTable(data){
   lastFiltered = data;
   const rows = data.map(r => {
-    const raw = (r.status || '').trim();
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
-    const statusDisplay = raw.startsWith('Leave:') ? raw : (POLICY.recompute ? comp : (raw || comp));
+    const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
     return ({
       Month: r.month, Date: r.date, Employee: r.employee,
       In: r.signIn, Out: r.signOut,
@@ -627,46 +722,44 @@ function renderTable(data){
   });
 
   const colDefs = [
-    { title:'Month', data:'Month' },
-    { title:'Date', data:'Date' },
-    { title:'Employee', data:'Employee', render:(d)=> `<a href="#" class="emp-link" data-emp="${d}">${d}</a>` },
-    { title:'First In', data:'In' },
-    { title:'Last Out', data:'Out' },
-    { title:'Hours', data:'Hours', className:'text-end', render:d=> d==null?'':fmtHours(d) },
-    { title:'Status', data:'Status', render:function(d,type,row){
+    { title:"Month", data:"Month" },
+    { title:"Date", data:"Date" },
+    { title:"Employee", data:"Employee", render:(d)=> `<a href="#" class="emp-link" data-emp="${d}">${d}</a>` },
+    { title:"First In", data:"In" },
+    { title:"Last Out", data:"Out" },
+    { title:"Hours", data:"Hours", className:"text-end", render:d=> d==null?"":fmtHours(d) },
+    { title:"Status", data:"Status", render:function(d,type,row){
         const expl = explainStatus(row.Date,row.In,row.Out);
-        const cls = `status-${(d||'').replace(/[^A-Za-z0-9]+/g,'_')}`;
-        const extra = (d||'').startsWith('Leave:') ? ' status-Leave' : '';
-        const clickable = (d === 'Need Correction') ? 'data-need-corr="1"' : '';
-        return `<span class="status-badge ${cls}${extra}" ${clickable}
+        const cls = `status-${(d||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
+        const clickable = (d === "Need Correction") ? 'data-need-corr="1"' : "";
+        return `<span class="status-badge ${cls}" ${clickable}
                  data-emp="${row.Employee}" data-date="${row.Date}"
-                 data-in="${row.In||''}" data-out="${row.Out||''}"
-                 data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,'&quot;')}">
-                 ${d||''}${row._raw._edited ? ' <i class="bi bi-pencil ms-1"></i>' : ''}</span>`;
+                 data-in="${row.In||""}" data-out="${row.Out||""}"
+                 data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">
+                 ${d||""}${row._raw._edited ? ' <i class="bi bi-pencil ms-1"></i>' : ""}</span>`;
       }
     }
   ];
 
   if(!DT){
-    DT = $('#attendanceTable').DataTable({
+    DT = $("#attendanceTable").DataTable({
       data: rows, columns: colDefs, responsive: true, fixedHeader:true,
-      order: [[1,'desc'],[2,'asc']], pageLength: 12,
-      dom:'Bfrtip',
+      order: [[1,"desc"],[2,"asc"]], pageLength: 12,
+      dom:"Bfrtip",
       buttons: [
-        {extend:'csv', title:'Attendance_Export'},
-        {extend:'print', title:'Attendance'},
-        {extend:'copy'}
+        {extend:"csv", title:"Attendance_Export"},
+        {extend:"print", title:"Attendance"},
+        {extend:"copy"}
       ],
       createdRow: function(row, data){
-        const s = (data.Status||'');
-        if(s==='Need Correction') row.style.backgroundColor = 'rgba(245,158,11,.10)';
-        else if(s.startsWith('Leave:')) row.style.backgroundColor = 'rgba(56,189,248,.08)';
-        else if(s==='Absent') row.style.backgroundColor = 'rgba(185,28,28,.06)';
-        else if(s==='Half Day') row.style.backgroundColor = 'rgba(124,58,237,.06)';
-        else if(s.includes('Left Early') && s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
-        else if(s.includes('Left Early')) row.style.backgroundColor = 'rgba(239,68,68,.06)';
-        else if(s.includes('Late')) row.style.backgroundColor = 'rgba(245,158,11,.06)';
-        else if(s==='Present') row.style.backgroundColor = 'rgba(22,163,74,.06)';
+        const s = (data.Status||"");
+        if(s==="Need Correction") row.style.backgroundColor = "rgba(245,158,11,.10)";
+        else if(s==="Absent") row.style.backgroundColor = "rgba(185,28,28,.06)";
+        else if(s==="Half Day") row.style.backgroundColor = "rgba(124,58,237,.06)";
+        else if(s.includes("Left Early") && s.includes("Late")) row.style.backgroundColor = "rgba(245,158,11,.06)";
+        else if(s.includes("Left Early")) row.style.backgroundColor = "rgba(239,68,68,.06)";
+        else if(s.includes("Late")) row.style.backgroundColor = "rgba(245,158,11,.06)";
+        else if(s==="Present") row.style.backgroundColor = "rgba(22,163,74,.06)";
       },
       drawCallback: function(){
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
@@ -679,32 +772,31 @@ function renderTable(data){
 
 /** ============== FILTERS & URL ============== **/
 function populateSelect(id, values, placeholder){
-  const sel=document.getElementById(id); sel.innerHTML='';
+  const sel=document.getElementById(id); sel.innerHTML="";
   [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v=>{
-    const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+    const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o);
   });
-  $(`#${id}`).select2({ placeholder, allowClear:true, width:'100%' });
+  $(`#${id}`).select2({ placeholder, allowClear:true, width:"100%" });
 }
 function getCriteria(){
   return {
-    employees: $('#employeeFilter').val()||[],
-    months: $('#monthFilter').val()||[],
-    statuses: $('#statusFilter').val()||[],
+    employees: $("#employeeFilter").val()||[],
+    months: $("#monthFilter").val()||[],
+    statuses: $("#statusFilter").val()||[],
     start: startDate.value, end: endDate.value,
-    q: (quickSearch.value||'').toLowerCase(),
-    policy: document.getElementById('policySwitch').checked
+    q: (quickSearch.value||"").toLowerCase(),
+    policy: document.getElementById("policySwitch").checked
   };
 }
 function applyFilters(){
-  POLICY.recompute = document.getElementById('policySwitch').checked;
-  PREFS.hoursFormat = document.getElementById('decimalSwitch').checked ? 'decimal' : 'hms';
+  POLICY.recompute = document.getElementById("policySwitch").checked;
+  PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
   saveLS(LS_KEYS.prefs, PREFS);
 
   const c=getCriteria();
   const filtered = CANON.filter(r=>{
-    const raw=(r.status||'').trim();
     const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
-    const statusDisp = raw.startsWith('Leave:') ? raw : (POLICY.recompute ? statusComp : (raw || statusComp));
+    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
     if(c.employees.length && !c.employees.includes(r.employee)) return false;
     if(c.months.length && !c.months.includes(r.month)) return false;
     if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
@@ -721,74 +813,87 @@ function applyFilters(){
   computeAndRenderAnomalies(filtered);
 }
 function resetFilters(){
-  $('#employeeFilter').val(null).trigger('change');
-  $('#monthFilter').val(null).trigger('change');
-  $('#statusFilter').val(null).trigger('change');
-  startDate.value=''; endDate.value=''; quickSearch.value='';
-  document.getElementById('policySwitch').checked = POLICY.recompute;
-  document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+  $("#employeeFilter").val(null).trigger("change");
+  $("#monthFilter").val(null).trigger("change");
+  $("#statusFilter").val(null).trigger("change");
+  startDate.value=""; endDate.value=""; quickSearch.value="";
+  document.getElementById("policySwitch").checked = POLICY.recompute;
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
   applyFilters();
 }
 function updateURLFromFilters(){
   const c=getCriteria(); const p=new URLSearchParams();
-  if(c.employees.length) p.set('emp', c.employees.join(','));
-  if(c.months.length)    p.set('month', c.months.join(','));
-  if(c.statuses.length)  p.set('status', c.statuses.join(','));
-  if(c.start) p.set('start', c.start); if(c.end) p.set('end', c.end);
-  if(c.q) p.set('q', c.q); if(c.policy) p.set('policy','1');
-  if(PREFS.hoursFormat==='decimal') p.set('fmt','dec');
-  history.replaceState(null,'',`${location.pathname}?${p.toString()}`);
+  if(c.employees.length) p.set("emp", c.employees.join(","));
+  if(c.months.length)    p.set("month", c.months.join(","));
+  if(c.statuses.length)  p.set("status", c.statuses.join(","));
+  if(c.start) p.set("start", c.start); if(c.end) p.set("end", c.end);
+  if(c.q) p.set("q", c.q); if(c.policy) p.set("policy","1");
+  if(PREFS.hoursFormat==="decimal") p.set("fmt","dec");
+  history.replaceState(null,"",`${location.pathname}?${p.toString()}`);
 }
 function readFiltersFromURL(){
   const p=new URLSearchParams(location.search);
-  const getList = k => p.get(k)? p.get(k).split(',').filter(Boolean) : [];
-  const employees = getList('emp'), months = getList('month'), statuses=getList('status');
-  const start = p.get('start')||'', end = p.get('end')||'', q = p.get('q')||'';
-  const policy = p.get('policy') === '1';
-  const fmt = p.get('fmt') === 'dec' ? 'decimal' : PREFS.hoursFormat;
+  const getList = k => p.get(k)? p.get(k).split(",").filter(Boolean) : [];
+  const employees = getList("emp"), months = getList("month"), statuses=getList("status");
+  const start = p.get("start")||"", end = p.get("end")||"", q = p.get("q")||"";
+  const policy = p.get("policy") === "1";
+  const fmt = p.get("fmt") === "dec" ? "decimal" : PREFS.hoursFormat;
 
-  if(employees.length) $('#employeeFilter').val(employees).trigger('change');
-  if(months.length) $('#monthFilter').val(months).trigger('change');
-  if(statuses.length) $('#statusFilter').val(statuses).trigger('change');
+  if(employees.length) $("#employeeFilter").val(employees).trigger("change");
+  if(months.length) $("#monthFilter").val(months).trigger("change");
+  if(statuses.length) $("#statusFilter").val(statuses).trigger("change");
   startDate.value = start; endDate.value = end; quickSearch.value = q;
-  document.getElementById('policySwitch').checked = policy || POLICY.recompute;
+  document.getElementById("policySwitch").checked = policy || POLICY.recompute;
   PREFS.hoursFormat = fmt;
-  document.getElementById('decimalSwitch').checked = (PREFS.hoursFormat==='decimal');
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
 /** ============== HEATMAP ============== **/
 function renderHeatmap(){
-  const wrap=document.getElementById('heatmap'); if(!wrap) return;
-  wrap.innerHTML=''; if(!lastFiltered.length) return;
+  const wrap=document.getElementById("heatmap"); if(!wrap) return;
+  wrap.innerHTML=""; if(!lastFiltered.length) return;
 
-  const p = document.getElementById('heatmapMonth').value;
+  const p = document.getElementById("heatmapMonth").value;
   let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
-  document.getElementById('heatmapMonth').value = monthISO;
+  document.getElementById("heatmapMonth").value = monthISO;
 
-  const first = DateTime.fromISO(monthISO+'-01'); const days=first.daysInMonth;
+  const first = DateTime.fromISO(monthISO+"-01"); const days=first.daysInMonth;
+
   const totals = {};
   lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
   const max = Math.max(1, ...Object.values(totals));
 
   let startOffset = first.weekday % 7; // Sunday=0
-  for(let i=0;i<startOffset;i++){ const cell=document.createElement('div'); cell.className='heat-cell'; cell.style.background='transparent'; wrap.appendChild(cell); }
+  for(let i=0;i<startOffset;i++){ const cell=document.createElement("div"); cell.className="heat-cell"; cell.style.background="transparent"; wrap.appendChild(cell); }
 
   for(let d=1; d<=days; d++){
-    const iso = first.set({day:d}).toISODate(); const val = totals[iso]||0;
-    const ratio = Math.min(1, val/max);
-    let bg = 'var(--heat-none)'; if(ratio>0){ if(ratio<0.34) bg='var(--heat-low)'; else if(ratio<0.67) bg='var(--heat-mid)'; else bg='var(--heat-high)'; }
-    const cell = document.createElement('div'); cell.className='heat-cell'; cell.style.background=bg;
-    cell.setAttribute('data-bs-toggle','tooltip'); cell.setAttribute('data-bs-title', `${iso}: ${fmtHours(val)} total`);
-    cell.innerHTML = `<span class="d">${d}</span>`; wrap.appendChild(cell);
+    const iso = first.set({day:d}).toISODate();
+    const val = totals[iso]||0;
+    const working = isWorkingDay(iso);
+
+    let bg = "var(--heat-none)";
+    if (working) {
+      const ratio = Math.min(1, val/max);
+      if (ratio>0) bg = ratio<0.34 ? "var(--heat-low)" : ratio<0.67 ? "var(--heat-mid)" : "var(--heat-high)";
+    } else if (PREFS.chartsSkipNonWorkingDays) {
+      bg = "transparent";
+    }
+
+    const cell = document.createElement("div");
+    cell.className="heat-cell";
+    cell.style.background=bg;
+    cell.setAttribute("data-bs-toggle","tooltip");
+    cell.setAttribute("data-bs-title", `${iso}: ${fmtHours(val)} total${working?"":" (non-working)"}`);
+    cell.innerHTML = `<span class="d">${d}</span>`;
+    wrap.appendChild(cell);
   }
-  document.querySelectorAll('#heatmap [data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
+  document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
 }
 
-/** ============== ANOMALIES ============== **/
+/** ============== ANOMALIES (missing punches on working days) ============== **/
 function computeAnomalies(data){
   const missing=[];
   for(const r of data){
-    if((r.status||'').startsWith('Leave:')) continue; // skip leave
     const working = isWorkingDay(r.date);
     const hasIn  = !!(r.signIn && String(r.signIn).trim());
     const hasOut = !!(r.signOut && String(r.signOut).trim());
@@ -798,10 +903,10 @@ function computeAnomalies(data){
 }
 function computeAndRenderAnomalies(data){
   const a = computeAnomalies(data);
-  document.getElementById('anomalyBadge').textContent = a.missing.length;
-  const body = document.getElementById('anomaliesBody'); body.innerHTML='';
+  document.getElementById("anomalyBadge").textContent = a.missing.length;
+  const body = document.getElementById("anomaliesBody"); body.innerHTML="";
 
-  const col=document.createElement('div'); col.className='col-lg-6';
+  const col=document.createElement("div"); col.className="col-lg-6";
   const html = [
     `<div class="glass p-3 h-100">`,
     `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
@@ -810,7 +915,7 @@ function computeAndRenderAnomalies(data){
   ];
   a.missing.slice(0,150).forEach(r=>{
     const hasIn  = !!(r.signIn && String(r.signIn).trim());
-    const why = hasIn ? 'Missing Sign-Out' : 'Missing Sign-In';
+    const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
     html.push(`<tr>
       <td>${r.date}</td>
       <td>${r.employee}</td>
@@ -818,7 +923,7 @@ function computeAndRenderAnomalies(data){
       <td class="text-end">
         <button class="btn btn-sm btn-outline-warning fix-missing-btn"
                 data-emp="${r.employee}" data-date="${r.date}"
-                data-in="${r.signIn||''}" data-out="${r.signOut||''}">
+                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
           <i class="bi bi-pencil-square me-1"></i>Fix
         </button>
       </td>
@@ -826,128 +931,134 @@ function computeAndRenderAnomalies(data){
   });
   if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
   html.push(`</tbody></table></div></div>`);
-  col.innerHTML = html.join(''); body.appendChild(col);
+  col.innerHTML = html.join(""); body.appendChild(col);
 }
 
 /** ============== EMPLOYEE DRAWER ============== **/
-let empChart=null;
 function openEmpDrawer(name){
   const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
-  const counts = rows.reduce((acc,r)=>{ 
-    const raw=(r.status||''); const s = raw.startsWith('Leave:')?raw:computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    acc[s]=(acc[s]||0)+1; return acc; 
-  },{});
+  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
   const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
-  const ontimeRate = rows.length? Math.round(100*(counts['Present']||0)/rows.length):0;
+  const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
 
+  // minutes
   let lateM=0, earlyM=0;
   rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
 
-  document.getElementById('empDrawerLabel').textContent = name;
-  document.getElementById('empMeta').innerHTML =
+  document.getElementById("empDrawerLabel").textContent = name;
+  document.getElementById("empMeta").innerHTML =
     `<div class="row g-2">
       <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
       <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
       <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
-      <div class="col-6"><div class="chip w-100">Late: <b>${counts['Late']||0}</b> • Left Early: <b>${(counts['Left Early']||0)+(counts['Late & Left Early']||0)}</b></div></div>
+      <div class="col-6"><div class="chip w-100">Late: <b>${counts["Late"]||0}</b> • Left Early: <b>${(counts["Left Early"]||0)+(counts["Late & Left Early"]||0)}</b></div></div>
       <div class="col-12"><div class="chip w-100">Late min: <b>${lateM}</b> • Early min: <b>${earlyM}</b></div></div>
     </div>`;
 
   const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
   empChart && empChart.destroy();
-  empChart = new Chart(document.getElementById('empChart'), {
-    type:'line', data:{ labels, datasets:[{ label:'Hours', data, tension:.3, fill:false }]},
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#64748b'}}, y:{ ticks:{ color:'#64748b'}}}}
+  empChart = new Chart(document.getElementById("empChart"), {
+    type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
 
   const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
   const body = rows.slice(-60).reverse().map(r=>{
-    const raw=(r.status||''); const s= raw.startsWith('Leave:')?raw:computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    const cls = `status-${(s||'').replace(/[^A-Za-z0-9]+/g,'_')}`;
+    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
     const expl= explainStatus(r.date,r.signIn,r.signOut);
     return `<tr>
-      <td>${r.date}</td><td>${r.signIn||''}</td><td>${r.signOut||''}</td>
+      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
       <td class="text-end">${fmtHours(r.totalHours)}</td>
-      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,'&quot;')}">${s||''}</span></td>
+      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
     </tr>`;
-  }).join('');
-  document.getElementById('empTable').innerHTML=head+'<tbody>'+body+'</tbody>';
-  document.querySelectorAll('#empTable [data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
-  new bootstrap.Offcanvas('#empDrawer').show();
+  }).join("");
+  document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
+  document.querySelectorAll("#empTable [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
+  new bootstrap.Offcanvas("#empDrawer").show();
 }
 
-/** ============== CORRECTION FLOW ============== **/
+/** ============== CORRECTION FLOW (Approval-aware) ============== **/
 let __corrCtx = null;
 function openCorrectionModal(rowLike){
   const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
   const hasOut = !!(rowLike.Out && String(rowLike.Out).trim());
-  const kind = (!hasIn && hasOut) ? 'IN' : (hasIn && !hasOut) ? 'OUT' : (!hasIn && !hasOut ? 'BOTH' : 'NONE');
+  const kind = (!hasIn && hasOut) ? "IN" : (hasIn && !hasOut) ? "OUT" : (!hasIn && !hasOut ? "BOTH" : "NONE");
 
   __corrCtx = { ...rowLike, kind };
-  document.getElementById('corrEmp').value = rowLike.Employee;
-  document.getElementById('corrDate').value = rowLike.Date;
+  document.getElementById("corrEmp").value = rowLike.Employee;
+  document.getElementById("corrDate").value = rowLike.Date;
 
-  document.getElementById('grpIn').style.display  = (kind==='IN'||kind==='BOTH') ? '' : 'none';
-  document.getElementById('grpOut').style.display = (kind==='OUT'||kind==='BOTH') ? '' : 'none';
-  document.getElementById('corrIn').value=''; document.getElementById('corrOut').value='';
-  document.getElementById('corrAlert').classList.add('d-none');
+  document.getElementById("grpIn").style.display  = (kind==="IN"||kind==="BOTH") ? "" : "none";
+  document.getElementById("grpOut").style.display = (kind==="OUT"||kind==="BOTH") ? "" : "none";
+  document.getElementById("corrIn").value=""; document.getElementById("corrOut").value="";
+  document.getElementById("corrApprovalPass").value="";
+  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : "Immediate";
+  document.getElementById("corrAlert").classList.add("d-none");
 
-  new bootstrap.Modal('#corrModal').show();
+  new bootstrap.Modal("#corrModal").show();
 }
 async function applyLocalCorrection(){
-  const emp  = document.getElementById('corrEmp').value;
-  const date = document.getElementById('corrDate').value;
-  const inVal  = document.getElementById('corrIn').value.trim();
-  const outVal = document.getElementById('corrOut').value.trim();
-  const al=document.getElementById('corrAlert');
+  const emp  = document.getElementById("corrEmp").value;
+  const date = document.getElementById("corrDate").value;
+  const inVal  = document.getElementById("corrIn").value.trim();
+  const outVal = document.getElementById("corrOut").value.trim();
+  const pass   = document.getElementById("corrApprovalPass").value.trim();
+  const al=document.getElementById("corrAlert");
 
-  if (__corrCtx.kind==='IN'  && !inVal){ al.textContent='Please enter Sign-In time.';  al.classList.remove('d-none'); return; }
-  if (__corrCtx.kind==='OUT' && !outVal){ al.textContent='Please enter Sign-Out time.'; al.classList.remove('d-none'); return; }
-  if (__corrCtx.kind==='BOTH' && (!inVal || !outVal)){ al.textContent='Please enter both times.'; al.classList.remove('d-none'); return; }
+  if (__corrCtx.kind==="IN"  && !inVal){ al.textContent="Please enter Sign-In time.";  al.classList.remove("d-none"); return; }
+  if (__corrCtx.kind==="OUT" && !outVal){ al.textContent="Please enter Sign-Out time."; al.classList.remove("d-none"); return; }
+  if (__corrCtx.kind==="BOTH" && (!inVal || !outVal)){ al.textContent="Please enter both times."; al.classList.remove("d-none"); return; }
 
-  const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || '', Out: outVal || __corrCtx.Out || '' };
+  const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || "", Out: outVal || __corrCtx.Out || "" };
 
   try {
-    if (__corrCtx.kind === 'IN' || __corrCtx.kind === 'BOTH')  await sendWriteback('IN',  { ...rowLike, In: inVal });
-    if (__corrCtx.kind === 'OUT' || __corrCtx.kind === 'BOTH') await sendWriteback('OUT', { ...rowLike, Out: outVal });
+    const approvalNeeded = !!POLICY.requireApproval;
+    const passOK = (!!pass && pass === (POLICY.approvalPass||"12345678"));
+    if (approvalNeeded && !passOK) {
+      await sendQueue(rowLike, "Approval required");
+    } else {
+      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
+      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
+    }
   } catch (e) {
-    console.warn('Writeback failed:', e);
-    al.textContent = 'Saved locally, but server update failed. Export now, or try again.';
-    al.classList.remove('d-none');
+    console.warn("Writeback/Queue failed:", e);
+    al.textContent = "Saved locally, but server update failed. Export now, or try again.";
+    al.classList.remove("d-none");
   }
 
-  // Local patch
+  // Local patch for instant UX
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
-      if(__corrCtx.kind==='IN'||__corrCtx.kind==='BOTH')  r.signIn  = inVal || r.signIn;
-      if(__corrCtx.kind==='OUT'||__corrCtx.kind==='BOTH') r.signOut = outVal || r.signOut;
+      if(__corrCtx.kind==="IN"||__corrCtx.kind==="BOTH")  r.signIn  = inVal || r.signIn;
+      if(__corrCtx.kind==="OUT"||__corrCtx.kind==="BOTH") r.signOut = outVal || r.signOut;
       const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
       const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
-      r.totalHours = (si&&so)? so.diff(si,'hours').hours : 0;
+      r.totalHours = (si&&so)? so.diff(si,"hours").hours : 0;
       r._edited = true;
       patched=true; break;
     }
   }
-  if(!patched){ al.textContent='Could not find the row in current data.'; al.classList.remove('d-none'); return; }
+  if(!patched){ al.textContent="Could not find the row in current data."; al.classList.remove("d-none"); return; }
 
-  bootstrap.Modal.getInstance(document.getElementById('corrModal')).hide();
+  bootstrap.Modal.getInstance(document.getElementById("corrModal")).hide();
   applyFilters();
 }
 
 /** ============== EXPORTS ============== **/
 async function downloadFullReport(){
   const el=document.body; const canvas=await html2canvas(el,{scale:2});
-  const img=canvas.toDataURL('image/png');
+  const img=canvas.toDataURL("image/png");
   const doc={content:[{image:img,width:520}]};
-  pdfMake.createPdf(doc).download('Attendance_Report.pdf');
+  pdfMake.createPdf(doc).download("Attendance_Report.pdf");
 }
 function toCSV(rows){
-  if(!rows.length) return '';
+  if(!rows.length) return "";
   const cols=Object.keys(rows[0]);
-  const esc=v=> '"'+String(v??'').replace(/"/g,'""')+'"';
-  const lines=[cols.join(',')].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(',')));
-  return lines.join('\n');
+  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+  const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
+  return lines.join("\n");
 }
 async function exportPack(){
   const zip = new JSZip();
@@ -955,25 +1066,24 @@ async function exportPack(){
     Month:r.month, Date:r.date, Employee:r.employee,
     FirstIn:r.signIn, LastOut:r.signOut,
     Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
-    Status: (r.status||'').startsWith('Leave:') ? r.status : computeStatusByPolicy(r.date,r.signIn,r.signOut)
+    Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
   }));
-  zip.file('attendance_filtered.csv', toCSV(simpleRows));
+  zip.file("attendance_filtered.csv", toCSV(simpleRows));
 
   const wb = XLSX.utils.book_new();
   const groups={}; lastFiltered.forEach(r=>{ (groups[r.employee] ||= []).push({
     Date:r.date, In:r.signIn, Out:r.signOut,
-    Hours:r.totalHours, Status: (r.status||'').startsWith('Leave:') ? r.status : computeStatusByPolicy(r.date,r.signIn,r.signOut)
+    Hours:r.totalHours, Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
   }); });
   Object.entries(groups).forEach(([emp,rows])=>{
     const ws = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
   });
-  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-  zip.file('attendance_by_employee.xlsx', wbout);
+  const wbout = XLSX.write(wb, { bookType:"xlsx", type:"array" });
+  zip.file("attendance_by_employee.xlsx", wbout);
 
-  const blob = await zip.generateAsync({type:'blob'}); saveAs(blob,'attendance_export_pack.zip');
+  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"attendance_export_pack.zip");
 }
-// Monthly packs (per-employee, per-month)
 async function exportMonthlyPacks(){
   const zip = new JSZip();
   const byEmpMonth = {};
@@ -983,92 +1093,95 @@ async function exportMonthlyPacks(){
     (byEmpMonth[key] ||= []).push(r);
   });
   Object.entries(byEmpMonth).forEach(([key,rows])=>{
-    const [emp, mk] = key.split('::');
+    const [emp, mk] = key.split("::");
     const folder = zip.folder(`${mk}/${emp}`);
     const csvRows = rows.map(r=>({
       Date:r.date, In:r.signIn, Out:r.signOut,
       Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
-      Status: (r.status||'').startsWith('Leave:') ? r.status : computeStatusByPolicy(r.date,r.signIn,r.signOut)
+      Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
     }));
     folder.file(`${emp}_${mk}.csv`, toCSV(csvRows));
+    // mini text card
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
-    const present = rows.filter(r=>((r.status||'').startsWith('Leave:')? (r.status||'') : computeStatusByPolicy(r.date,r.signIn,r.signOut))==='Present').length;
-    const half = rows.filter(r=>((r.status||'').startsWith('Leave:')? (r.status||'') : computeStatusByPolicy(r.date,r.signIn,r.signOut))==='Half Day').length;
-    const abs  = rows.filter(r=>((r.status||'').startsWith('Leave:')? (r.status||'') : computeStatusByPolicy(r.date,r.signIn,r.signOut))==='Absent').length;
+    const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
+    const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
+    const abs  = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Absent").length;
     folder.file(`${emp}_${mk}_summary.txt`, `Employee: ${emp}\nMonth: ${mk}\nHours: ${hours}\nPresent: ${present}\nHalf: ${half}\nAbsent: ${abs}\nGenerated: ${new Date().toISOString()}`);
   });
-  const blob = await zip.generateAsync({type:'blob'}); saveAs(blob,'monthly_packs.zip');
+  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"monthly_packs.zip");
 }
-// ICS export (Absences, Half-days, and Leave)
 function exportICS(){
-  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Attendance//ICS//EN'];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Attendance//ICS//EN"];
   const uidBase = Date.now();
   lastFiltered.forEach((r,i)=>{
-    const raw = (r.status||'').trim();
-    const s = raw.startsWith('Leave:') ? raw : computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    if(s==='Absent' || s==='Half Day' || s.startsWith('Leave:')){
-      const dt = r.date.replace(/-/g,'');
+    const s = computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    if(s==="Absent" || s==="Half Day"){
+      const dt = r.date.replace(/-/g,"");
       const uid = `${uidBase}-${i}@attendance`;
-      const title = s.startsWith('Leave:') ? s.replace(':',' -') + ` - ${r.employee}` : `${s} - ${r.employee}`;
+      const title = `${s} - ${r.employee}`;
       lines.push(
-        'BEGIN:VEVENT',
+        "BEGIN:VEVENT",
         `UID:${uid}`,
         `DTSTAMP:${dt}T000000Z`,
         `DTSTART;VALUE=DATE:${dt}`,
         `DTEND;VALUE=DATE:${dt}`,
         `SUMMARY:${title}`,
-        'END:VEVENT'
+        "END:VEVENT"
       );
     }
   });
-  lines.push('END:VCALENDAR');
-  const blob = new Blob([lines.join('\r\n')], {type:'text/calendar;charset=utf-8'});
-  saveAs(blob, 'absences_halfdays_leaves.ics');
+  lines.push("END:VCALENDAR");
+  const blob = new Blob([lines.join("\r\n")], {type:"text/calendar;charset=utf-8"});
+  saveAs(blob, "absences_halfdays.ics");
 }
 
 /** ============== SETTINGS UI ============== **/
 function renderWeekendChecks(){
-  const cont=document.getElementById('weekendChecks'); if(!cont) return; cont.innerHTML='';
-  const names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const cont=document.getElementById("weekendChecks"); if(!cont) return; cont.innerHTML="";
+  const names=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   for(let i=1;i<=7;i++){
-    const col=document.createElement('div'); col.className='col-6 col-md-3';
+    const col=document.createElement("div"); col.className="col-6 col-md-3";
     const id=`wkd_${i}`;
-    col.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(WEEKEND.includes(i)?'checked':'')}><label class="form-check-label" for="${id}">${i}. ${names[i-1]}</label></div>`;
+    col.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(WEEKEND.includes(i)?"checked":"")}><label class="form-check-label" for="${id}">${i}. ${names[i-1]}</label></div>`;
     cont.appendChild(col);
   }
 }
 function openSettings(){
-  document.getElementById('setStart').value = POLICY.dayStart;
-  document.getElementById('setEnd').value = POLICY.dayEnd;
-  document.getElementById('setGraceMin').value = POLICY.graceMin;
-  document.getElementById('setEarlyGraceMin').value = POLICY.earlyGraceMin;
-  document.getElementById('setBreakMin').value = POLICY.breakMin;
-  document.getElementById('setWorkdayHours').value = POLICY.workdayHours;
-  document.getElementById('setUseCalcTarget').checked = POLICY.useCalcTarget;
-  document.getElementById('setAbsentEnabled').checked = !!POLICY.markAbsentOnWorkingDay;
-  document.getElementById('setHalfDayHours').value = POLICY.halfDayThresholdHours;
-  document.getElementById('setHalfDayUseNet').checked = POLICY.halfDayUseNet;
+  document.getElementById("setStart").value = POLICY.dayStart;
+  document.getElementById("setEnd").value = POLICY.dayEnd;
+  document.getElementById("setGraceMin").value = POLICY.graceMin;
+  document.getElementById("setEarlyGraceMin").value = POLICY.earlyGraceMin;
+  document.getElementById("setBreakMin").value = POLICY.breakMin;
+  document.getElementById("setWorkdayHours").value = POLICY.workdayHours;
+  document.getElementById("setUseCalcTarget").checked = POLICY.useCalcTarget;
+  document.getElementById("setAbsentEnabled").checked = !!POLICY.markAbsentOnWorkingDay;
+  document.getElementById("setHalfDayHours").value = POLICY.halfDayThresholdHours;
+  document.getElementById("setHalfDayUseNet").checked = POLICY.halfDayUseNet;
+  document.getElementById("setRequireApproval").checked = !!POLICY.requireApproval;
+  document.getElementById("setApprovalPass").value = POLICY.approvalPass || "12345678";
   renderWeekendChecks();
-  document.getElementById('holidayText').value = HOLIDAYS.join('\n');
-  new bootstrap.Modal('#settingsModal').show();
+  document.getElementById("holidayText").value = HOLIDAYS.join("\n");
+  new bootstrap.Modal("#settingsModal").show();
 }
 function saveSettings(){
-  POLICY.dayStart = document.getElementById('setStart').value || DEFAULT_POLICY.dayStart;
-  POLICY.dayEnd   = document.getElementById('setEnd').value || DEFAULT_POLICY.dayEnd;
-  POLICY.graceMin = parseInt(document.getElementById('setGraceMin').value || DEFAULT_POLICY.graceMin);
-  POLICY.earlyGraceMin = parseInt(document.getElementById('setEarlyGraceMin').value || DEFAULT_POLICY.earlyGraceMin);
-  POLICY.breakMin = parseInt(document.getElementById('setBreakMin').value || DEFAULT_POLICY.breakMin);
-  POLICY.workdayHours = parseFloat(document.getElementById('setWorkdayHours').value || DEFAULT_POLICY.workdayHours);
-  POLICY.useCalcTarget = document.getElementById('setUseCalcTarget').checked;
-  POLICY.markAbsentOnWorkingDay = document.getElementById('setAbsentEnabled').checked;
-  POLICY.halfDayThresholdHours = parseFloat(document.getElementById('setHalfDayHours').value || DEFAULT_POLICY.halfDayThresholdHours);
-  POLICY.halfDayUseNet = document.getElementById('setHalfDayUseNet').checked;
+  POLICY.dayStart = document.getElementById("setStart").value || DEFAULT_POLICY.dayStart;
+  POLICY.dayEnd   = document.getElementById("setEnd").value || DEFAULT_POLICY.dayEnd;
+  POLICY.graceMin = parseInt(document.getElementById("setGraceMin").value || DEFAULT_POLICY.graceMin);
+  POLICY.earlyGraceMin = parseInt(document.getElementById("setEarlyGraceMin").value || DEFAULT_POLICY.earlyGraceMin);
+  POLICY.breakMin = parseInt(document.getElementById("setBreakMin").value || DEFAULT_POLICY.breakMin);
+  POLICY.workdayHours = parseFloat(document.getElementById("setWorkdayHours").value || DEFAULT_POLICY.workdayHours);
+  POLICY.useCalcTarget = document.getElementById("setUseCalcTarget").checked;
+  POLICY.markAbsentOnWorkingDay = document.getElementById("setAbsentEnabled").checked;
+  POLICY.halfDayThresholdHours = parseFloat(document.getElementById("setHalfDayHours").value || DEFAULT_POLICY.halfDayThresholdHours);
+  POLICY.halfDayUseNet = document.getElementById("setHalfDayUseNet").checked;
+  POLICY.requireApproval = document.getElementById("setRequireApproval").checked;
+  POLICY.approvalPass = document.getElementById("setApprovalPass").value || "12345678";
   saveLS(LS_KEYS.policy, POLICY);
 
   const wk=[]; for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`)?.checked) wk.push(i);
   if(wk.length){ WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND); }
 
-  const lines = document.getElementById('holidayText').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  const lines = document.getElementById("holidayText").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
   HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
 
   applyFilters();
@@ -1079,12 +1192,12 @@ async function fetchCSVNetwork(){
   let lastErr;
   for(const url of candidateURLs()){
     try{
-      const res = await fetch(url, { cache:'no-store' });
+      const res = await fetch(url, { cache:"no-store" });
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.text();
-    }catch(e){ lastErr=e; console.warn('Fetch failed', url, e); }
+    }catch(e){ lastErr=e; console.warn("Fetch failed", url, e); }
   }
-  throw lastErr || new Error('All endpoints failed');
+  throw lastErr || new Error("All endpoints failed");
 }
 async function fetchCSV(){
   const cached = localStorage.getItem(LS_KEYS.csv);
@@ -1106,75 +1219,85 @@ function parseAndRender(csv){
   const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
   CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
 
-  populateSelect('employeeFilter', CANON.map(r=>r.employee), 'Employees');
-  populateSelect('monthFilter', CANON.map(r=>r.month), 'Months');
-  populateSelect('statusFilter', CANON.map(r=>{
-    const raw=(r.status||''); return raw.startsWith('Leave:')?raw:computeStatusByPolicy(r.date,r.signIn,r.signOut);
-  }), 'Statuses');
+  populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
+  populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
+  populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
 
   readFiltersFromURL(); applyFilters();
 
   const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0];
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
-  document.getElementById('heatmapMonth').value = mo;
+  document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
 }
 async function loadData(){
   try{
     const csv = await fetchCSV(); parseAndRender(csv);
     const refreshed = await refreshFromNetwork(true);
-    document.getElementById('lastSync').textContent = "Last auto-refresh: " + new Date().toLocaleTimeString();
+    document.getElementById("lastSync").textContent = "Last auto-refresh: " + new Date().toLocaleTimeString();
     return refreshed;
-  } catch(e){ console.error(e); alert('Failed to load data: '+e.message); }
+  } catch(e){ console.error(e); alert("Failed to load data: "+e.message); }
 }
 
 /** ============== EVENTS ============== **/
-document.getElementById('themeBtn').addEventListener('click', ()=>{ const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark'; applyTheme(next); });
-document.getElementById('settingsBtn').addEventListener('click', openSettings);
-document.getElementById('settingsSave').addEventListener('click', saveSettings);
-document.getElementById('settingsReset').addEventListener('click', ()=>{ POLICY={...DEFAULT_POLICY}; saveLS(LS_KEYS.policy,POLICY); WEEKEND=[...DEFAULT_WEEKEND]; saveLS(LS_KEYS.weekend,WEEKEND); HOLIDAYS=[...DEFAULT_HOLIDAYS]; HOLIDAYS_SET=new Set(HOLIDAYS); saveLS(LS_KEYS.holidays,HOLIDAYS); openSettings(); });
-document.getElementById('holidayAddBtn').addEventListener('click', ()=>{ const inp=document.getElementById('holidayAdd'); if(!inp) return; const v=inp.value.trim(); if(!v) return; const ta=document.getElementById('holidayText'); const lines=ta.value.split(/\n+/).filter(Boolean); if(!lines.includes(v)) lines.push(v); ta.value=lines.join('\n'); inp.value=''; });
-
-document.getElementById('pdfBtn').addEventListener('click', downloadFullReport);
-document.getElementById('packBtn').addEventListener('click', exportPack);
-document.getElementById('packsMonthlyBtn').addEventListener('click', exportMonthlyPacks);
-document.getElementById('icsBtn').addEventListener('click', exportICS);
-document.getElementById('applyBtn').addEventListener('click', applyFilters);
-document.getElementById('resetBtn').addEventListener('click', resetFilters);
-document.getElementById('refreshBtn').addEventListener('click', loadData);
-document.getElementById('quickSearch').addEventListener('input', applyFilters);
-document.getElementById('heatmapMonth').addEventListener('change', renderHeatmap);
-document.getElementById('corrSave').addEventListener('click', applyLocalCorrection);
-
-// Links
-document.addEventListener('click', (e)=>{
-  const a=e.target.closest('.emp-link'); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
+document.getElementById("themeBtn").addEventListener("click", ()=>{ const next = document.body.classList.contains("dark-mode") ? "light" : "dark"; applyTheme(next); });
+document.getElementById("settingsBtn").addEventListener("click", openSettings);
+document.getElementById("settingsSave").addEventListener("click", saveSettings);
+document.getElementById("settingsReset").addEventListener("click", ()=>{ 
+  POLICY={...DEFAULT_POLICY}; saveLS(LS_KEYS.policy,POLICY);
+  WEEKEND=[...DEFAULT_WEEKEND]; saveLS(LS_KEYS.weekend,WEEKEND);
+  HOLIDAYS=[...DEFAULT_HOLIDAYS]; HOLIDAYS_SET=new Set(HOLIDAYS); saveLS(LS_KEYS.holidays,HOLIDAYS);
+  openSettings();
 });
-document.addEventListener('click', (e)=>{
+document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
+  const inp=document.getElementById("holidayAdd"); if(!inp) return;
+  const v=inp.value.trim(); if(!v) return;
+  const ta=document.getElementById("holidayText");
+  const lines=ta.value.split(/\n+/).filter(Boolean);
+  if(!lines.includes(v)) lines.push(v); ta.value=lines.join("\n"); inp.value="";
+});
+
+document.getElementById("pdfBtn").addEventListener("click", downloadFullReport);
+document.getElementById("packBtn").addEventListener("click", exportPack);
+document.getElementById("packsMonthlyBtn").addEventListener("click", exportMonthlyPacks);
+document.getElementById("icsBtn").addEventListener("click", exportICS);
+document.getElementById("applyBtn").addEventListener("click", applyFilters);
+document.getElementById("resetBtn").addEventListener("click", resetFilters);
+document.getElementById("refreshBtn").addEventListener("click", loadData);
+document.getElementById("quickSearch").addEventListener("input", applyFilters);
+document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
+document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
+
+// links
+document.addEventListener("click", (e)=>{
+  const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
+});
+document.addEventListener("click", (e)=>{
   const el=e.target.closest('.status-badge[data-need-corr="1"]'); if(!el) return;
   e.preventDefault();
-  openCorrectionModal({ Employee:el.dataset.emp, Date:el.dataset.date, In:el.dataset.in||'', Out:el.dataset.out||'', Status:'Need Correction' });
+  openCorrectionModal({ Employee:el.dataset.emp, Date:el.dataset.date, In:el.dataset.in||"", Out:el.dataset.out||"", Status:"Need Correction" });
 });
-document.addEventListener('click', (e)=>{
-  const btn=e.target.closest('.fix-missing-btn'); if(!btn) return;
+document.addEventListener("click", (e)=>{
+  const btn=e.target.closest(".fix-missing-btn"); if(!btn) return;
   e.preventDefault();
-  openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||'', Out:btn.dataset.out||'', Status:'Need Correction' });
+  openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
 // periodic refresh (5 min)
 setTimeout(()=> loadData(), Math.random()*60_000); // stagger first load
-setInterval(()=>{ if(document.visibilityState==='visible') loadData(); }, REFRESH_MS);
+setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
 
 // boot
 initTheme();
-document.getElementById('buildStamp').textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat('yyyy-LL-dd HH:mm')}`;
+document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
 /** ============== INLINE TESTS (console) ============== **/
 (function tests(){
-  function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?'OK':'FAIL'}`); }
-  ok('cachebust URL', /cachebust=\d+/.test(candidateURLs()[0]||''));
-  ok('policy.persisted', !!POLICY && typeof POLICY.graceMin==='number');
+  function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
+  ok("cachebust URL", /cachebust=\d+/.test(candidateURLs()[0]||""));
+  ok("policy.persisted", !!POLICY && typeof POLICY.graceMin==="number");
+  ok("charts skip non-working days", PREFS.chartsSkipNonWorkingDays === true);
 })();
-</script>
+  </script>
 </body>
 </html>
