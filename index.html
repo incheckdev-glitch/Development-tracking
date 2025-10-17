@@ -1189,16 +1189,51 @@ async function fetchCSVNetworkIfChanged(){
   }
 }
 function parseCSVWithWorker(csv){
-  return new Promise((resolve)=>{
-    setProgress(40, "Parsing data…");
-    const totalLines = Math.max(1, (csv.match(/\n/g)||[]).length);
-    let seen = 0;
-    Papa.parse(csv, {
-      header:true, skipEmptyLines:true, worker:true,
-      step: function(){ seen++; if(seen % 1000 === 0){ const pct = 40 + Math.min(40, (seen/totalLines)*40); setProgress(pct, "Parsing data…"); } },
-      complete: function(res){ setProgress(85, "Mapping rows…"); resolve(res.data); }
-    });
-    setTimeout(()=>{ if(overlay.classList.contains("show")) hint.textContent = "taking longer than usual…"; }, 8000);
+  return new Promise((resolve, reject)=>{
+    try{
+      setProgress(40, "Parsing data…");
+
+      // We will accumulate rows ourselves in step()
+      const out = [];
+      const totalLines = Math.max(1, (csv.match(/\n/g)||[]).length);
+      let seen = 0;
+
+      Papa.parse(csv, {
+        header: true,
+        skipEmptyLines: true,
+        worker: true,
+        step: function(step){
+          // step?.data is one parsed row (object)
+          const row = step && step.data;
+          if (row && typeof row === "object" && Object.keys(row).length){
+            out.push(row);
+          }
+          seen++;
+          // smooth progress between 40% → ~80%
+          if (seen % 1000 === 0){
+            const pct = 40 + Math.min(40, (seen/totalLines)*40);
+            setProgress(pct, "Parsing data…");
+          }
+        },
+        complete: function(){
+          setProgress(85, "Mapping rows…");
+          resolve(out);            // <- no res.data here
+        },
+        error: function(err){
+          reject(err);
+        }
+      });
+
+      // UX hint if parsing is slow
+      setTimeout(()=>{
+        if(overlay.classList.contains("show")){
+          hint.textContent = "taking longer than usual…";
+        }
+      }, 8000);
+
+    } catch(e){
+      reject(e);
+    }
   });
 }
 function parseAndRenderFromRows(rows){
