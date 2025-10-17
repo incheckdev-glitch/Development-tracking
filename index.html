@@ -50,40 +50,31 @@
 
     /* Loading overlay */
     #loadingOverlay{
-      position:fixed; inset:0; z-index:2000;
-      display:none; align-items:center; justify-content:center;
-      background:rgba(15,23,42,.35); backdrop-filter: blur(2px) saturate(1.2);
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.35); backdrop-filter:blur(2px); z-index:3000;
     }
-    #loadingOverlay.show{ display:flex; }
-    .loading-card{ width:min(520px,92vw); border-radius:16px; padding:18px; background:var(--card); border:1px solid var(--line); box-shadow:0 10px 30px rgba(0,0,0,.15); }
-    .progress{ height:10px; }
+    #loadingCard{ background:var(--card); border:1px solid var(--line); padding:16px 18px; border-radius:12px; min-width:260px; }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:rgba(148,163,184,.2); padding:.1rem .35rem; border-radius:6px;}
   </style>
 </head>
 <body>
-  <!-- Loading overlay -->
-  <div id="loadingOverlay" aria-live="polite">
-    <div class="loading-card">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <strong id="loadingTitle">Loading…</strong>
-        <span class="text-secondary small" id="loadingHint"></span>
+  <div id="loadingOverlay" role="status" aria-live="polite">
+    <div id="loadingCard">
+      <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <strong id="loadingText">Loading…</strong>
       </div>
-      <div class="progress mb-1">
-        <div id="loadingBar" class="progress-bar" role="progressbar" style="width: 10%"></div>
-      </div>
-      <div class="small text-secondary" id="loadingNote">Checking for updates…</div>
+      <div class="small text-secondary mt-1" id="loadingSub"></div>
     </div>
   </div>
 
   <div class="container-fluid p-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="d-flex align-items-center gap-2">
-        <div>
-          <h2 class="mb-0">📊 Attendance Intelligence</h2>
-          <small id="buildStamp" class="text-secondary"></small>
-          <div><small id="lastSync" class="text-secondary"></small></div>
-        </div>
-        <button id="metricsBtn" class="btn btn-outline-secondary btn-sm ms-1" title="Show load metrics"><i class="bi bi-info-circle"></i></button>
+      <div>
+        <h2 class="mb-0">📊 Attendance Intelligence</h2>
+        <small id="buildStamp" class="text-secondary"></small>
+        <div><small id="lastSync" class="text-secondary"></small></div>
       </div>
       <div class="d-flex gap-2">
         <button id="themeBtn" class="btn btn-outline-secondary"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
@@ -152,7 +143,6 @@
           <label class="form-label">Quick Search</label>
           <input id="quickSearch" class="form-control" placeholder="Name, status, date..." />
         </div>
-
         <div class="col-lg-3">
           <label class="form-label">Start Date</label>
           <input type="date" id="startDate" class="form-control"/>
@@ -161,7 +151,6 @@
           <label class="form-label">End Date</label>
           <input type="date" id="endDate" class="form-control"/>
         </div>
-
         <div class="col-lg-3">
           <label class="form-label">Display</label>
           <div class="form-check form-switch">
@@ -173,30 +162,21 @@
             <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
           </div>
         </div>
-
-        <div class="col-lg-3">
-          <label class="form-label">Views</label>
-          <div class="d-flex gap-2">
-            <input id="viewName" class="form-control" placeholder="Name">
-            <button id="saveViewBtn" class="btn btn-outline-secondary">Save</button>
-          </div>
-          <div class="d-flex gap-2 mt-1">
-            <select id="loadView" class="form-select"></select>
-            <button id="deleteViewBtn" class="btn btn-outline-danger">Delete</button>
-          </div>
-        </div>
-
-        <div class="col-lg-6 d-flex align-items-end gap-2">
-          <div class="btn-group" role="group" aria-label="Quick ranges">
-            <button id="thisMonthBtn" class="btn btn-outline-primary btn-sm">This Month</button>
-            <button id="lastMonthBtn" class="btn btn-outline-primary btn-sm">Last Month</button>
-            <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-sm">Clear</button>
-          </div>
-        </div>
-
-        <div class="col-lg-6 d-flex align-items-end justify-content-end gap-2">
+        <div class="col-lg-3 text-end">
           <button id="applyBtn" class="btn btn-primary">Apply</button>
           <button id="resetBtn" class="btn btn-warning">Reset</button>
+        </div>
+
+        <!-- Saved views + quick chips -->
+        <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+          <div class="input-group" style="max-width:420px">
+            <input id="saveViewName" class="form-control" placeholder="Save current filters as…">
+            <button id="saveViewBtn" class="btn btn-outline-secondary"><i class="bi bi-bookmark-plus"></i> Save View</button>
+          </div>
+          <div id="savedViews" class="d-flex flex-wrap gap-2"></div>
+          <div class="ms-auto small text-secondary">
+            Shortcuts: <span class="kbd">/</span> search • <span class="kbd">m</span> month • <span class="kbd">e</span> employee • <span class="kbd">?</span> help
+          </div>
         </div>
       </div>
     </div>
@@ -211,10 +191,42 @@
 
     <!-- Charts -->
     <div class="row g-3 mb-3">
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours by Employee</h6><canvas id="chartByEmp" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours over Time</h6><canvas id="chartOverTime" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Over/Under Time by Employee</h6><canvas id="chartOverUnder" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Late vs Early Minutes (Employee)</h6><canvas id="chartLateEarly" height="220"></canvas></div></div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Hours by Employee</h6>
+            <button id="csvByEmp" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartByEmp" height="220"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Hours over Time</h6>
+            <button id="csvOverTime" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartOverTime" height="220"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Over/Under Time by Employee</h6>
+            <button id="csvOverUnder" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartOverUnder" height="220"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Late vs Early Minutes (Employee)</h6>
+            <button id="csvLateEarly" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartLateEarly" height="220"></canvas>
+        </div>
+      </div>
     </div>
 
     <!-- Heatmap -->
@@ -251,7 +263,7 @@
     </div>
   </div>
 
-  <!-- Settings Modal -->
+  <!-- Settings Modal (unchanged UI, behavior improved in JS) -->
   <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg"><div class="modal-content">
       <div class="modal-header">
@@ -271,6 +283,7 @@
         <div class="col-md-3 d-flex align-items-end"><div class="form-check"><input id="setHalfDayUseNet" class="form-check-input" type="checkbox" checked><label class="form-check-label">Half-day uses Net</label></div></div>
 
         <div class="col-12"><hr></div>
+
         <div class="col-md-4 d-flex align-items-end">
           <div class="form-check">
             <input id="setRequireApproval" class="form-check-input" type="checkbox">
@@ -284,6 +297,7 @@
         </div>
 
         <div class="col-12"><hr></div>
+
         <div class="col-12">
           <label class="form-label">Weekend (check days off)</label>
           <div id="weekendChecks" class="row g-2"></div>
@@ -301,19 +315,6 @@
       <div class="modal-footer">
         <button id="settingsReset" class="btn btn-outline-danger">Reset Defaults</button>
         <button id="settingsSave" class="btn btn-primary">Save</button>
-      </div>
-    </div></div>
-  </div>
-
-  <!-- Metrics Modal -->
-  <div class="modal fade" id="metricsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog"><div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Load & Render Metrics</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <pre id="metricsPre" class="small text-secondary mb-0"></pre>
       </div>
     </div></div>
   </div>
@@ -337,7 +338,7 @@
           </div>
         </div>
         <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
-        <div class="form-text mt-2">Writes back via server proxy if configured; otherwise saved to local queue.</div>
+        <div class="form-text mt-2">Writes back to Google Sheets or queues for approval (based on Settings).</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -346,7 +347,7 @@
     </div></div>
   </div>
 
-  <!-- JS libs (logic comes in Chunk 2) -->
+  <!-- JS libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
@@ -365,32 +366,45 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Part 2 (script) next -->
-  <!-- Part 2 (script) -->
-  <script>
-/** ====================== CONFIG ====================== **/
+  <!-- Part 2/2 script comes next -->
+<script>
+/** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-
-// Optional: host month-sliced JSON as `${MONTHLY_JSON_BASE}{YYYY-MM}.json`, plus optional `${MONTHLY_JSON_BASE}index.json`
-const MONTHLY_JSON_BASE = ""; // e.g. "https://your.cdn/attendance/monthly/" — leave blank to use CSV path
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4.0-month-filter-all-debounced-fastfetch-sparks-fixed-views";
+const BUILD = "v4.0-full-filters-fast-load";
 
-/** Server writeback is intentionally disabled client-side to avoid leaking secrets. 
- *  Set WRITEBACK.enabled=true and url=/your/proxy if you have a server proxy. */
-const WRITEBACK = {
-  enabled: false, // 🔐 keep false unless you have a secure proxy
-  url: "/api/attendance-write"
+// Optional: per-month JSON (drop-in). Leave empty to use CSV only.
+const MONTHLY_JSON_BASE = ""; // e.g. "https://your.cdn/data" -> expects /YYYY-MM.json schema compatible
+
+// Writeback proxy (disabled by default; safe no-op if left blank)
+const WRITEBACK = { url: "", token: "" };
+
+/** ============== STATE & STORAGE ============== **/
+const LS_KEYS = {
+  policy:"attendance_policy_v2",
+  weekend:"attendance_weekend_v1",
+  holidays:"attendance_holidays_v1",
+  prefs:"attendance_prefs_v3",
+  csv:"attendance_csv_v1",
+  etag:"attendance_csv_etag_v1",
+  lastModified:"attendance_csv_lm_v1",
+  views:"attendance_saved_views_v1"
 };
-const LOCAL_QUEUE_KEY = "attendance_write_queue_v1";
 
-/** Defaults & persisted settings **/
-const DEFAULT_POLICY = { dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30, workdayHours:8.75, useCalcTarget:false, recompute:true, markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true, requireApproval:false, approvalPass:"12345678" };
-const DEFAULT_WEEKEND = [6,7];
+const DEFAULT_POLICY = {
+  dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30,
+  workdayHours:8.75, useCalcTarget:false, recompute:true,
+  markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true,
+  requireApproval:false, approvalPass:"12345678"
+};
+const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
 const DEFAULT_HOLIDAYS = [];
-const DEFAULT_PREFS = { hoursFormat:"hms", chartsSkipNonWorkingDays:true, includeWeekendOvertimeInTotals:false };
-const LS_KEYS = { policy:"attendance_policy_v2", weekend:"attendance_weekend_v1", holidays:"attendance_holidays_v1", prefs:"attendance_prefs_v2", csv:"attendance_csv_v1", csv_meta:"attendance_csv_meta_v1", months:"attendance_months_index_v1", views:"attendance_views_v1" };
+const DEFAULT_PREFS = {
+  hoursFormat:"hms",
+  chartsSkipNonWorkingDays:true,
+  includeWeekendOvertimeInTotals:false
+};
 
 function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
@@ -399,41 +413,26 @@ let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
 let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-let META     = loadLS(LS_KEYS.csv_meta, { etag:null, lastModified:null });
-let MONTH_INDEX = loadLS(LS_KEYS.months, []); // e.g., ["2025-08","2025-09"]
-let VIEWS = loadLS(LS_KEYS.views, {});
-PREFS.chartsSkipNonWorkingDays ??= true;
-PREFS.includeWeekendOvertimeInTotals ??= false;
 saveLS(LS_KEYS.prefs, PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
-
+let CANON = [];              // all rows (normalized)
+let lastFiltered = [];       // current filtered rows
+let DT = null;               // DataTable
+let chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
+const sparkCharts = {};      // spark instances by canvas id
+const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] }; // for CSV exports
 const { DateTime } = luxon;
 
-/** ====================== STATE ====================== **/
-let CANON = [];
-let DT = null, chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
-let lastFiltered = [];
-let sparkDaysChart = null, sparkHoursChart = null;
-let _inflight = null;
-const metrics = {};
-
-/** ====================== UTIL & UI ====================== **/
-const overlay = document.getElementById("loadingOverlay");
-const bar = document.getElementById("loadingBar");
-const note = document.getElementById("loadingNote");
-const hint = document.getElementById("loadingHint");
-function showLoading(title="Loading…", subtitle=""){
-  document.getElementById("loadingTitle").textContent = title;
-  hint.textContent = subtitle || (navigator.onLine ? "" : "offline mode");
-  bar.style.width = "10%";
-  note.textContent = "Checking for updates…";
-  overlay.classList.add("show");
+/** ============== UI HELPERS ============== **/
+function showLoading(text="Loading…", sub=""){ 
+  const o=document.getElementById("loadingOverlay"); 
+  document.getElementById("loadingText").textContent = text; 
+  document.getElementById("loadingSub").textContent = sub || ""; 
+  o.style.display="flex";
 }
-function setProgress(p, msg){ bar.style.width = `${Math.max(10, Math.min(100, p))}%`; if(msg) note.textContent = msg; }
-function hideLoading(){ overlay.classList.remove("show"); }
-function debounce(fn, wait=180){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); }; }
-function disposeTooltips(root=document){ root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> bootstrap.Tooltip.getInstance(el)?.dispose()); }
+function setLoading(sub){ document.getElementById("loadingSub").textContent = sub || ""; }
+function hideLoading(){ document.getElementById("loadingOverlay").style.display="none"; }
 
 function applyTheme(mode){
   document.body.classList.toggle("dark-mode", mode === "dark");
@@ -443,44 +442,55 @@ function applyTheme(mode){
 }
 function initTheme(){
   const saved = localStorage.getItem("theme");
-  applyTheme(saved ? saved : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+  if (saved) applyTheme(saved);
+  else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
 
-function hmsFromHours(h){ if(!isFinite(h)) return ""; const s=h<0?"-":""; const t=Math.abs(h); const H=Math.floor(t); const M=Math.round((t-H)*60); return `${s}${String(H).padStart(2,"0")}:${String(M).padStart(2,"0")}`; }
-function fmtHours(h){ return PREFS.hoursFormat==="decimal" ? (isFinite(h)? h.toFixed(2) : "") : hmsFromHours(h); }
+/** ============== DATE & FORMAT HELPERS ============== **/
+function hmsFromHours(hours){
+  if(!isFinite(hours)) return "";
+  const sign = hours<0 ? "-" : "";
+  const total = Math.abs(hours);
+  const h = Math.floor(total);
+  const m = Math.round((total - h) * 60);
+  return `${sign}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+function fmtHours(hours){ return PREFS.hoursFormat === "decimal" ? (isFinite(hours) ? hours.toFixed(2) : "") : hmsFromHours(hours); }
 function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
 function toISODate(s){
-  if(!s) return ""; const x=String(s).trim(); if(!x) return "";
-  const c=[ DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"), DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"), DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x) ];
-  for(const t of c){ if(t.isValid) return t.toISODate(); }
-  const d=new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
+  if(!s) return "";
+  const x = String(s).trim(); if(!x) return "";
+  const candidates = [
+    DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"),
+    DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"),
+    DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x)
+  ];
+  for(const t of candidates){ if(t.isValid) return t.toISODate(); }
+  const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
   const s = String(val).trim(); if(!s || s === "-") return null;
-  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm"); if(a.isValid) return a;
-  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss"); if(b.isValid) return b;
-  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a"); if(c.isValid) return c;
-  const iso = DateTime.fromISO(s); if(iso.isValid) return iso;
+  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm", { zone: TZ }); if(a.isValid) return a;
+  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss", { zone: TZ }); if(b.isValid) return b;
+  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a", { zone: TZ }); if(c.isValid) return c;
+  const iso = DateTime.fromISO(s, { zone: TZ }); if(iso.isValid) return iso;
   const d = new Date(`${dateISO}T${s.length===5 ? (s+":00") : s}`);
-  return isNaN(d) ? null : DateTime.fromJSDate(d);
+  return isNaN(d) ? null : DateTime.fromJSDate(d).setZone(TZ);
 }
 function isWorkingDay(isoDate){
   if(!isoDate) return false;
   if(HOLIDAYS_SET.has(isoDate)) return false;
-  const wd = DateTime.fromISO(isoDate).weekday; // 1=Mon..7=Sun
+  const wd = DateTime.fromISO(isoDate, { zone: TZ }).weekday; // 1..7
   return !WEEKEND.includes(wd);
 }
 function monthKey(iso){ return (iso||"").slice(0,7); }
-function monthNameFromISO(iso){ return DateTime.fromISO(iso+"-01").setLocale("en").toFormat("LLLL"); }
-function currentMonthISO(){ return DateTime.now().setZone(TZ).toISODate().slice(0,7); }
-function lastMonthISO(){ return DateTime.now().setZone(TZ).minus({months:1}).toISODate().slice(0,7); }
 
-/** ====================== STATUS & METRICS ====================== **/
+/** ============== STATUS & METRICS ============== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!dateISO) return "";
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
@@ -489,7 +499,6 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!inDT || !outDT) return "";
 
   let hours = outDT.diff(inDT,"hours").hours;
-  if(hours < 0) hours = 0; // DST/clock sanity
   if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
   if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours) return "Half Day";
 
@@ -504,8 +513,8 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   return "Present";
 }
 function explainStatus(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   const s = computeStatusByPolicy(dateISO, signIn, signOut);
@@ -515,7 +524,6 @@ function explainStatus(dateISO, signIn, signOut){
   let lateMin  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
   let earlyMin = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
   let hours = outDT.diff(inDT,"hours").hours;
-  if(hours < 0) hours = 0; // DST guard
   let net   = POLICY.halfDayUseNet ? (hours - POLICY.breakMin/60) : hours;
   const parts = [];
   parts.push(`Worked ${fmtHours(hours)} (net ${fmtHours(net)})`);
@@ -524,8 +532,18 @@ function explainStatus(dateISO, signIn, signOut){
   if(net < POLICY.halfDayThresholdHours) parts.push(`Under half-day threshold ${POLICY.halfDayThresholdHours}h`);
   return parts.join(" • ");
 }
+function lateEarlyMinutes(dateISO, signIn, signOut){
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
+  const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
+  const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
+  let lateM=0, earlyM=0;
+  if(inDT)  lateM  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
+  if(outDT) earlyM = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
+  return {lateM, earlyM};
+}
 
-/** ====================== MAP ROW ====================== **/
+/** ============== MAP ROW ============== **/
 function mapRow(r){
   const month = r["month name"] || r["month"] || "";
   const dateISO = toISODate(r["date"] || r["day"] || "");
@@ -536,11 +554,11 @@ function mapRow(r){
   if(!isFinite(total)){
     const si=dateISO?parsePunchWithDate(dateISO,siRaw):null;
     const so=dateISO?parsePunchWithDate(dateISO,soRaw):null;
-    total = (si&&so)? Math.max(0, so.diff(si,"hours").hours) : 0;
+    total = (si&&so)? so.diff(si,"hours").hours : 0;
   }
   const statusCSV = r["status"] || "";
   return {
-    month: month || (dateISO?DateTime.fromISO(dateISO).toFormat("LLLL"):""),
+    month: month || (dateISO?DateTime.fromISO(dateISO, { zone: TZ }).toFormat("LLLL"):""),
     date: dateISO,
     employee: r["employee name"]||r["employee"]||r["name"]||"",
     signIn: siRaw||"",
@@ -550,9 +568,15 @@ function mapRow(r){
   };
 }
 
-/** ====================== AGG HELPERS ====================== **/
+/** ============== AGG HELPERS ============== **/
 function aggregateBy(data, keyFn, valFn){
   const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
+}
+function arrowDelta(curr, prev, suffix=""){
+  if(prev===0 || prev===undefined || isNaN(prev)) return "";
+  const diff = curr - prev; const sign = diff>0 ? "▲" : diff<0 ? "▼" : "•";
+  const pct = prev!==0 ? Math.round((diff/prev)*100) : 0;
+  return `${sign} ${pct}%${suffix}`;
 }
 function computeCohorts(data){
   const months = Array.from(new Set(data.map(r=>monthKey(r.date)).filter(Boolean))).sort();
@@ -568,16 +592,25 @@ function computeCohorts(data){
   const rowsPrev = data.filter(r=> monthKey(r.date)===prev);
   return {curr, prev, mc:metrics(rowsCurr), mp:metrics(rowsPrev)};
 }
-function arrowDelta(curr, prev, suffix=""){
-  if(prev===0 || prev===undefined || isNaN(prev)) return "";
-  const diff = curr - prev; const sign = diff>0 ? "▲" : diff<0 ? "▼" : "•";
-  const pct = prev!==0 ? Math.round((diff/prev)*100) : 0;
-  return `${sign} ${pct}%${suffix}`;
-}
 
-/** ====================== KPIs & CHARTS ====================== **/
+/** ============== RENDER: KPIs & CHARTS ============== **/
+function safeDestroyChart(instance){
+  if(instance && typeof instance.destroy === "function"){
+    try{ instance.destroy(); }catch(_){}
+  }
+}
+function igniteSpark(canvasId, value){
+  const c = document.getElementById(canvasId); if(!c) return;
+  if(sparkCharts[canvasId]){ safeDestroyChart(sparkCharts[canvasId]); sparkCharts[canvasId]=null; }
+  const ctx = c.getContext("2d");
+  const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
+  sparkCharts[canvasId] = new Chart(ctx, {
+    type:"line",
+    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+  });
+}
 function renderKPIs(data){
-  const t0 = performance.now();
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
   const counts = data.reduce((acc,r)=>{
@@ -586,12 +619,8 @@ function renderKPIs(data){
     acc.half += (s==="Half Day");
     if(s==="Present") acc.present++;
     acc.total++;
-    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
-    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
-    const inDT  = r.signIn? parsePunchWithDate(r.date, r.signIn) : null;
-    const outDT = r.signOut? parsePunchWithDate(r.date, r.signOut) : null;
-    if(inDT)  acc.lateM  += Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
-    if(outDT) acc.earlyM += Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
+    const m = lateEarlyMinutes(r.date,r.signIn,r.signOut);
+    acc.lateM += m.lateM; acc.earlyM += m.earlyM;
     return acc;
   }, {abs:0,half:0, present:0, total:0, lateM:0, earlyM:0});
   const ontimeRate = counts.total? Math.round(100*counts.present/counts.total) : 0;
@@ -628,22 +657,26 @@ function renderKPIs(data){
 
   igniteSpark("sparkDays", uniqueWorkingDays || 1);
   igniteSpark("sparkHours", Math.round(hours) || 1);
-
-  metrics.kpi_ms = Math.round(performance.now() - t0);
 }
-function renderCharts(data){
-  const t0 = performance.now();
-  const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=>isWorkingDay(r.date)) : data;
 
+function renderCharts(data){
+  // Optionally exclude non-working days from charts
+  const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=> isWorkingDay(r.date)) : data;
+
+  // Hours by employee (optionally exclude weekend OT)
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
-  const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
-  const empData = empLabels.map(k=> byEmp[k]||0);
+  const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,50);
+  const empData = empLabels.map(k=> byEmp[k]);
+  chartCSV.byEmp = [["Employee","Hours"]].concat(empLabels.map((e,i)=>[e, empData[i]]));
 
+  // Hours over time
   const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
+  chartCSV.overTime = [["Date","Hours"]].concat(dateLabels.map((d,i)=>[d, dateData[i]]));
 
+  // Over/Under
   const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
@@ -656,86 +689,148 @@ function renderCharts(data){
     over.push(Math.max(0,d));
     under.push(Math.max(0,-d));
   });
+  chartCSV.overUnder = [["Employee","Overtime","Undertime"]].concat(empLabels.map((e,i)=>[e,over[i],under[i]]));
 
+  // Late/Early minutes by employee
   const lateMap={}, earlyMap={};
   data.forEach(r=>{
-    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
-    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
-    const inDT  = r.signIn? parsePunchWithDate(r.date,r.signIn) : null;
-    const outDT = r.signOut? parsePunchWithDate(r.date,r.signOut) : null;
-    const lateM = inDT ? Math.max(0, Math.round(inDT.diff(start,"minutes").minutes)) : 0;
-    const earlyM= outDT? Math.max(0, Math.round(end.diff(outDT,"minutes").minutes)) : 0;
+    const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
     lateMap[r.employee]=(lateMap[r.employee]||0)+lateM;
     earlyMap[r.employee]=(earlyMap[r.employee]||0)+earlyM;
   });
-  const leLabels = Object.keys(lateMap).sort((a,b)=> (lateMap[b]+(earlyMap[b]||0))-(lateMap[a]+(earlyMap[a]||0))).slice(0,20);
+  const leLabels = Object.keys(lateMap).sort((a,b)=> (lateMap[b]+(earlyMap[b]||0))-(lateMap[a]+(earlyMap[a]||0))).slice(0,50);
   const lateVals = leLabels.map(e=> lateMap[e]||0);
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
+  chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  chartByEmp && chartByEmp.destroy();
-  chartOverTime && chartOverTime.destroy();
-  chartOverUnder && chartOverUnder.destroy();
-  chartLateEarly && chartLateEarly.destroy();
+  // Destroy old charts safely
+  [chartByEmp, chartOverTime, chartOverUnder, chartLateEarly].forEach(safeDestroyChart);
 
   chartByEmp = new Chart(document.getElementById("chartByEmp"), {
-    type:"bar",
-    data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
+    type:"bar", data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
   chartOverTime = new Chart(document.getElementById("chartOverTime"), {
-    type:"line",
-    data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
+    type:"line", data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
   chartOverUnder = new Chart(document.getElementById("chartOverUnder"), {
-    type:"bar",
-    data:{ labels:empLabels, datasets:[
+    type:"bar", data:{ labels:empLabels, datasets:[
       { label:"Overtime", data:over, stack:"x" },
       { label:"Undertime", data:under, stack:"x" }
     ]},
     options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
   });
   chartLateEarly = new Chart(document.getElementById("chartLateEarly"), {
-    type:"bar",
-    data:{ labels:leLabels, datasets:[
+    type:"bar", data:{ labels:leLabels, datasets:[
       { label:"Late minutes", data:lateVals },
       { label:"Early minutes", data:earlyVals }
-    ]},
-    options:{ plugins:{ legend:{ position:"bottom" } } }
+    ]}, options:{ plugins:{ legend:{ position:"bottom" } } }
   });
 
-  metrics.charts_ms = Math.round(performance.now() - t0);
+  renderHeatmap();
 }
-function igniteSpark(id, value){
-  const c = document.getElementById(id); if(!c) return;
-  const existing = Chart.getChart(c);
-  if (existing) existing.destroy();
-  if (id === "sparkDays" && sparkDaysChart) { try { sparkDaysChart.destroy(); } catch{} }
-  if (id === "sparkHours" && sparkHoursChart) { try { sparkHoursChart.destroy(); } catch{} }
 
-  const ctx = c.getContext("2d");
-  const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-  const chart = new Chart(ctx, {
-    type:"line",
-    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+/** ============== HEATMAP ============== **/
+function renderHeatmap(){
+  const wrap=document.getElementById("heatmap"); if(!wrap) return;
+  wrap.innerHTML=""; if(!lastFiltered.length) return;
+
+  // If user picked a single Month filter, default the heatmap month to it.
+  const monthFilters = $("#monthFilter").val()||[];
+  if(monthFilters.length===1){
+    const any = lastFiltered.find(r=>r.month===monthFilters[0]);
+    if(any) document.getElementById("heatmapMonth").value = monthKey(any.date);
+  }
+
+  const p = document.getElementById("heatmapMonth").value;
+  let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
+  document.getElementById("heatmapMonth").value = monthISO;
+
+  const first = DateTime.fromISO(monthISO+"-01", { zone: TZ }); const days=first.daysInMonth;
+  const totals = {};
+  lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
+  const max = Math.max(1, ...Object.values(totals));
+
+  let startOffset = first.weekday % 7; // Sunday=0
+  for(let i=0;i<startOffset;i++){ const cell=document.createElement("div"); cell.className="heat-cell"; cell.style.background="transparent"; wrap.appendChild(cell); }
+
+  for(let d=1; d<=days; d++){
+    const iso = first.set({day:d}).toISODate();
+    const val = totals[iso]||0;
+    const working = isWorkingDay(iso);
+    let bg = "var(--heat-none)";
+    if (working) {
+      const ratio = Math.min(1, val/max);
+      if (ratio>0) bg = ratio<0.34 ? "var(--heat-low)" : ratio<0.67 ? "var(--heat-mid)" : "var(--heat-high)";
+    } else if (PREFS.chartsSkipNonWorkingDays) {
+      bg = "transparent";
+    }
+    const cell = document.createElement("div");
+    cell.className="heat-cell";
+    cell.style.background=bg;
+    cell.setAttribute("data-bs-toggle","tooltip");
+    cell.setAttribute("data-bs-title", `${iso}: ${fmtHours(val)} total${working?"":" (non-working)"}`);
+    cell.innerHTML = `<span class="d">${d}</span>`;
+    wrap.appendChild(cell);
+  }
+  document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
+}
+
+/** ============== ANOMALIES ============== **/
+function computeAnomalies(data){
+  const missing=[];
+  for(const r of data){
+    const working = isWorkingDay(r.date);
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const hasOut = !!(r.signOut && String(r.signOut).trim());
+    if(working && ((hasIn && !hasOut) || (!hasIn && hasOut))) missing.push(r);
+  }
+  return { missing };
+}
+function computeAndRenderAnomalies(data){
+  const a = computeAnomalies(data);
+  document.getElementById("anomalyBadge").textContent = a.missing.length;
+  const body = document.getElementById("anomaliesBody"); body.innerHTML="";
+
+  const col=document.createElement("div"); col.className="col-lg-12";
+  const html = [
+    `<div class="glass p-3 h-100">`,
+    `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
+    `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
+    `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
+  ];
+  a.missing.slice(0,300).forEach(r=>{
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
+    html.push(`<tr>
+      <td>${r.date}</td>
+      <td>${r.employee}</td>
+      <td>${why}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-warning fix-missing-btn"
+                data-emp="${r.employee}" data-date="${r.date}"
+                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
+          <i class="bi bi-pencil-square me-1"></i>Fix
+        </button>
+      </td>
+    </tr>`);
   });
-  if (id === "sparkDays") sparkDaysChart = chart;
-  if (id === "sparkHours") sparkHoursChart = chart;
+  if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
+  html.push(`</tbody></table></div></div>`);
+  col.innerHTML = html.join(""); body.appendChild(col);
 }
 
-/** ====================== TABLE ====================== **/
+/** ============== TABLE ============== **/
 function renderTable(data){
-  disposeTooltips(document);
+  lastFiltered = data;
   const rows = data.map(r => {
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
-    return ({
-      Month: r.month, Date: r.date, Employee: r.employee,
+    return ({ Month: r.month, Date: r.date, Employee: r.employee,
       In: r.signIn, Out: r.signOut,
       Hours: isFinite(r.totalHours)? r.totalHours : null,
-      Status: statusDisplay, _raw:r
-    });
+      Status: statusDisplay, _raw:r });
   });
 
   const colDefs = [
@@ -760,8 +855,8 @@ function renderTable(data){
 
   if(!DT){
     DT = $("#attendanceTable").DataTable({
-      data: rows, columns: colDefs, responsive:true, fixedHeader:true,
-      order: [[1,"desc"],[2,"asc"]], pageLength: 12, deferRender:true,
+      data: rows, columns: colDefs, responsive: true, fixedHeader:true,
+      order: [[1,"desc"],[2,"asc"]], pageLength: 12,
       dom:"Bfrtip",
       buttons: [
         {extend:"csv", title:"Attendance_Export"},
@@ -783,13 +878,11 @@ function renderTable(data){
       }
     });
   } else {
-    DT.clear().rows.add(rows).draw(false);
+    DT.clear().rows.add(rows).draw();
   }
-
-  lastFiltered = data;
 }
 
-/** ====================== FILTERS & URL ====================== **/
+/** ============== FILTERS ============== **/
 function populateSelect(id, values, placeholder){
   const sel=document.getElementById(id); sel.innerHTML="";
   [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v=>{
@@ -806,6 +899,41 @@ function getCriteria(){
     q: (quickSearch.value||"").toLowerCase(),
     policy: document.getElementById("policySwitch").checked
   };
+}
+let _applyTimer=null;
+function scheduleApplyFilters(){ clearTimeout(_applyTimer); _applyTimer=setTimeout(applyFilters, 60); }
+function applyFilters(){
+  POLICY.recompute = document.getElementById("policySwitch").checked;
+  PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
+  saveLS(LS_KEYS.prefs, PREFS);
+
+  const c=getCriteria();
+  const filtered = CANON.filter(r=>{
+    const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
+    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
+    if(c.employees.length && !c.employees.includes(r.employee)) return false;
+    if(c.months.length && !c.months.includes(r.month)) return false;
+    if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
+    if(c.start && r.date < c.start) return false;
+    if(c.end && r.date > c.end) return false;
+    if(c.q && !`${r.employee} ${r.date} ${statusDisp}`.toLowerCase().includes(c.q)) return false;
+    return true;
+  });
+
+  renderTable(filtered);
+  renderKPIs(filtered);
+  renderCharts(filtered);
+  updateURLFromFilters();
+  computeAndRenderAnomalies(filtered);
+}
+function resetFilters(){
+  $("#employeeFilter").val(null).trigger("change");
+  $("#monthFilter").val(null).trigger("change");
+  $("#statusFilter").val(null).trigger("change");
+  startDate.value=""; endDate.value=""; quickSearch.value="";
+  document.getElementById("policySwitch").checked = POLICY.recompute;
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
+  applyFilters();
 }
 function updateURLFromFilters(){
   const c=getCriteria(); const p=new URLSearchParams();
@@ -834,166 +962,105 @@ function readFiltersFromURL(){
   document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
-/** ====================== HEATMAP ====================== **/
-function renderHeatmap(){
-  const wrap=document.getElementById("heatmap"); if(!wrap) return;
-  wrap.innerHTML=""; if(!lastFiltered.length) return;
+/** ============== SAVED VIEWS ============== **/
+function renderSavedViews(){
+  const container = document.getElementById("savedViews"); container.innerHTML = "";
+  const views = loadLS(LS_KEYS.views, []);
+  views.forEach((v,idx)=>{
+    const chip = document.createElement("button");
+    chip.className = "btn btn-sm btn-outline-secondary";
+    chip.innerHTML = `<i class="bi bi-bookmark"></i> ${v.name}`;
+    chip.addEventListener("click", ()=>{
+      $("#employeeFilter").val(v.employees).trigger("change");
+      $("#monthFilter").val(v.months).trigger("change");
+      $("#statusFilter").val(v.statuses).trigger("change");
+      startDate.value = v.start||""; endDate.value = v.end||""; quickSearch.value = v.q||"";
+      document.getElementById("policySwitch").checked = !!v.policy;
+      document.getElementById("decimalSwitch").checked = (v.fmt==="decimal");
+      scheduleApplyFilters();
+    });
+    container.appendChild(chip);
 
-  let monthISO = document.getElementById("heatmapMonth").value;
-  if(!monthISO){
-    const monthKeys = [...new Set(lastFiltered.map(r => r.date?.slice(0,7)).filter(Boolean))].sort();
-    monthISO = monthKeys.length ? monthKeys[monthKeys.length - 1] : DateTime.now().toISODate().slice(0,7);
-    document.getElementById("heatmapMonth").value = monthISO;
-  }
-
-  const first = DateTime.fromISO(monthISO+"-01"); const days=first.daysInMonth;
-
-  const totals = {};
-  lastFiltered.forEach(r => { if(r.date && r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
-  const max = Math.max(1, ...Object.values(totals));
-
-  let startOffset = first.weekday % 7; // Sunday=0
-  for(let i=0;i<startOffset;i++){ const cell=document.createElement("div"); cell.className="heat-cell"; cell.style.background="transparent"; wrap.appendChild(cell); }
-
-  for(let d=1; d<=days; d++){
-    const iso = first.set({day:d}).toISODate();
-    const val = totals[iso]||0;
-    const working = isWorkingDay(iso);
-
-    let bg = "var(--heat-none)";
-    if (working) {
-      const ratio = Math.min(1, val/max);
-      if (ratio>0) bg = ratio<0.34 ? "var(--heat-low)" : ratio<0.67 ? "var(--heat-mid)" : "var(--heat-high)";
-    } else if (PREFS.chartsSkipNonWorkingDays) {
-      bg = "transparent";
-    }
-
-    const cell = document.createElement("div");
-    cell.className="heat-cell";
-    cell.style.background=bg;
-    cell.setAttribute("data-bs-toggle","tooltip");
-    cell.setAttribute("data-bs-title", `${iso}: ${fmtHours(val)} total${working?"":" (non-working)"}`);
-    cell.innerHTML = `<span class="d">${d}</span>`;
-    wrap.appendChild(cell);
-  }
-  document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
-}
-
-/** ====================== ANOMALIES ====================== **/
-function computeAnomalies(data){
-  const missing=[];
-  for(const r of data){
-    const working = isWorkingDay(r.date);
-    const hasIn  = !!(r.signIn && String(r.signIn).trim());
-    const hasOut = !!(r.signOut && String(r.signOut).trim());
-    if(working && ((hasIn && !hasOut) || (!hasIn && hasOut))) missing.push(r);
-  }
-  return { missing };
-}
-function computeAndRenderAnomalies(data){
-  const a = computeAnomalies(data);
-  document.getElementById("anomalyBadge").textContent = a.missing.length;
-  const body = document.getElementById("anomaliesBody"); body.innerHTML="";
-
-  const col=document.createElement("div"); col.className="col-lg-6";
-  const html = [
-    `<div class="glass p-3 h-100">`,
-    `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
-    `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
-    `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
-  ];
-  a.missing.slice(0,200).forEach(r=>{
-    const hasIn  = !!(r.signIn && String(r.signIn).trim());
-    const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
-    html.push(`<tr>
-      <td>${r.date}</td>
-      <td>${r.employee}</td>
-      <td>${why}</td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-outline-warning fix-missing-btn"
-                data-emp="${r.employee}" data-date="${r.date}"
-                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
-          <i class="bi bi-pencil-square me-1"></i>Fix
-        </button>
-      </td>
-    </tr>`);
+    const del = document.createElement("button");
+    del.className="btn btn-sm btn-outline-danger";
+    del.innerHTML = `<i class="bi bi-x"></i>`;
+    del.addEventListener("click", ()=>{
+      const fresh = loadLS(LS_KEYS.views, []).filter((_,i)=> i!==idx);
+      saveLS(LS_KEYS.views, fresh); renderSavedViews();
+    });
+    container.appendChild(del);
   });
-  if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
-  html.push(`</tbody></table></div></div>`);
-  col.innerHTML = html.join(""); body.appendChild(col);
 }
+document.getElementById("saveViewBtn").addEventListener("click", ()=>{
+  const name = (document.getElementById("saveViewName").value||"").trim();
+  if(!name) return;
+  const c = getCriteria();
+  const views = loadLS(LS_KEYS.views, []);
+  views.push({ name, ...c, fmt:PREFS.hoursFormat });
+  saveLS(LS_KEYS.views, views);
+  document.getElementById("saveViewName").value="";
+  renderSavedViews();
+});
 
-/** ====================== EMPLOYEE DRAWER ====================== **/
-function openEmpDrawer(name){
-  const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
-  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
-  const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
-  const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
-
-  let lateM=0, earlyM=0;
-  rows.forEach(r=>{ 
-    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
-    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
-    const inDT  = r.signIn? parsePunchWithDate(r.date,r.signIn) : null;
-    const outDT = r.signOut? parsePunchWithDate(r.date,r.signOut) : null;
-    if(inDT)  lateM  += Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
-    if(outDT) earlyM += Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
-  });
-
-  document.getElementById("empDrawerLabel").textContent = name;
-  document.getElementById("empMeta").innerHTML =
-    `<div class="row g-2">
-      <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
-      <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
-      <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
-      <div class="col-6"><div class="chip w-100">Late: <b>${counts["Late"]||0}</b> • Left Early: <b>${(counts["Left Early"]||0)+(counts["Late & Left Early"]||0)}</b></div></div>
-      <div class="col-12"><div class="chip w-100">Late min: <b>${lateM}</b> • Early min: <b>${earlyM}</b></div></div>
-    </div>`;
-
-  const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
-  empChart && empChart.destroy();
-  empChart = new Chart(document.getElementById("empChart"), {
-    type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
-  });
-
-  const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
-  const body = rows.slice(-60).reverse().map(r=>{
-    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
-    const expl= explainStatus(r.date,r.signIn,r.signOut);
-    return `<tr>
-      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
-      <td class="text-end">${fmtHours(r.totalHours)}</td>
-      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
-    </tr>`;
-  }).join("");
-  document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
-  document.querySelectorAll("#empTable [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
-  new bootstrap.Offcanvas("#empDrawer").show();
+/** ============== EXPORT HELPERS ============== **/
+function toCSV(rows){
+  if(!rows.length) return "";
+  const cols=rows[0].map? rows[0].map((_,i)=>`col${i+1}`) : Object.keys(rows[0]);
+  const data = rows.map(r=> (Array.isArray(r)? r : cols.map(c=> r[c])));
+  const head = Array.isArray(rows[0]) ? rows[0] : cols;
+  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+  const lines=[head.join(",")].concat(data.slice(1).map(r=> r.map(esc).join(",")));
+  return lines.join("\n");
 }
-
-/** ====================== CORRECTIONS ====================== **/
-function queueLocalCorrection(entry){
-  const q = loadLS(LOCAL_QUEUE_KEY, []);
-  q.push({ ...entry, queuedAt: new Date().toISOString() });
-  saveLS(LOCAL_QUEUE_KEY, q);
+function downloadCSV(name, rows){
+  const blob = new Blob([toCSV(rows)], {type:"text/csv;charset=utf-8"});
+  saveAs(blob, `${name}.csv`);
 }
-async function sendWrite(kind, payload){
-  if(!WRITEBACK.enabled){
-    queueLocalCorrection({ kind, ...payload, info:"local-queue-no-proxy" });
-    return { ok:true, local:true };
-  }
-  const res = await fetch(WRITEBACK.url, {
+document.getElementById("csvByEmp").addEventListener("click", ()=> downloadCSV("hours_by_employee", chartCSV.byEmp));
+document.getElementById("csvOverTime").addEventListener("click", ()=> downloadCSV("hours_over_time", chartCSV.overTime));
+document.getElementById("csvOverUnder").addEventListener("click", ()=> downloadCSV("over_under_by_employee", chartCSV.overUnder));
+document.getElementById("csvLateEarly").addEventListener("click", ()=> downloadCSV("late_early_minutes", chartCSV.lateEarly));
+
+/** ============== WRITEBACK (safe no-op if disabled) ============== **/
+async function sendWriteback(kind, payload){
+  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
+  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, payload })
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      kind,
+      employee: payload.Employee,
+      date: payload.Date,
+      time: (kind === "IN" ? payload.In : payload.Out)
+    }),
+    cache: "no-store"
   });
-  const j = await res.json();
-  if(!j.ok) throw new Error(j.error || "write_failed");
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || "writeback_failed");
+  return j;
+}
+async function sendQueue(payload, reason=""){
+  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
+  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      employee: payload.Employee,
+      date: payload.Date,
+      in: payload.In || "",
+      out: payload.Out || "",
+      reason: reason || "Missing punch fix"
+    }),
+    cache: "no-store"
+  });
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || "queue_failed");
   return j;
 }
 
+/** ============== CORRECTIONS FLOW ============== **/
 let __corrCtx = null;
 function openCorrectionModal(rowLike){
   const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
@@ -1008,7 +1075,7 @@ function openCorrectionModal(rowLike){
   document.getElementById("grpOut").style.display = (kind==="OUT"||kind==="BOTH") ? "" : "none";
   document.getElementById("corrIn").value=""; document.getElementById("corrOut").value="";
   document.getElementById("corrApprovalPass").value="";
-  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : (WRITEBACK.enabled ? "Immediate" : "Local Queue");
+  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : "Immediate";
   document.getElementById("corrAlert").classList.add("d-none");
 
   new bootstrap.Modal("#corrModal").show();
@@ -1031,17 +1098,19 @@ async function applyLocalCorrection(){
     const approvalNeeded = !!POLICY.requireApproval;
     const passOK = (!!pass && pass === (POLICY.approvalPass||"12345678"));
     if (approvalNeeded && !passOK) {
-      queueLocalCorrection({ action:"queue", ...rowLike, info:"approval-required" });
+      await sendQueue(rowLike, "Approval required");
     } else {
-      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWrite("IN",  { ...rowLike, In: inVal });
-      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWrite("OUT", { ...rowLike, Out: outVal });
+      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
+      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
     }
   } catch (e) {
-    console.warn("Writeback/Queue failed:", e);
-    al.textContent = "Saved locally; server update failed or disabled.";
+    // safe soft-fail; keep local patch
+    console.warn("Writeback/Queue failed or disabled:", e);
+    al.textContent = "Saved locally (server update not applied). Export now, or try again.";
     al.classList.remove("d-none");
   }
 
+  // Local patch for instant UX
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
@@ -1049,7 +1118,7 @@ async function applyLocalCorrection(){
       if(__corrCtx.kind==="OUT"||__corrCtx.kind==="BOTH") r.signOut = outVal || r.signOut;
       const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
       const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
-      r.totalHours = (si&&so)? Math.max(0, so.diff(si,"hours").hours) : 0;
+      r.totalHours = (si&&so)? so.diff(si,"hours").hours : 0;
       r._edited = true;
       patched=true; break;
     }
@@ -1060,29 +1129,30 @@ async function applyLocalCorrection(){
   applyFilters();
 }
 
-/** ====================== EXPORTS ====================== **/
+/** ============== EXPORTS ============== **/
 async function downloadFullReport(){
+  showLoading("Preparing PDF…");
   const el=document.body; const canvas=await html2canvas(el,{scale:2});
   const img=canvas.toDataURL("image/png");
   const doc={content:[{image:img,width:520}]};
+  hideLoading();
   pdfMake.createPdf(doc).download("Attendance_Report.pdf");
 }
-function toCSV(rows){
-  if(!rows.length) return "";
-  const cols=Object.keys(rows[0]);
-  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
-  const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
-  return lines.join("\n");
-}
-async function exportPack(){
-  const zip = new JSZip();
+function exportPack(){
   const simpleRows = lastFiltered.map(r=>({
     Month:r.month, Date:r.date, Employee:r.employee,
     FirstIn:r.signIn, LastOut:r.signOut,
     Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
     Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
   }));
-  zip.file("attendance_filtered.csv", toCSV(simpleRows));
+  const zip = new JSZip();
+  const csv = (rows)=>{
+    const cols=Object.keys(rows[0]||{});
+    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+    const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
+    return lines.join("\n");
+  };
+  zip.file("attendance_filtered.csv", csv(simpleRows));
 
   const wb = XLSX.utils.book_new();
   const groups={}; lastFiltered.forEach(r=>{ (groups[r.employee] ||= []).push({
@@ -1095,10 +1165,9 @@ async function exportPack(){
   });
   const wbout = XLSX.write(wb, { bookType:"xlsx", type:"array" });
   zip.file("attendance_by_employee.xlsx", wbout);
-
-  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"attendance_export_pack.zip");
+  zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"attendance_export_pack.zip"));
 }
-async function exportMonthlyPacks(){
+function exportMonthlyPacks(){
   const zip = new JSZip();
   const byEmpMonth = {};
   lastFiltered.forEach(r=>{
@@ -1106,22 +1175,25 @@ async function exportMonthlyPacks(){
     const key = `${r.employee}::${mk}`;
     (byEmpMonth[key] ||= []).push(r);
   });
+  const csv = (rows)=>{
+    const cols=["Date","In","Out","Hours","Status"];
+    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+    const head = cols.join(",");
+    const body = rows.map(r=> [r.date,r.signIn,r.signOut,(isFinite(r.totalHours)?r.totalHours:0).toFixed(2), computeStatusByPolicy(r.date,r.signIn,r.signOut)].map(esc).join(",")).join("\n");
+    return head+"\n"+body;
+  };
   Object.entries(byEmpMonth).forEach(([key,rows])=>{
     const [emp, mk] = key.split("::");
     const folder = zip.folder(`${mk}/${emp}`);
-    const csvRows = rows.map(r=>({
-      Date:r.date, In:r.signIn, Out:r.signOut,
-      Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
-      Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
-    }));
-    folder.file(`${emp}_${mk}.csv`, toCSV(csvRows));
+    folder.file(`${emp}_${mk}.csv`, csv(rows));
+    // mini text card
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
     const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
     const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
     const abs  = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Absent").length;
     folder.file(`${emp}_${mk}_summary.txt`, `Employee: ${emp}\nMonth: ${mk}\nHours: ${hours}\nPresent: ${present}\nHalf: ${half}\nAbsent: ${abs}\nGenerated: ${new Date().toISOString()}`);
   });
-  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"monthly_packs.zip");
+  zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"monthly_packs.zip"));
 }
 function exportICS(){
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Attendance//ICS//EN"];
@@ -1132,15 +1204,7 @@ function exportICS(){
       const dt = r.date.replace(/-/g,"");
       const uid = `${uidBase}-${i}@attendance`;
       const title = `${s} - ${r.employee}`;
-      lines.push(
-        "BEGIN:VEVENT",
-        `UID:${uid}`,
-        `DTSTAMP:${dt}T000000Z`,
-        `DTSTART;VALUE=DATE:${dt}`,
-        `DTEND;VALUE=DATE:${dt}`,
-        `SUMMARY:${title}`,
-        "END:VEVENT"
-      );
+      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTAMP:${dt}T000000Z`,`DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${dt}`,`SUMMARY:${title}`,"END:VEVENT");
     }
   });
   lines.push("END:VCALENDAR");
@@ -1148,7 +1212,7 @@ function exportICS(){
   saveAs(blob, "absences_halfdays.ics");
 }
 
-/** ====================== SETTINGS ====================== **/
+/** ============== SETTINGS UI ============== **/
 function renderWeekendChecks(){
   const cont=document.getElementById("weekendChecks"); if(!cont) return; cont.innerHTML="";
   const names=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -1171,7 +1235,7 @@ function openSettings(){
   document.getElementById("setHalfDayHours").value = POLICY.halfDayThresholdHours;
   document.getElementById("setHalfDayUseNet").checked = POLICY.halfDayUseNet;
   document.getElementById("setRequireApproval").checked = !!POLICY.requireApproval;
-  document.getElementById("setApprovalPass").value = (POLICY.approvalPass || "12345678");
+  document.getElementById("setApprovalPass").value = POLICY.approvalPass || "12345678";
   renderWeekendChecks();
   document.getElementById("holidayText").value = HOLIDAYS.join("\n");
   new bootstrap.Modal("#settingsModal").show();
@@ -1200,79 +1264,44 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ====================== FAST FETCH & PARSE ====================== **/
-async function headCSVMeta(){
-  try{
-    const res = await fetch(PUBLISHED_CSV, { method:"HEAD", cache:"no-cache" });
-    return { ok: res.ok, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") };
-  }catch(e){ return { ok:false }; }
+/** ============== DATA LOADING (fast & robust) ============== **/
+function candidateURLs(){
+  const t = Date.now();
+  return [`${PUBLISHED_CSV}&cachebust=${t}`];
 }
-function sameMeta(a,b){
-  if(!a||!b) return false;
-  return (a.etag && b.etag && a.etag===b.etag) || (a.lastModified && b.lastModified && a.lastModified===b.lastModified);
-}
-function startFetchWithTimeout(url, timeoutMs=20000){
-  if(_inflight?.controller) _inflight.controller.abort();
-  const controller=new AbortController();
-  const t=setTimeout(()=>controller.abort("timeout"), timeoutMs);
-  _inflight={ controller, startedAt: Date.now(), timer:t };
-  return { controller, cancel:()=>{ clearTimeout(t); controller.abort(); } };
-}
-async function fetchCSVNetworkIfChanged(){
-  setProgress(12, "Checking for updates…");
-  const meta = await headCSVMeta();
-  if(meta.ok && sameMeta(meta, META)){
-    setProgress(18, "Up to date (cached)");
-    return { changed:false, meta };
-  }
-  setProgress(25, "Downloading CSV…");
-  const { controller } = startFetchWithTimeout(PUBLISHED_CSV, 20000);
-  try{
-    const res = await fetch(PUBLISHED_CSV, { cache:"no-cache", signal: controller.signal });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const txt = await res.text();
-    clearTimeout(_inflight.timer);
-    return { changed:true, meta: { etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") }, text: txt };
-  } finally { _inflight=null; }
-}
-function parseCSVWithWorker(csv){
+
+function parseCSVAsync(csvText){
   return new Promise((resolve, reject)=>{
-    try{
-      setProgress(40, "Parsing data…");
-      const out = [];
-      const totalLines = Math.max(1, (csv.match(/\n/g)||[]).length);
-      let seen = 0;
-
-      Papa.parse(csv, {
-        header:true, skipEmptyLines:true, worker:true,
-        step: function(step){
-          const row = step && step.data;
-          if (row && typeof row === "object" && Object.keys(row).length){
-            out.push(row);
-          }
-          seen++;
-          if (seen % 1000 === 0){
-            const pct = 40 + Math.min(40, (seen/totalLines)*40);
-            setProgress(pct, "Parsing data…");
-          }
-        },
-        complete: function(){ setProgress(85, "Mapping rows…"); resolve(out); },
-        error: function(err){ reject(err); }
-      });
-
-      setTimeout(()=>{ if(overlay.classList.contains("show")) hint.textContent = "taking longer than usual…"; }, 8000);
-    } catch(e){ reject(e); }
+    Papa.parse(csvText, {
+      header:true, skipEmptyLines:true, worker:true,
+      complete: (res)=> {
+        try{
+          const data = (res.data||[]).map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+          resolve(data);
+        }catch(e){ reject(e); }
+      },
+      error: reject
+    });
   });
 }
-function parseAndRenderFromRows(rows){
-  const t0 = performance.now();
-  rows = Array.isArray(rows) ? rows : [];
-  CANON = rows.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
 
+async function fetchCSVNetwork(){
+  let lastErr;
+  for(const url of candidateURLs()){
+    try{
+      const res = await fetch(url, { cache:"no-store" });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    }catch(e){ lastErr=e; console.warn("Fetch failed", url, e); }
+  }
+  throw lastErr || new Error("All endpoints failed");
+}
+
+async function parseAndRenderFromRows(rows){
+  CANON = rows;
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
   populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
   populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
-
   readFiltersFromURL();
   applyFilters();
 
@@ -1280,214 +1309,49 @@ function parseAndRenderFromRows(rows){
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
-
-  metrics.map_ms = Math.round(performance.now() - t0);
-
-  // Build month index for faster later loads
-  const monthSet = [...new Set(CANON.map(r=> monthKey(r.date)).filter(Boolean))].sort();
-  MONTH_INDEX = monthSet;
-  saveLS(LS_KEYS.months, MONTH_INDEX);
 }
-async function loadData(initial=false){
-  showLoading(initial ? "Loading data…" : "Refreshing…", "");
-  const t0 = performance.now();
-  const cached = localStorage.getItem(LS_KEYS.csv);
-  if(cached && initial){
-    setProgress(30, "Using cached data…");
-    const rows = await parseCSVWithWorker(cached);
-    parseAndRenderFromRows(rows);
-  }
+
+async function loadData(){
   try{
-    if (MONTHLY_JSON_BASE) {
-      // optional monthly JSON mode (index file is optional)
-      try{
-        const idxRes = await fetch(`${MONTHLY_JSON_BASE}index.json`, { cache:"no-cache" });
-        if(idxRes.ok){
-          const idx = await idxRes.json();
-          MONTH_INDEX = Array.isArray(idx) ? idx : MONTH_INDEX;
-          saveLS(LS_KEYS.months, MONTH_INDEX);
-        }
-      }catch{}
+    showLoading("Loading data…", "Cache-first. Parsing…");
+    const cached = localStorage.getItem(LS_KEYS.csv);
+    if(cached){
+      const t0 = performance.now();
+      const rows = await parseCSVAsync(cached);
+      const t1 = performance.now();
+      await parseAndRenderFromRows(rows);
+      hideLoading();
+      document.getElementById("buildStamp").textContent = `${BUILD} • Parsed from cache in ${(t1-t0|0)} ms`;
+      // Revalidate in background
+      setTimeout(async ()=>{
+        try{
+          setLoading("Refreshing from network…");
+          const fresh = await fetchCSVNetwork();
+          if(fresh && fresh !== cached){
+            localStorage.setItem(LS_KEYS.csv, fresh);
+            const rows2 = await parseCSVAsync(fresh);
+            await parseAndRenderFromRows(rows2);
+            document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
+          }
+        }catch(e){ console.warn("Network refresh failed:", e); }
+        hideLoading();
+      }, 0);
+    } else {
+      const t0 = performance.now();
+      const csv = await fetchCSVNetwork();
+      localStorage.setItem(LS_KEYS.csv, csv);
+      const rows = await parseCSVAsync(csv);
+      const t1 = performance.now();
+      await parseAndRenderFromRows(rows);
+      hideLoading();
+      document.getElementById("buildStamp").textContent = `${BUILD} • Parsed in ${(t1-t0|0)} ms`;
+      document.getElementById("lastSync").textContent = "Loaded: " + new Date().toLocaleTimeString();
     }
-
-    const net = await fetchCSVNetworkIfChanged();
-    if(net.changed && net.text){
-      setProgress(70, "Updating cache…");
-      localStorage.setItem(LS_KEYS.csv, net.text);
-      META = { etag: net.meta?.etag || META.etag, lastModified: net.meta?.lastModified || META.lastModified };
-      saveLS(LS_KEYS.csv_meta, META);
-      const rows = await parseCSVWithWorker(net.text);
-      parseAndRenderFromRows(rows);
-      document.getElementById("lastSync").textContent = "Last refresh: " + new Date().toLocaleTimeString();
-    } else if(!cached && !net.changed){
-      const forced = await fetch(PUBLISHED_CSV, { cache:"no-cache" });
-      const txt = await forced.text();
-      localStorage.setItem(LS_KEYS.csv, txt);
-      const rows = await parseCSVWithWorker(txt);
-      parseAndRenderFromRows(rows);
-    }
-  } catch(e){
-    console.warn("Network refresh failed:", e);
-    if(!cached){
-      alert("Failed to fetch data. Please check your connection and try again.");
-    }
-  } finally {
-    metrics.load_ms = Math.round(performance.now() - t0);
-    setProgress(100, "Done");
-    hideLoading();
-  }
+  } catch(e){ console.error(e); hideLoading(); alert("Failed to load data: "+e.message); }
 }
 
-/** ====================== APPLY FILTERS (debounced) ====================== **/
-function realApplyFilters(){
-  POLICY.recompute = document.getElementById("policySwitch").checked;
-  PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
-  saveLS(LS_KEYS.prefs, PREFS);
-
-  const c=getCriteria();
-  const filtered = CANON.filter(r=>{
-    const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
-    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
-    if(c.employees.length && !c.employees.includes(r.employee)) return false;
-    if(c.months.length && !c.months.includes(r.month)) return false;
-    if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
-    if(c.start && r.date < c.start) return false;
-    if(c.end && r.date > c.end) return false;
-    if(c.q && !`${r.employee} ${r.date} ${statusDisp}`.toLowerCase().includes(c.q)) return false;
-    return true;
-  });
-
-  lastFiltered = filtered;
-
-  // Sync heatmap month to newest month in filtered set
-  const monthKeys = [...new Set(filtered.map(r => r.date?.slice(0,7)).filter(Boolean))].sort();
-  if (monthKeys.length) {
-    const newest = monthKeys[monthKeys.length - 1];
-    if (document.getElementById("heatmapMonth").value !== newest) {
-      document.getElementById("heatmapMonth").value = newest;
-    }
-  }
-
-  renderTable(filtered);
-  renderKPIs(filtered);
-  renderCharts(filtered);
-  renderHeatmap();
-  computeAndRenderAnomalies(filtered);
-  updateURLFromFilters();
-}
-const applyFilters = debounce(realApplyFilters, 150);
-
-/** ====================== VIEWS & QUICK CHIPS ====================== **/
-function refreshViewsUI(){
-  const sel = document.getElementById("loadView");
-  sel.innerHTML = "";
-  Object.keys(VIEWS).sort().forEach(name=>{
-    const o = document.createElement("option");
-    o.value = name; o.textContent = name;
-    sel.appendChild(o);
-  });
-}
-function saveCurrentView(){
-  const name = (document.getElementById("viewName").value||"").trim();
-  if(!name) return;
-  VIEWS[name] = {
-    criteria: getCriteria(),
-    prefs: { hoursFormat: PREFS.hoursFormat },
-    policy: document.getElementById("policySwitch").checked
-  };
-  saveLS(LS_KEYS.views, VIEWS);
-  refreshViewsUI();
-}
-function loadViewByName(name){
-  const v = VIEWS[name]; if(!v) return;
-  $("#employeeFilter").val(v.criteria.employees||[]).trigger("change");
-  $("#monthFilter").val(v.criteria.months||[]).trigger("change");
-  $("#statusFilter").val(v.criteria.statuses||[]).trigger("change");
-  startDate.value = v.criteria.start||"";
-  endDate.value = v.criteria.end||"";
-  quickSearch.value = v.criteria.q||"";
-  document.getElementById("policySwitch").checked = !!v.policy;
-  PREFS.hoursFormat = v.prefs?.hoursFormat || PREFS.hoursFormat;
-  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
-  applyFilters();
-}
-function deleteSelectedView(){
-  const name = document.getElementById("loadView").value;
-  if(!name) return;
-  delete VIEWS[name];
-  saveLS(LS_KEYS.views, VIEWS);
-  refreshViewsUI();
-}
-function setThisMonth(){
-  const iso = currentMonthISO();
-  const monthName = monthNameFromISO(iso);
-  $("#monthFilter").val([monthName]).trigger("change");
-  startDate.value = `${iso}-01`;
-  endDate.value = "";
-  applyFilters();
-}
-function setLastMonth(){
-  const iso = lastMonthISO();
-  const monthName = monthNameFromISO(iso);
-  $("#monthFilter").val([monthName]).trigger("change");
-  startDate.value = `${iso}-01`;
-  endDate.value = "";
-  applyFilters();
-}
-function clearFilters(){
-  $("#employeeFilter").val(null).trigger("change");
-  $("#monthFilter").val(null).trigger("change");
-  $("#statusFilter").val(null).trigger("change");
-  startDate.value=""; endDate.value=""; quickSearch.value="";
-  document.getElementById("policySwitch").checked = POLICY.recompute;
-  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
-  applyFilters();
-}
-
-/** ====================== SERVICE WORKER (inline) ====================== **/
-(function registerSW(){
-  if(!('serviceWorker' in navigator)) return;
-  try{
-    const swCode = `
-      const CACHE = 'ai-cache-v1';
-      const CORE = [
-        location.origin + location.pathname,
-        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
-        'https://code.jquery.com/jquery-3.7.1.min.js',
-        'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-        'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'
-      ];
-      self.addEventListener('install', e=>{
-        e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));
-      });
-      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
-      self.addEventListener('fetch', e=>{
-        const url = new URL(e.request.url);
-        if(url.origin===location.origin || url.hostname.endsWith('jsdelivr.net') || url.hostname==='code.jquery.com'){
-          e.respondWith(
-            caches.match(e.request).then(r=> r || fetch(e.request).then(resp=>{
-              const clone = resp.clone();
-              caches.open(CACHE).then(c=>c.put(e.request, clone));
-              return resp;
-            }).catch(()=>r))
-          );
-        }
-      });
-    `;
-    const blob = new Blob([swCode], {type:'text/javascript'});
-    const url = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(url);
-  }catch(e){ console.warn("SW registration failed", e); }
-})();
-
-/** ====================== EVENTS ====================== **/
-document.getElementById("themeBtn").addEventListener("click", ()=>applyTheme(document.body.classList.contains("dark-mode")?"light":"dark"));
-document.getElementById("metricsBtn").addEventListener("click", ()=>{
-  const pre = document.getElementById("metricsPre");
-  pre.textContent = JSON.stringify(metrics, null, 2);
-  new bootstrap.Modal("#metricsModal").show();
-});
+/** ============== EVENTS ============== **/
+document.getElementById("themeBtn").addEventListener("click", ()=>{ const next = document.body.classList.contains("dark-mode") ? "light" : "dark"; applyTheme(next); });
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 document.getElementById("settingsSave").addEventListener("click", saveSettings);
 document.getElementById("settingsReset").addEventListener("click", ()=>{ 
@@ -1509,25 +1373,13 @@ document.getElementById("packBtn").addEventListener("click", exportPack);
 document.getElementById("packsMonthlyBtn").addEventListener("click", exportMonthlyPacks);
 document.getElementById("icsBtn").addEventListener("click", exportICS);
 document.getElementById("applyBtn").addEventListener("click", applyFilters);
-document.getElementById("resetBtn").addEventListener("click", clearFilters);
-document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
-document.getElementById("refreshBtn").addEventListener("click", ()=>loadData(false));
-
-$('#employeeFilter, #monthFilter, #statusFilter').on('change', applyFilters);
-document.getElementById("startDate").addEventListener("change", applyFilters);
-document.getElementById("endDate").addEventListener("change", applyFilters);
-document.getElementById("policySwitch").addEventListener("change", applyFilters);
-document.getElementById("decimalSwitch").addEventListener("change", applyFilters);
-document.getElementById("quickSearch").addEventListener("input", applyFilters);
+document.getElementById("resetBtn").addEventListener("click", resetFilters);
+document.getElementById("refreshBtn").addEventListener("click", loadData);
+document.getElementById("quickSearch").addEventListener("input", scheduleApplyFilters);
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
 
-document.getElementById("saveViewBtn").addEventListener("click", saveCurrentView);
-document.getElementById("deleteViewBtn").addEventListener("click", deleteSelectedView);
-document.getElementById("loadView").addEventListener("change", (e)=> loadViewByName(e.target.value));
-document.getElementById("thisMonthBtn").addEventListener("click", setThisMonth);
-document.getElementById("lastMonthBtn").addEventListener("click", setLastMonth);
-
+// links
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
 });
@@ -1542,20 +1394,30 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-// periodic refresh
-setTimeout(()=> loadData(true), 200); // initial load (cache-first)
-setInterval(()=>{ if(document.visibilityState==="visible") loadData(false); }, REFRESH_MS);
+// Command-like shortcuts
+document.addEventListener("keydown", (e)=>{
+  if(e.key==="/"){ e.preventDefault(); document.getElementById("quickSearch").focus(); }
+  if(e.key==="m"){ e.preventDefault(); $("#monthFilter").select2("open"); }
+  if(e.key==="e"){ e.preventDefault(); $("#employeeFilter").select2("open"); }
+  if(e.key==="?"){ e.preventDefault(); alert("Shortcuts:\n/ focus search\nm open month\ne open employee"); }
+});
+
+// Select2 change -> debounce re-render
+$("#employeeFilter,#monthFilter,#statusFilter").on("change", scheduleApplyFilters);
+
+// periodic refresh (5 min)
+setTimeout(()=> loadData(), 50); // immediate
+setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
 
 // boot
 initTheme();
-refreshViewsUI();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
-/** ====================== Smoke test ====================== **/
+/** ============== INLINE TESTS (console) ============== **/
 (function tests(){
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
-  ok("prefs.persist", !!PREFS);
+  ok("prefs.persist", !!PREFS && typeof PREFS.chartsSkipNonWorkingDays==="boolean");
 })();
-  </script>
+</script>
 </body>
 </html>
