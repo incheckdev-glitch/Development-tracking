@@ -47,9 +47,33 @@
     table.dataTable thead th{ color:var(--fg); }
     table.dataTable{ color:var(--fg); }
     .select2-container--default .select2-selection--multiple{ background:var(--card); border-color:var(--line); color:var(--fg); }
+
+    /* Loading overlay */
+    #loadingOverlay{
+      position:fixed; inset:0; z-index:2000;
+      display:none; align-items:center; justify-content:center;
+      background:rgba(15,23,42,.35); backdrop-filter: blur(2px) saturate(1.2);
+    }
+    #loadingOverlay.show{ display:flex; }
+    .loading-card{ width:min(520px,92vw); border-radius:16px; padding:18px; background:var(--card); border:1px solid var(--line); box-shadow:0 10px 30px rgba(0,0,0,.15); }
+    .progress{ height:10px; }
   </style>
 </head>
 <body>
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" aria-live="polite">
+    <div class="loading-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <strong id="loadingTitle">Loading…</strong>
+        <span class="text-secondary small" id="loadingHint"></span>
+      </div>
+      <div class="progress mb-1">
+        <div id="loadingBar" class="progress-bar" role="progressbar" style="width: 10%"></div>
+      </div>
+      <div class="small text-secondary" id="loadingNote">Checking for updates…</div>
+    </div>
+  </div>
+
   <div class="container-fluid p-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -285,7 +309,7 @@
     </div></div>
   </div>
 
-  <!-- JS libs -->
+  <!-- JS libs (app logic comes in Chunk 2) -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
@@ -304,16 +328,16 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Part 2 (script) goes below -->
+  <!-- Part 2 (script) next -->
   <!-- Part 2 (script) -->
   <script>
 /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v3.3-global-filters-auto-apply";
+const BUILD = "v3.5-full-fastfetch-monthfilter";
 
-/** (Optional) Writeback & Queue API **/
+/** Writeback & Queue API **/
 const WRITEBACK = {
   url: "https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec",
   token: "3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11"
@@ -355,26 +379,11 @@ async function sendQueue(payload, reason=""){
 }
 
 /** Defaults & persisted settings **/
-const DEFAULT_POLICY = {
-  dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30,
-  workdayHours:8.75, useCalcTarget:false, recompute:true,
-  markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true,
-  requireApproval:false, approvalPass:"12345678"
-};
-const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
+const DEFAULT_POLICY = { dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30, workdayHours:8.75, useCalcTarget:false, recompute:true, markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true, requireApproval:false, approvalPass:"12345678" };
+const DEFAULT_WEEKEND = [6,7];
 const DEFAULT_HOLIDAYS = [];
-const DEFAULT_PREFS = {
-  hoursFormat:"hms",
-  chartsSkipNonWorkingDays: true,
-  includeWeekendOvertimeInTotals: false
-};
-const LS_KEYS = {
-  policy:"attendance_policy_v2",
-  weekend:"attendance_weekend_v1",
-  holidays:"attendance_holidays_v1",
-  prefs:"attendance_prefs_v2",
-  csv:"attendance_csv_v1"
-};
+const DEFAULT_PREFS = { hoursFormat:"hms", chartsSkipNonWorkingDays:true, includeWeekendOvertimeInTotals:false };
+const LS_KEYS = { policy:"attendance_policy_v2", weekend:"attendance_weekend_v1", holidays:"attendance_holidays_v1", prefs:"attendance_prefs_v2", csv:"attendance_csv_v1", csv_meta:"attendance_csv_meta_v1" };
 
 function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
@@ -383,8 +392,9 @@ let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
 let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-PREFS.chartsSkipNonWorkingDays = PREFS.chartsSkipNonWorkingDays ?? true;
-PREFS.includeWeekendOvertimeInTotals = PREFS.includeWeekendOvertimeInTotals ?? false;
+let META     = loadLS(LS_KEYS.csv_meta, { etag:null, lastModified:null });
+PREFS.chartsSkipNonWorkingDays ??= true;
+PREFS.includeWeekendOvertimeInTotals ??= false;
 saveLS(LS_KEYS.prefs, PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
@@ -393,7 +403,26 @@ let HOLIDAYS_SET = new Set(HOLIDAYS);
 let CANON = [];
 let DT = null, chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
 let lastFiltered = [];
+let _inflight = null; // {controller, startedAt, timer}
 const { DateTime } = luxon;
+
+/** ============== LOADING UI ============== **/
+const overlay = document.getElementById("loadingOverlay");
+const bar = document.getElementById("loadingBar");
+const note = document.getElementById("loadingNote");
+const hint = document.getElementById("loadingHint");
+function showLoading(title="Loading…", subtitle=""){
+  document.getElementById("loadingTitle").textContent = title;
+  hint.textContent = subtitle || (navigator.onLine ? "" : "offline mode");
+  bar.style.width = "10%";
+  note.textContent = "Checking for updates…";
+  overlay.classList.add("show");
+}
+function setProgress(p, msg){
+  bar.style.width = `${Math.max(10, Math.min(100, p))}%`;
+  if(msg) note.textContent = msg;
+}
+function hideLoading(){ overlay.classList.remove("show"); }
 
 /** ============== THEME ============== **/
 function applyTheme(mode){
@@ -404,41 +433,18 @@ function applyTheme(mode){
 }
 function initTheme(){
   const saved = localStorage.getItem("theme");
-  if (saved) applyTheme(saved);
-  else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(saved ? saved : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 }
 
 /** ============== HELPERS ============== **/
-function candidateURLs(){
-  const t = Date.now();
-  return [`${PUBLISHED_CSV}&cachebust=${t}`];
-}
-function hmsFromHours(hours){
-  if(!isFinite(hours)) return "";
-  const sign = hours<0 ? "-" : "";
-  const total = Math.abs(hours);
-  const h = Math.floor(total);
-  const m = Math.round((total - h) * 60);
-  return `${sign}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-}
-function fmtHours(hours){
-  return PREFS.hoursFormat === "decimal"
-    ? (isFinite(hours) ? hours.toFixed(2) : "")
-    : hmsFromHours(hours);
-}
-function normalizeHeaders(r){
-  const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o;
-}
+function hmsFromHours(h){ if(!isFinite(h)) return ""; const s=h<0?"-":""; const t=Math.abs(h); const H=Math.floor(t); const M=Math.round((t-H)*60); return `${s}${String(H).padStart(2,"0")}:${String(M).padStart(2,"0")}`; }
+function fmtHours(h){ return PREFS.hoursFormat==="decimal" ? (isFinite(h)? h.toFixed(2) : "") : hmsFromHours(h); }
+function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
 function toISODate(s){
-  if(!s) return "";
-  const x = String(s).trim(); if(!x) return "";
-  const candidates = [
-    DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"),
-    DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"),
-    DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x)
-  ];
+  if(!s) return ""; const x=String(s).trim(); if(!x) return "";
+  const candidates=[ DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"), DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"), DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x) ];
   for(const t of candidates){ if(t.isValid) return t.toISODate(); }
-  const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
+  const d=new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
@@ -456,6 +462,7 @@ function isWorkingDay(isoDate){
   const wd = DateTime.fromISO(isoDate).weekday; // 1=Mon..7=Sun
   return !WEEKEND.includes(wd);
 }
+function monthKey(iso){ return (iso||"").slice(0,7); }
 
 /** ============== STATUS & METRICS ============== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
@@ -539,11 +546,10 @@ function mapRow(r){
   };
 }
 
-/** ============== KPIs & CHARTS ============== **/
+/** ============== Aggregation helpers ============== **/
 function aggregateBy(data, keyFn, valFn){
   const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
 }
-function monthKey(iso){ return (iso||"").slice(0,7); }
 function computeCohorts(data){
   const months = Array.from(new Set(data.map(r=>monthKey(r.date)).filter(Boolean))).sort();
   const curr = months.slice(-1)[0]; const prev = months.slice(-2)[0];
@@ -565,6 +571,7 @@ function arrowDelta(curr, prev, suffix=""){
   return `${sign} ${pct}%${suffix}`;
 }
 
+/** ============== KPIs & CHARTS ============== **/
 function renderKPIs(data){
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
@@ -613,25 +620,21 @@ function renderKPIs(data){
   igniteSpark("sparkDays", uniqueWorkingDays || 1);
   igniteSpark("sparkHours", Math.round(hours) || 1);
 }
-
 function renderCharts(data){
-  // ALWAYS render from filtered data
-  const chartRows = PREFS.chartsSkipNonWorkingDays
-    ? data.filter(r => isWorkingDay(r.date))
-    : data;
+  const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=>isWorkingDay(r.date)) : data;
 
-  // Hours by employee
+  // Hours by employee (optionally exclude weekend OT)
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
-  const empData = empLabels.map(k=> byEmp[k]);
+  const empData = empLabels.map(k=> byEmp[k]||0);
 
-  // Hours over time
+  // Hours over time (dates)
   const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
 
-  // Over/Under time
+  // Over/Under vs expected
   const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
@@ -656,53 +659,37 @@ function renderCharts(data){
   const lateVals = leLabels.map(e=> lateMap[e]||0);
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
 
-  // (Re)draw charts
   chartByEmp && chartByEmp.destroy();
   chartOverTime && chartOverTime.destroy();
   chartOverUnder && chartOverUnder.destroy();
   chartLateEarly && chartLateEarly.destroy();
 
-  const elEmp = document.getElementById("chartByEmp");
-  const elTime = document.getElementById("chartOverTime");
-  const elOU = document.getElementById("chartOverUnder");
-  const elLE = document.getElementById("chartLateEarly");
-
-  if(elEmp){
-    chartByEmp = new Chart(elEmp, {
-      type:"bar",
-      data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
-      options:{ plugins:{ legend:{ display:false } }, animation:false }
-    });
-  }
-  if(elTime){
-    chartOverTime = new Chart(elTime, {
-      type:"line",
-      data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
-      options:{ plugins:{ legend:{ display:false } }, animation:false }
-    });
-  }
-  if(elOU){
-    chartOverUnder = new Chart(elOU, {
-      type:"bar",
-      data:{ labels:empLabels, datasets:[
-        { label:"Overtime", data:over, stack:"x" },
-        { label:"Undertime", data:under, stack:"x" }
-      ]},
-      options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } }, animation:false }
-    });
-  }
-  if(elLE){
-    chartLateEarly = new Chart(elLE, {
-      type:"bar",
-      data:{ labels:leLabels, datasets:[
-        { label:"Late minutes", data:lateVals },
-        { label:"Early minutes", data:earlyVals }
-      ]},
-      options:{ plugins:{ legend:{ position:"bottom" } }, animation:false }
-    });
-  }
-
-  renderHeatmap(); // keep heatmap in sync
+  chartByEmp = new Chart(document.getElementById("chartByEmp"), {
+    type:"bar",
+    data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
+  });
+  chartOverTime = new Chart(document.getElementById("chartOverTime"), {
+    type:"line",
+    data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
+  });
+  chartOverUnder = new Chart(document.getElementById("chartOverUnder"), {
+    type:"bar",
+    data:{ labels:empLabels, datasets:[
+      { label:"Overtime", data:over, stack:"x" },
+      { label:"Undertime", data:under, stack:"x" }
+    ]},
+    options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
+  });
+  chartLateEarly = new Chart(document.getElementById("chartLateEarly"), {
+    type:"bar",
+    data:{ labels:leLabels, datasets:[
+      { label:"Late minutes", data:lateVals },
+      { label:"Early minutes", data:earlyVals }
+    ]},
+    options:{ plugins:{ legend:{ position:"bottom" } } }
+  });
 }
 function igniteSpark(id, value){
   const c = document.getElementById(id); if(!c) return;
@@ -711,13 +698,12 @@ function igniteSpark(id, value){
   new Chart(ctx, {
     type:"line",
     data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } }, animation:false }
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
   });
 }
 
 /** ============== TABLE ============== **/
 function renderTable(data){
-  lastFiltered = data; // keep global filtered snapshot for other modules
   const rows = data.map(r => {
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
@@ -751,8 +737,8 @@ function renderTable(data){
 
   if(!DT){
     DT = $("#attendanceTable").DataTable({
-      data: rows, columns: colDefs, responsive: true, fixedHeader:true,
-      order: [[1,"desc"],[2,"asc"]], pageLength: 12,
+      data: rows, columns: colDefs, responsive:true, fixedHeader:true,
+      order: [[1,"desc"],[2,"asc"]], pageLength: 12, deferRender:true,
       dom:"Bfrtip",
       buttons: [
         {extend:"csv", title:"Attendance_Export"},
@@ -774,8 +760,11 @@ function renderTable(data){
       }
     });
   } else {
-    DT.clear().rows.add(rows).draw();
+    DT.clear().rows.add(rows).draw(false);
   }
+
+  // update sticky totals text here (also set in renderKPIs)
+  lastFiltered = data;
 }
 
 /** ============== FILTERS & URL ============== **/
@@ -795,42 +784,6 @@ function getCriteria(){
     q: (quickSearch.value||"").toLowerCase(),
     policy: document.getElementById("policySwitch").checked
   };
-}
-function applyFilters(){
-  // persist display prefs from switches
-  POLICY.recompute = document.getElementById("policySwitch").checked;
-  PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
-  saveLS(LS_KEYS.prefs, PREFS);
-
-  const c=getCriteria();
-  const filtered = CANON.filter(r=>{
-    const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
-    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
-    if(c.employees.length && !c.employees.includes(r.employee)) return false;
-    if(c.months.length && !c.months.includes(r.month)) return false;
-    if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
-    if(c.start && r.date < c.start) return false;
-    if(c.end && r.date > c.end) return false;
-    if(c.q && !`${r.employee} ${r.date} ${statusDisp}`.toLowerCase().includes(c.q)) return false;
-    return true;
-  });
-
-  lastFiltered = filtered;            // <-- single source of truth
-  renderTable(filtered);              // table
-  renderKPIs(filtered);               // kpis
-  renderCharts(filtered);             // charts (now re-derived from filtered)
-  renderHeatmap();                    // heatmap honors filtered + month picker
-  computeAndRenderAnomalies(filtered);// anomalies from filtered
-  updateURLFromFilters();             // shareable links
-}
-function resetFilters(){
-  $("#employeeFilter").val(null).trigger("change");
-  $("#monthFilter").val(null).trigger("change");
-  $("#statusFilter").val(null).trigger("change");
-  startDate.value=""; endDate.value=""; quickSearch.value="";
-  document.getElementById("policySwitch").checked = POLICY.recompute;
-  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
-  applyFilters();
 }
 function updateURLFromFilters(){
   const c=getCriteria(); const p=new URLSearchParams();
@@ -859,22 +812,22 @@ function readFiltersFromURL(){
   document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
-/** ============== HEATMAP (filter-aware) ============== **/
+/** ============== HEATMAP ============== **/
 function renderHeatmap(){
   const wrap=document.getElementById("heatmap"); if(!wrap) return;
   wrap.innerHTML=""; if(!lastFiltered.length) return;
 
-  const selectedMonth = $("#monthFilter").val()?.[0];
-  const p = document.getElementById("heatmapMonth").value;
-  let monthISO = selectedMonth
-    || p
-    || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
-
-  document.getElementById("heatmapMonth").value = monthISO;
+  let monthISO = document.getElementById("heatmapMonth").value;
+  if(!monthISO){
+    const monthKeys = [...new Set(lastFiltered.map(r => r.date?.slice(0,7)).filter(Boolean))].sort();
+    monthISO = monthKeys.length ? monthKeys[monthKeys.length - 1] : DateTime.now().toISODate().slice(0,7);
+    document.getElementById("heatmapMonth").value = monthISO;
+  }
 
   const first = DateTime.fromISO(monthISO+"-01"); const days=first.daysInMonth;
+
   const totals = {};
-  lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
+  lastFiltered.forEach(r => { if(r.date && r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
   const max = Math.max(1, ...Object.values(totals));
 
   let startOffset = first.weekday % 7; // Sunday=0
@@ -904,7 +857,7 @@ function renderHeatmap(){
   document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
 }
 
-/** ============== ANOMALIES (from filtered data) ============== **/
+/** ============== ANOMALIES (missing punches on working days) ============== **/
 function computeAnomalies(data){
   const missing=[];
   for(const r of data){
@@ -972,7 +925,7 @@ function openEmpDrawer(name){
   empChart && empChart.destroy();
   empChart = new Chart(document.getElementById("empChart"), {
     type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
-    options:{ plugins:{ legend:{ display:false } }, animation:false }
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
 
   const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
@@ -1040,7 +993,6 @@ async function applyLocalCorrection(){
     al.classList.remove("d-none");
   }
 
-  // Local patch + re-render from filtered set
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
@@ -1170,7 +1122,7 @@ function openSettings(){
   document.getElementById("setHalfDayHours").value = POLICY.halfDayThresholdHours;
   document.getElementById("setHalfDayUseNet").checked = POLICY.halfDayUseNet;
   document.getElementById("setRequireApproval").checked = !!POLICY.requireApproval;
-  document.getElementById("setApprovalPass").value = POLICY.approvalPass || "12345678";
+  document.getElementById("setApprovalPass").value = (POLICY.approvalPass || "12345678");
   renderWeekendChecks();
   document.getElementById("holidayText").value = HOLIDAYS.join("\n");
   new bootstrap.Modal("#settingsModal").show();
@@ -1199,63 +1151,147 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ============== IO & LOAD ============== **/
-function candidateURLs(){ const t=Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
-async function fetchCSVNetwork(){
-  let lastErr;
-  for(const url of candidateURLs()){
-    try{
-      const res = await fetch(url, { cache:"no-store" });
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.text();
-    }catch(e){ lastErr=e; console.warn("Fetch failed", url, e); }
-  }
-  throw lastErr || new Error("All endpoints failed");
-}
-async function fetchCSV(){
-  const cached = localStorage.getItem(LS_KEYS.csv);
-  if(cached){
-    setTimeout(()=>refreshFromNetwork(true), 0);
-    return cached;
-  }
-  return await refreshFromNetwork(false);
-}
-async function refreshFromNetwork(silent){
+/** ============== FAST FETCH PATH ============== **/
+async function headCSVMeta(){
   try{
-    const txt = await fetchCSVNetwork();
-    const old = localStorage.getItem(LS_KEYS.csv);
-    if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); if(silent) parseAndRender(txt); }
-    return txt;
-  }catch(e){ if(!silent) throw e; return null; }
+    const res = await fetch(PUBLISHED_CSV, { method:"HEAD", cache:"no-cache" });
+    return { ok: res.ok, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified"), contentLength: res.headers.get("content-length") };
+  }catch(e){ return { ok:false }; }
 }
-function parseAndRender(csv){
-  const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
-  CANON = parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+function sameMeta(a,b){
+  if(!a||!b) return false;
+  return (a.etag && b.etag && a.etag===b.etag) || (a.lastModified && b.lastModified && a.lastModified===b.lastModified);
+}
+function startFetchWithTimeout(url, timeoutMs=20000){
+  if(_inflight?.controller) _inflight.controller.abort();
+  const controller=new AbortController();
+  const t=setTimeout(()=>controller.abort("timeout"), timeoutMs);
+  _inflight={ controller, startedAt: Date.now(), timer:t };
+  return { controller, cancel:()=>{ clearTimeout(t); controller.abort(); } };
+}
+async function fetchCSVNetworkIfChanged(){
+  setProgress(12, "Checking for updates…");
+  const meta = await headCSVMeta();
+  if(meta.ok && sameMeta(meta, META)){
+    setProgress(18, "Up to date (cached)");
+    return { changed:false, meta };
+  }
+  setProgress(25, "Downloading CSV…");
+  const { controller } = startFetchWithTimeout(PUBLISHED_CSV, 20000);
+  try{
+    const res = await fetch(PUBLISHED_CSV, { cache:"no-cache", signal: controller.signal });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const txt = await res.text();
+    clearTimeout(_inflight.timer);
+    return { changed:true, meta: { etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") }, text: txt };
+  } finally {
+    _inflight=null;
+  }
+}
+function parseCSVWithWorker(csv){
+  return new Promise((resolve)=>{
+    setProgress(40, "Parsing data…");
+    const totalLines = Math.max(1, (csv.match(/\n/g)||[]).length);
+    let seen = 0;
+    Papa.parse(csv, {
+      header:true, skipEmptyLines:true, worker:true,
+      step: function(){ seen++; if(seen % 1000 === 0){ const pct = 40 + Math.min(40, (seen/totalLines)*40); setProgress(pct, "Parsing data…"); } },
+      complete: function(res){ setProgress(85, "Mapping rows…"); resolve(res.data); }
+    });
+    setTimeout(()=>{ if(overlay.classList.contains("show")) hint.textContent = "taking longer than usual…"; }, 8000);
+  });
+}
+function parseAndRenderFromRows(rows){
+  CANON = rows.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
 
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
   populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
   populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
 
   readFiltersFromURL();
-  applyFilters(); // render everything from the filtered view
+  applyFilters();
 
   const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0];
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
 }
-async function loadData(){
+async function loadData(initial=false){
+  showLoading(initial ? "Loading data…" : "Refreshing…", "");
+  const cached = localStorage.getItem(LS_KEYS.csv);
+  if(cached && initial){
+    setProgress(30, "Using cached data…");
+    const rows = await parseCSVWithWorker(cached);
+    parseAndRenderFromRows(rows);
+  }
   try{
-    const csv = await fetchCSV(); parseAndRender(csv);
-    const refreshed = await refreshFromNetwork(true);
-    document.getElementById("lastSync").textContent = "Last auto-refresh: " + new Date().toLocaleTimeString();
-    applyFilters(); // keep charts/anomalies synced after refresh
-    return refreshed;
-  } catch(e){ console.error(e); alert("Failed to load data: "+e.message); }
+    const net = await fetchCSVNetworkIfChanged();
+    if(net.changed && net.text){
+      setProgress(70, "Updating cache…");
+      localStorage.setItem(LS_KEYS.csv, net.text);
+      META = { etag: net.meta?.etag || META.etag, lastModified: net.meta?.lastModified || META.lastModified };
+      saveLS(LS_KEYS.csv_meta, META);
+      const rows = await parseCSVWithWorker(net.text);
+      parseAndRenderFromRows(rows);
+      document.getElementById("lastSync").textContent = "Last refresh: " + new Date().toLocaleTimeString();
+    } else if(!cached && !net.changed){
+      const forced = await fetch(PUBLISHED_CSV, { cache:"no-cache" });
+      const txt = await forced.text();
+      localStorage.setItem(LS_KEYS.csv, txt);
+      const rows = await parseCSVWithWorker(txt);
+      parseAndRenderFromRows(rows);
+    }
+  } catch(e){
+    console.warn("Network refresh failed:", e);
+    if(!cached){
+      alert("Failed to fetch data. Please check your connection and try again.");
+    }
+  } finally {
+    setProgress(100, "Done");
+    hideLoading();
+  }
 }
 
-/** ============== EVENTS (auto-apply filters) ============== **/
-document.getElementById("themeBtn").addEventListener("click", ()=>{ const next = document.body.classList.contains("dark-mode") ? "light" : "dark"; applyTheme(next); });
+/** ============== APPLY FILTERS (drives charts, anomalies, heatmap) ============== **/
+function applyFilters(){
+  POLICY.recompute = document.getElementById("policySwitch").checked;
+  PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
+  saveLS(LS_KEYS.prefs, PREFS);
+
+  const c=getCriteria();
+  const filtered = CANON.filter(r=>{
+    const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
+    const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
+    if(c.employees.length && !c.employees.includes(r.employee)) return false;
+    if(c.months.length && !c.months.includes(r.month)) return false; // month filter enforced globally
+    if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
+    if(c.start && r.date < c.start) return false;
+    if(c.end && r.date > c.end) return false;
+    if(c.q && !`${r.employee} ${r.date} ${statusDisp}`.toLowerCase().includes(c.q)) return false;
+    return true;
+  });
+
+  lastFiltered = filtered;
+
+  // Sync heatmap month to newest month in filtered set
+  const monthKeys = [...new Set(filtered.map(r => r.date?.slice(0,7)).filter(Boolean))].sort();
+  if (monthKeys.length) {
+    const newest = monthKeys[monthKeys.length - 1];
+    if (document.getElementById("heatmapMonth").value !== newest) {
+      document.getElementById("heatmapMonth").value = newest;
+    }
+  }
+
+  renderTable(filtered);
+  renderKPIs(filtered);
+  renderCharts(filtered);
+  renderHeatmap();
+  computeAndRenderAnomalies(filtered);
+  updateURLFromFilters();
+}
+
+/** ============== EVENTS ============== **/
+document.getElementById("themeBtn").addEventListener("click", ()=>applyTheme(document.body.classList.contains("dark-mode")?"light":"dark"));
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 document.getElementById("settingsSave").addEventListener("click", saveSettings);
 document.getElementById("settingsReset").addEventListener("click", ()=>{ 
@@ -1277,21 +1313,25 @@ document.getElementById("packBtn").addEventListener("click", exportPack);
 document.getElementById("packsMonthlyBtn").addEventListener("click", exportMonthlyPacks);
 document.getElementById("icsBtn").addEventListener("click", exportICS);
 document.getElementById("applyBtn").addEventListener("click", applyFilters);
-document.getElementById("resetBtn").addEventListener("click", resetFilters);
-document.getElementById("refreshBtn").addEventListener("click", loadData);
-
-// 🔁 AUTO-APPLY on filter changes (fix for charts & anomalies)
+document.getElementById("resetBtn").addEventListener("click", ()=>{ 
+  $("#employeeFilter").val(null).trigger("change");
+  $("#monthFilter").val(null).trigger("change");
+  $("#statusFilter").val(null).trigger("change");
+  startDate.value=""; endDate.value=""; quickSearch.value="";
+  document.getElementById("policySwitch").checked = POLICY.recompute;
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
+  applyFilters();
+});
+document.getElementById("refreshBtn").addEventListener("click", ()=>loadData(false));
 $('#employeeFilter, #monthFilter, #statusFilter').on('change', applyFilters);
 document.getElementById("startDate").addEventListener("change", applyFilters);
 document.getElementById("endDate").addEventListener("change", applyFilters);
 document.getElementById("policySwitch").addEventListener("change", applyFilters);
 document.getElementById("decimalSwitch").addEventListener("change", applyFilters);
-
 document.getElementById("quickSearch").addEventListener("input", applyFilters);
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
 
-// links
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
 });
@@ -1306,20 +1346,18 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-// periodic refresh (5 min)
-setTimeout(()=> loadData(), Math.random()*60_000); // stagger first load
-setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
+// periodic refresh
+setTimeout(()=> loadData(true), 200); // initial load (cache-first)
+setInterval(()=>{ if(document.visibilityState==="visible") loadData(false); }, REFRESH_MS);
 
 // boot
 initTheme();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
-/** ============== INLINE TESTS (console) ============== **/
+/** ============== Smoke tests ============== **/
 (function tests(){
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
-  ok("cachebust URL", /cachebust=\d+/.test(candidateURLs()[0]||""));
-  ok("policy.persisted", !!POLICY && typeof POLICY.graceMin==="number");
-  ok("charts skip non-working days", PREFS.chartsSkipNonWorkingDays === true);
+  ok("prefs.persist", !!PREFS);
 })();
   </script>
 </body>
