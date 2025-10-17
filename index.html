@@ -84,8 +84,9 @@
         <div><small id="lastSync" class="text-secondary"></small></div>
       </div>
       <div class="d-flex gap-2">
-        <button id="themeBtn" class="btn btn-outline-secondary"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
-        <button id="refreshBtn" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
+        <button id="themeBtn" class="btn btn-outline-secondary" aria-label="Toggle theme"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
+        <button id="insightsBtn" class="btn btn-outline-dark" aria-label="Open telemetry"><i class="bi bi-activity me-1"></i>Insights</button>
+        <button id="refreshBtn" class="btn btn-outline-primary" aria-label="Reload data"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
         <button id="pdfBtn" class="btn btn-success"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
         <button id="packBtn" class="btn btn-outline-success"><i class="bi bi-box-arrow-down me-1"></i>Export Pack</button>
         <button id="packsMonthlyBtn" class="btn btn-outline-success"><i class="bi bi-archive me-1"></i>Monthly Packs</button>
@@ -161,11 +162,11 @@
         <div class="col-lg-3">
           <label class="form-label">Display</label>
           <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="policySwitch">
+            <input class="form-check-input" type="checkbox" id="policySwitch" aria-label="Recompute Status by Policy">
             <label class="form-check-label" for="policySwitch">Recompute Status by Policy</label>
           </div>
           <div class="form-check form-switch mt-1">
-            <input class="form-check-input" type="checkbox" id="decimalSwitch">
+            <input class="form-check-input" type="checkbox" id="decimalSwitch" aria-label="Show hours in decimals">
             <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
           </div>
         </div>
@@ -182,7 +183,7 @@
           </div>
           <div id="savedViews" class="d-flex flex-wrap gap-2"></div>
           <div class="ms-auto small text-secondary">
-            Shortcuts: <span class="kbd">/</span> search • <span class="kbd">m</span> month • <span class="kbd">e</span> employee • <span class="kbd">?</span> help
+            Shortcuts: <span class="kbd">/</span> search • <span class="kbd">m</span> month • <span class="kbd">e</span> employee • <span class="kbd">t</span> insights • <span class="kbd">?</span> help
           </div>
         </div>
       </div>
@@ -326,6 +327,23 @@
     </div></div>
   </div>
 
+  <!-- Telemetry Modal -->
+  <div class="modal fade" id="insightsModal" tabindex="-1" aria-hidden="true" aria-labelledby="insightsLabel">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="insightsLabel">Insights</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close insights"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group small" id="insightsList"></ul>
+      </div>
+      <div class="modal-footer">
+        <button id="insightsCopy" class="btn btn-outline-secondary">Copy</button>
+        <button class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div></div>
+  </div>
+
   <!-- Correction Modal -->
   <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true" aria-labelledby="corrLabel">
     <div class="modal-dialog"><div class="modal-content">
@@ -380,7 +398,7 @@
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4.2.0-toasts-abort-scroller";
+const BUILD = "v4.4.0-retry-telemetry-a11y";
 
 /** Writeback (disabled by default for safety; keep empty strings) **/
 const WRITEBACK = { url: "", token: "" };
@@ -394,7 +412,6 @@ const LS_KEYS = {
   csv:"attendance_csv_v1",
   views:"attendance_saved_views_v1"
 };
-
 const DEFAULT_POLICY = {
   dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30,
   workdayHours:8.75, useCalcTarget:false, recompute:true,
@@ -408,7 +425,6 @@ const DEFAULT_PREFS = {
   chartsSkipNonWorkingDays:true,
   includeWeekendOvertimeInTotals:false
 };
-
 function loadLS(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v ?? d; }catch{ return d; } }
 function saveLS(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
 
@@ -416,20 +432,24 @@ let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
 let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS); saveLS(LS_KEYS.prefs,PREFS);
-
 let HOLIDAYS_SET = new Set(HOLIDAYS);
+
 let CANON = [];
 let lastFiltered = [];
 let DT = null;
 const { DateTime } = luxon;
 
-// Charts (handled via Chart.getChart(canvas))
+// Charts CSV caches
 const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] };
 
 /** Abortable fetch + parse **/
 let currentFetchController = null;
-let currentPapa = null;
-let currentPapaReject = null;
+let currentPapa = null, currentPapaReject = null;
+
+/** Telemetry **/
+const TELEMETRY = { last: {
+  source: "", parseMs: 0, rows: 0, fetchedAt: null, attempts: 0, refreshed: false, error: null
+}};
 
 /** ============== UI HELPERS ============== **/
 function toast(msg, variant="info", delay=3000){
@@ -445,11 +465,14 @@ function toast(msg, variant="info", delay=3000){
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>`;
   host.appendChild(div);
+  const prev = document.activeElement;
   const t = new bootstrap.Toast(div, { delay });
   t.show();
-  div.addEventListener("hidden.bs.toast", ()=> div.remove());
+  div.addEventListener("hidden.bs.toast", ()=>{
+    div.remove();
+    if(prev && typeof prev.focus==="function") try{ prev.focus(); }catch{}
+  });
 }
-
 function showLoading(text="Loading…", sub=""){ 
   document.getElementById("loadingText").textContent=text;
   document.getElementById("loadingSub").textContent=sub||"";
@@ -682,7 +705,6 @@ function renderKPIs(data){
   igniteSpark("sparkDays", uniqueWorkingDays || 1);
   igniteSpark("sparkHours", Math.round(hours) || 1);
 }
-
 function renderCharts(data){
   const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=> isWorkingDay(r.date)) : data;
 
@@ -726,7 +748,7 @@ function renderCharts(data){
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
   chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  // Destroy any existing charts bound to canvases
+  // Destroy existing charts
   ["chartByEmp","chartOverTime","chartOverUnder","chartLateEarly"].forEach(destroyChartOnCanvas);
 
   new Chart(document.getElementById("chartByEmp"), {
@@ -1299,11 +1321,10 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ============== DATA LOADING (cache-first, abortable) ============== **/
+/** ============== DATA LOADING (cache-first, abortable, retry/backoff) ============== **/
 function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
 
 function parseCSVAsync(csvText){
-  // Abort previous parse if running
   if(currentPapa && typeof currentPapa.abort==="function"){
     try{ currentPapa.abort(); }catch{}
     if(currentPapaReject){ currentPapaReject(new Error("parse_aborted")); }
@@ -1312,6 +1333,7 @@ function parseCSVAsync(csvText){
 
   return new Promise((resolve, reject)=>{
     currentPapaReject = reject;
+    const t0 = performance.now();
     currentPapa = Papa.parse(csvText, {
       header:true, skipEmptyLines:true, worker:true,
       complete: (res)=> {
@@ -1319,6 +1341,8 @@ function parseCSVAsync(csvText){
           const arr = Array.isArray(res?.data) ? res.data : [];
           const data = arr.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
           currentPapa = null; currentPapaReject = null;
+          TELEMETRY.last.parseMs = (performance.now()-t0|0);
+          TELEMETRY.last.rows = data.length;
           resolve(data);
         }catch(e){ currentPapa=null; currentPapaReject=null; reject(e); }
       },
@@ -1326,9 +1350,24 @@ function parseCSVAsync(csvText){
     });
   });
 }
-
+function sleep(ms){ return new Promise(r=> setTimeout(r, ms)); }
+async function fetchWithRetry(url, {tries=3, backoffMs=500, signal}={}){
+  let lastErr=null;
+  for(let i=0;i<tries;i++){
+    try{
+      const res = await fetch(url, { cache:"no-store", signal });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      TELEMETRY.last.attempts = i+1;
+      return await res.text();
+    }catch(e){
+      if(e.name==="AbortError") throw e;
+      lastErr=e;
+      if(i<tries-1) await sleep(backoffMs * Math.pow(2,i));
+    }
+  }
+  throw lastErr || new Error("fetch_failed");
+}
 async function fetchCSVNetwork(){
-  // Abort previous fetch if running
   if(currentFetchController){ try{ currentFetchController.abort(); }catch{} }
   currentFetchController = new AbortController();
   const signal = currentFetchController.signal;
@@ -1336,9 +1375,7 @@ async function fetchCSVNetwork(){
   let lastErr;
   for(const url of candidateURLs()){
     try{
-      const res = await fetch(url, { cache:"no-store", signal });
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.text();
+      return await fetchWithRetry(url, {tries:3, backoffMs:600, signal});
     }catch(e){
       if(e.name==="AbortError") throw e;
       lastErr=e; console.warn("Fetch failed", url, e);
@@ -1361,17 +1398,56 @@ async function parseAndRenderFromRows(rows){
   renderHeatmap();
 }
 
+/** Telemetry UI **/
+function renderInsights(){
+  const ul = document.getElementById("insightsList");
+  const L = TELEMETRY.last;
+  const rows = [
+    ["Build", BUILD],
+    ["Rows", String(L.rows||0)],
+    ["Parse (ms)", String(L.parseMs||0)],
+    ["Fetch attempts", String(L.attempts||0)],
+    ["Source", L.source||""],
+    ["Fetched at", L.fetchedAt? new Date(L.fetchedAt).toLocaleString() : ""],
+    ["Refreshed", L.refreshed? "yes":"no"],
+    ["Error", L.error? String(L.error): "—"]
+  ];
+  ul.innerHTML = rows.map(([k,v])=> `<li class="list-group-item d-flex justify-content-between"><span class="text-secondary">${k}</span><span>${v}</span></li>`).join("");
+}
+document.getElementById("insightsBtn").addEventListener("click", ()=>{ renderInsights(); new bootstrap.Modal("#insightsModal").show(); });
+document.getElementById("insightsCopy").addEventListener("click", ()=>{
+  const L = TELEMETRY.last;
+  const text = `Build: ${BUILD}
+Rows: ${L.rows||0}
+Parse (ms): ${L.parseMs||0}
+Fetch attempts: ${L.attempts||0}
+Source: ${L.source||""}
+Fetched at: ${L.fetchedAt? new Date(L.fetchedAt).toISOString() : ""}
+Refreshed: ${L.refreshed? "yes":"no"}
+Error: ${L.error? String(L.error): "none"}\n`;
+  navigator.clipboard.writeText(text).then(()=> toast("Insights copied.", "success"));
+});
+
 async function loadData(){
   try{
     showLoading("Loading data…","Cache-first parse");
+    TELEMETRY.last.error = null;
+
     const cached = localStorage.getItem(LS_KEYS.csv);
     if(cached){
       const t0 = performance.now();
       const rows = await parseCSVAsync(cached);
       const t1 = performance.now();
+      TELEMETRY.last.parseMs = (t1-t0|0);
+      TELEMETRY.last.rows = rows.length;
+      TELEMETRY.last.source = "cache";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = false;
+
       await parseAndRenderFromRows(rows);
       hideLoading();
       document.getElementById("buildStamp").textContent = `${BUILD} • Parsed from cache in ${(t1-t0|0)} ms`;
+
       // Background refresh
       setTimeout(async ()=>{
         try{
@@ -1380,14 +1456,24 @@ async function loadData(){
           if(fresh && fresh !== cached){
             localStorage.setItem(LS_KEYS.csv, fresh);
             const rows2 = await parseCSVAsync(fresh);
+            TELEMETRY.last.source = "network";
+            TELEMETRY.last.fetchedAt = Date.now();
+            TELEMETRY.last.refreshed = true;
+
             await parseAndRenderFromRows(rows2);
             document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
             toast("Data refreshed from network.", "success");
           } else {
+            TELEMETRY.last.source = "network (unchanged)";
+            TELEMETRY.last.fetchedAt = Date.now();
+            TELEMETRY.last.refreshed = false;
             toast("No new data on refresh.", "secondary", 2000);
           }
         }catch(e){
-          if(e.name!=="AbortError") toast("Network refresh failed.", "warning");
+          if(e.name!=="AbortError"){
+            TELEMETRY.last.error = e.message || String(e);
+            toast("Network refresh failed.", "warning");
+          }
           console.warn("Network refresh failed:", e);
         }
         hideLoading();
@@ -1398,6 +1484,11 @@ async function loadData(){
       localStorage.setItem(LS_KEYS.csv, csv);
       const rows = await parseCSVAsync(csv);
       const t1 = performance.now();
+
+      TELEMETRY.last.source = "network";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = false;
+
       await parseAndRenderFromRows(rows);
       hideLoading();
       document.getElementById("buildStamp").textContent = `${BUILD} • Parsed in ${(t1-t0|0)} ms`;
@@ -1408,6 +1499,7 @@ async function loadData(){
     hideLoading();
     if(e.name==="AbortError"){ console.warn("Load aborted"); return; }
     console.error(e);
+    TELEMETRY.last.error = e.message || String(e);
     toast("Failed to load data: "+e.message, "danger", 6000);
   }
 }
@@ -1441,7 +1533,7 @@ document.getElementById("quickSearch").addEventListener("input", scheduleApplyFi
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
 
-// Links
+// Links & actions
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
 });
@@ -1456,7 +1548,7 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-// Keyboard shortcuts with Select2 guards
+// Keyboard shortcuts
 document.addEventListener("keydown", (e)=>{
   if(e.key==="/"){ e.preventDefault(); document.getElementById("quickSearch").focus(); }
   if(e.key==="m"){ 
@@ -1469,14 +1561,17 @@ document.addEventListener("keydown", (e)=>{
     const sel = $("#employeeFilter");
     if(sel.data("select2")) sel.select2("open"); else document.getElementById("employeeFilter").focus();
   }
-  if(e.key==="?"){ e.preventDefault(); toast("Shortcuts: / search • m month • e employee", "secondary", 3000); }
+  if(e.key==="t"){
+    e.preventDefault();
+    renderInsights(); new bootstrap.Modal("#insightsModal").show();
+  }
+  if(e.key==="?"){ e.preventDefault(); toast("Shortcuts: / search • m month • e employee • t insights", "secondary", 3000); }
 });
 
 // Select2 change -> debounce
 $("#employeeFilter,#monthFilter,#statusFilter").on("change", scheduleApplyFilters);
 
-/** Employee Drawer (mini analytics) **/
-let empChart=null;
+/** Employee Drawer **/
 function openEmpDrawer(name){
   const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
   const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
@@ -1497,10 +1592,9 @@ function openEmpDrawer(name){
     </div>`;
 
   const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
-  // Destroy previous emp chart if exists
   const empCanvas = document.getElementById("empChart");
   const ex = Chart.getChart(empCanvas); if(ex) ex.destroy();
-  empChart = new Chart(empCanvas, {
+  new Chart(empCanvas, {
     type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
@@ -1528,6 +1622,7 @@ setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRES
 /** ============== BOOT ============== **/
 initTheme();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
+renderSavedViews();
 
 /** ============== INLINE TESTS (console) ============== **/
 (function tests(){
