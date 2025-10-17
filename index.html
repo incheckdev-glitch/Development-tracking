@@ -15,37 +15,23 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"/>
 
   <style>
-    /* ==== Design tokens ==== */
     :root{
-      color-scheme: light dark;
       --bg:#f8fafc; --fg:#0f172a; --muted:#64748b;
       --card:#ffffff; --line:#e2e8f0;
       --good:#16a34a; --warn:#f59e0b; --bad:#ef4444; --accent:#7c3aed; --absent:#b91c1c;
       --heat-none:#e2e8f0; --heat-low:#c7d2fe; --heat-mid:#93c5fd; --heat-high:#60a5fa;
-      --shadow: 0 8px 24px rgba(2,6,23,.06);
-      --ring: 0 0 0 2px var(--accent);
-      --focus: var(--accent);
     }
     body.dark-mode{
-      color-scheme: dark;
       --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
       --card:#111827; --line:#1f2937;
       --heat-none:#1f2937; --heat-low:#4f46e5; --heat-mid:#0284c7; --heat-high:#22d3ee;
-      --shadow: 0 8px 24px rgba(0,0,0,.35);
-    }
-    @media (prefers-reduced-motion: no-preference){
-      html, body, .card, .glass, .select2-container--default .select2-selection--multiple {
-        transition: background-color .25s ease, color .25s ease, border-color .25s ease;
-      }
     }
     body{ background:var(--bg); color:var(--fg); }
-    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow: var(--shadow); }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; }
     .glass{ background:var(--card); border:1px solid var(--line); border-radius:14px; }
     .chip{ background:rgba(148,163,184,.12); padding:.5rem .75rem; border-radius:9999px; display:inline-block; }
-    .filter-bar{ position:sticky; top:0; z-index:20; padding:12px; backdrop-filter:saturate(1.2) blur(4px); background: color-mix(in oklab, var(--card) 85%, transparent); border:1px solid var(--line); }
-    :focus-visible{ outline:2px dashed var(--focus); outline-offset:3px; }
+    .filter-bar{ position:sticky; top:0; z-index:20; padding:12px; backdrop-filter:saturate(1.2) blur(4px); }
 
-    /* Status badges */
     .status-badge{ padding:.2rem .5rem; border-radius:999px; font-weight:600; font-size:.85rem; display:inline-block; }
     .status-Present{ background:rgba(22,163,74,.12); color:var(--good); border:1px solid rgba(22,163,74,.35); }
     .status-Late{ background:rgba(245,158,11,.12); color:var(--warn); border:1px solid rgba(245,158,11,.35); }
@@ -55,49 +41,39 @@
     .status-Absent{ background:rgba(185,28,28,.12); color:var(--absent); border:1px solid rgba(185,28,28,.35); }
     .status-Need_Correction{ background:rgba(245,158,11,.18); color:var(--warn); border:1px dashed rgba(245,158,11,.45); cursor:pointer; }
 
-    /* Heatmap */
     #heatmap{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
-    .heat-cell{
-      height:42px; border-radius:8px; display:flex; align-items:flex-start; justify-content:flex-end; padding:4px;
-      font-size:.8rem; color:var(--fg); border:1px solid color-mix(in oklab, var(--line) 80%, transparent);
-      cursor: pointer;
-    }
-    .heat-cell .d{ opacity:.9; font-weight:600; }
+    .heat-cell{ height:42px; border-radius:8px; display:flex; align-items:flex-start; justify-content:flex-end; padding:4px; font-size:.8rem; color:var(--fg); }
+    .heat-cell .d{ opacity:.85; font-weight:600; }
 
-    /* DataTables + Buttons theming */
-    table.dataTable{ color:var(--fg); background:var(--card); border-color:var(--line); }
-    table.dataTable thead th{ color:var(--fg); border-bottom:1px solid var(--line)!important; }
-    table.dataTable tbody tr:hover{ background: color-mix(in oklab, var(--card) 80%, var(--line)); }
-    .dataTables_wrapper .dataTables_length label,
-    .dataTables_wrapper .dataTables_filter label,
-    .dataTables_wrapper .dataTables_info{ color:var(--muted); }
-    .dataTables_wrapper .dataTables_paginate .paginate_button{ color:var(--fg)!important; border:1px solid var(--line)!important; background:var(--card)!important; }
-    .dataTables_wrapper .dataTables_paginate .paginate_button.current{ background: color-mix(in oklab, var(--card) 85%, var(--line))!important; }
-    .dt-buttons .dt-button{ background:var(--card)!important; color:var(--fg)!important; border:1px solid var(--line)!important; }
-    .dt-buttons .dt-button:hover{ background: color-mix(in oklab, var(--card) 80%, var(--line))!important; }
-
-    /* Select2 */
+    table.dataTable thead th{ color:var(--fg); }
+    table.dataTable{ color:var(--fg); }
     .select2-container--default .select2-selection--multiple{ background:var(--card); border-color:var(--line); color:var(--fg); }
-    .select2-dropdown{ background:var(--card); border:1px solid var(--line); color:var(--fg); }
-    .select2-results__option--highlighted{ background: color-mix(in oklab, var(--accent) 30%, var(--card)); color:var(--fg); }
 
-    /* Tooltips & scrollbars */
-    .tooltip{ --bs-tooltip-bg: var(--fg); --bs-tooltip-color: var(--card); }
-    *{ scrollbar-color: var(--line) transparent; }
-    ::-webkit-scrollbar{ height:10px; width:10px; }
-    ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; }
-    ::-webkit-scrollbar-track{ background:transparent; }
-
-    /* Loader overlay */
-    #loader {
-      position: fixed; inset: 0; background: rgba(15,23,42,.45);
-      display:none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px);
+    /* Loading overlay */
+    #loadingOverlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.35); backdrop-filter:blur(2px); z-index:3000;
     }
-    #loader .box { background: var(--card); color: var(--fg); border:1px solid var(--line); padding: 16px 20px; border-radius: 12px; box-shadow: var(--shadow); }
+    #loadingCard{ background:var(--card); border:1px solid var(--line); padding:16px 18px; border-radius:12px; min-width:260px; }
+
+    /* Toasts */
+    #toastHost{ position:fixed; bottom:0; right:0; padding:1rem; z-index:4000; }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:rgba(148,163,184,.2); padding:.1rem .35rem; border-radius:6px;}
   </style>
 </head>
 <body>
-  <div id="loader"><div class="box"><span class="spinner-border spinner-border-sm me-2"></span>Loading data…</div></div>
+  <div id="loadingOverlay" role="status" aria-live="polite">
+    <div id="loadingCard">
+      <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <strong id="loadingText">Loading…</strong>
+      </div>
+      <div class="small text-secondary mt-1" id="loadingSub"></div>
+    </div>
+  </div>
+
+  <!-- Toast host -->
+  <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
 
   <div class="container-fluid p-4">
     <!-- Header -->
@@ -108,8 +84,9 @@
         <div><small id="lastSync" class="text-secondary"></small></div>
       </div>
       <div class="d-flex gap-2">
-        <button id="themeBtn" class="btn btn-outline-secondary" title="Theme: AUTO (click to cycle)"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
-        <button id="refreshBtn" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
+        <button id="themeBtn" class="btn btn-outline-secondary" aria-label="Toggle theme"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
+        <button id="insightsBtn" class="btn btn-outline-dark" aria-label="Open telemetry"><i class="bi bi-activity me-1"></i>Insights</button>
+        <button id="refreshBtn" class="btn btn-outline-primary" aria-label="Reload data"><i class="bi bi-arrow-repeat me-1"></i>Refresh</button>
         <button id="pdfBtn" class="btn btn-success"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
         <button id="packBtn" class="btn btn-outline-success"><i class="bi bi-box-arrow-down me-1"></i>Export Pack</button>
         <button id="packsMonthlyBtn" class="btn btn-outline-success"><i class="bi bi-archive me-1"></i>Monthly Packs</button>
@@ -125,7 +102,7 @@
           <div class="text-secondary">Working Days</div>
           <div class="fs-3 fw-bold" id="kpiDays">0</div>
           <small id="kpiDaysNote" class="text-secondary"></small>
-          <div class="mt-2"><canvas id="sparkDays" width="110" height="50"></canvas></div>
+          <div class="mt-2"><canvas id="sparkDays" width="110" height="50" role="img" aria-label="Sparkline for working days"></canvas></div>
         </div>
       </div>
       <div class="col-md-3">
@@ -133,7 +110,7 @@
           <div class="text-secondary">Total Hours <small id="kpiHoursVar" class="ms-1"></small></div>
           <div class="fs-3 fw-bold" id="kpiHours">0</div>
           <small class="text-secondary">vs Target: <span id="kpiVar"></span></small>
-          <div class="mt-2"><canvas id="sparkHours" width="110" height="50"></canvas></div>
+          <div class="mt-2"><canvas id="sparkHours" width="110" height="50" role="img" aria-label="Sparkline for total hours"></canvas></div>
         </div>
       </div>
       <div class="col-md-3">
@@ -185,11 +162,11 @@
         <div class="col-lg-3">
           <label class="form-label">Display</label>
           <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="policySwitch">
+            <input class="form-check-input" type="checkbox" id="policySwitch" aria-label="Recompute Status by Policy">
             <label class="form-check-label" for="policySwitch">Recompute Status by Policy</label>
           </div>
           <div class="form-check form-switch mt-1">
-            <input class="form-check-input" type="checkbox" id="decimalSwitch">
+            <input class="form-check-input" type="checkbox" id="decimalSwitch" aria-label="Show hours in decimals">
             <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
           </div>
         </div>
@@ -197,30 +174,74 @@
           <button id="applyBtn" class="btn btn-primary">Apply</button>
           <button id="resetBtn" class="btn btn-warning">Reset</button>
         </div>
+
+        <!-- Saved views + quick chips -->
+        <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+          <div class="input-group" style="max-width:420px">
+            <input id="saveViewName" class="form-control" placeholder="Save current filters as…">
+            <button id="saveViewBtn" class="btn btn-outline-secondary"><i class="bi bi-bookmark-plus"></i> Save View</button>
+          </div>
+          <div id="savedViews" class="d-flex flex-wrap gap-2"></div>
+          <div class="ms-auto small text-secondary">
+            Shortcuts: <span class="kbd">/</span> search • <span class="kbd">m</span> month • <span class="kbd">e</span> employee • <span class="kbd">t</span> insights • <span class="kbd">?</span> help
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Table -->
     <div class="card p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <div><small class="text-secondary" id="stickyTotals"></small></div>
+        <div><small class="text-secondary" id="stickyTotals" aria-live="polite"></small></div>
       </div>
       <table id="attendanceTable" class="display nowrap" style="width:100%"></table>
     </div>
 
     <!-- Charts -->
     <div class="row g-3 mb-3">
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours by Employee</h6><canvas id="chartByEmp" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Hours over Time</h6><canvas id="chartOverTime" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Over/Under Time by Employee</h6><canvas id="chartOverUnder" height="220"></canvas></div></div>
-      <div class="col-lg-6"><div class="card p-3"><h6 class="mb-2">Late vs Early Minutes (Employee)</h6><canvas id="chartLateEarly" height="220"></canvas></div></div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Hours by Employee</h6>
+            <button id="csvByEmp" class="btn btn-sm btn-outline-secondary" aria-label="Download Hours by Employee CSV"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartByEmp" height="220" role="img" aria-label="Bar chart showing hours by employee"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Hours over Time</h6>
+            <button id="csvOverTime" class="btn btn-sm btn-outline-secondary" aria-label="Download Hours over Time CSV"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartOverTime" height="220" role="img" aria-label="Line chart showing hours over time"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Over/Under Time by Employee</h6>
+            <button id="csvOverUnder" class="btn btn-sm btn-outline-secondary" aria-label="Download Over/Under CSV"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartOverUnder" height="220" role="img" aria-label="Stacked bar chart with overtime and undertime by employee"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Late vs Early Minutes (Employee)</h6>
+            <button id="csvLateEarly" class="btn btn-sm btn-outline-secondary" aria-label="Download Late vs Early CSV"><i class="bi bi-download"></i> CSV</button>
+          </div>
+          <canvas id="chartLateEarly" height="220" role="img" aria-label="Bar chart of late and early minutes by employee"></canvas>
+        </div>
+      </div>
     </div>
 
     <!-- Heatmap -->
     <div class="card p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="mb-0">Calendar Heatmap</h6>
-        <input type="month" id="heatmapMonth" class="form-control" style="max-width:200px" />
+        <input type="month" id="heatmapMonth" class="form-control" style="max-width:200px" aria-label="Select heatmap month" />
       </div>
       <div id="heatmap"></div>
     </div>
@@ -236,14 +257,14 @@
   </div>
 
   <!-- Employee Drawer -->
-  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer">
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer" aria-labelledby="empDrawerLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="empDrawerLabel">Employee</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
       <div id="empMeta" class="mb-3"></div>
-      <canvas id="empChart" height="160" class="mb-3"></canvas>
+      <canvas id="empChart" height="160" class="mb-3" role="img" aria-label="Employee hours trend"></canvas>
       <div class="table-responsive">
         <table class="table table-sm" id="empTable"></table>
       </div>
@@ -251,11 +272,11 @@
   </div>
 
   <!-- Settings Modal -->
-  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true" aria-labelledby="settingsLabel">
     <div class="modal-dialog modal-lg"><div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Policy & Calendar</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="settingsLabel">Policy & Calendar</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close settings"></button>
       </div>
       <div class="modal-body row g-3">
         <div class="col-md-3"><label class="form-label">Day Start</label><input id="setStart" type="time" class="form-control" value="08:00"></div>
@@ -306,12 +327,29 @@
     </div></div>
   </div>
 
-  <!-- Correction Modal -->
-  <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true">
+  <!-- Telemetry Modal -->
+  <div class="modal fade" id="insightsModal" tabindex="-1" aria-hidden="true" aria-labelledby="insightsLabel">
     <div class="modal-dialog"><div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Fix missing punch</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="insightsLabel">Insights</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close insights"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group small" id="insightsList"></ul>
+      </div>
+      <div class="modal-footer">
+        <button id="insightsCopy" class="btn btn-outline-secondary">Copy</button>
+        <button class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Correction Modal -->
+  <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true" aria-labelledby="corrLabel">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="corrLabel">Fix missing punch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close correction"></button>
       </div>
       <div class="modal-body">
         <div class="row g-2">
@@ -324,7 +362,7 @@
             <span class="badge bg-secondary" id="approvalModeBadge">Queue</span>
           </div>
         </div>
-        <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
+        <div id="corrAlert" class="alert alert-danger d-none mt-3" role="alert"></div>
         <div class="form-text mt-2">Writes back to Google Sheets or queues for approval (based on Settings).</div>
       </div>
       <div class="modal-footer">
@@ -333,18 +371,19 @@
       </div>
     </div></div>
   </div>
+
   <!-- JS libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/fixedheader/3.4.1/js/dataTables.fixedHeader.min.js"></script>
-  <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/fixedheader/3.4.1/js/dataTables.fixedHeader.min.js"></script>
+  <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -353,173 +392,108 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script>
+  <!-- Part 2/2 script comes next -->
+<script>
 /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
-const REFRESH_MS = 300_000; // 5 min
+const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v3.2-darkmode-allfilters-safecharts";
+const BUILD = "v4.4.0-retry-telemetry-a11y";
 
-/** (Optional) Writeback & Queue API **/
-const WRITEBACK = {
-  url: "https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec",
-  token: "3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11"
+/** Writeback (disabled by default for safety; keep empty strings) **/
+const WRITEBACK = { url: "", token: "" };
+
+/** ============== STATE & STORAGE ============== **/
+const LS_KEYS = {
+  policy:"attendance_policy_v2",
+  weekend:"attendance_weekend_v1",
+  holidays:"attendance_holidays_v1",
+  prefs:"attendance_prefs_v3",
+  csv:"attendance_csv_v1",
+  views:"attendance_saved_views_v1"
 };
-async function sendWriteback(kind, payload){
-  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      kind,
-      employee: payload.Employee,
-      date: payload.Date,
-      time: (kind === "IN" ? payload.In : payload.Out)
-    }),
-    cache: "no-store"
-  });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "writeback_failed");
-  return j;
-}
-async function sendQueue(payload, reason=""){
-  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      employee: payload.Employee,
-      date: payload.Date,
-      in: payload.In || "",
-      out: payload.Out || "",
-      reason: reason || "Missing punch fix"
-    }),
-    cache: "no-store"
-  });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "queue_failed");
-  return j;
-}
-
-/** Defaults & persisted settings **/
 const DEFAULT_POLICY = {
   dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30,
   workdayHours:8.75, useCalcTarget:false, recompute:true,
   markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true,
   requireApproval:false, approvalPass:"12345678"
 };
-const DEFAULT_WEEKEND = [6,7];
+const DEFAULT_WEEKEND = [6,7]; // 1..7 (Mon..Sun)
 const DEFAULT_HOLIDAYS = [];
 const DEFAULT_PREFS = {
   hoursFormat:"hms",
-  chartsSkipNonWorkingDays: true,
-  includeWeekendOvertimeInTotals: false
+  chartsSkipNonWorkingDays:true,
+  includeWeekendOvertimeInTotals:false
 };
-const LS_KEYS = {
-  policy:"attendance_policy_v2",
-  weekend:"attendance_weekend_v1",
-  holidays:"attendance_holidays_v1",
-  prefs:"attendance_prefs_v2",
-  csv:"attendance_csv_v1",
-  theme:"theme_mode"
-};
-function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
-function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function loadLS(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v ?? d; }catch{ return d; } }
+function saveLS(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
 let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
-let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-PREFS.chartsSkipNonWorkingDays ??= true;
-PREFS.includeWeekendOvertimeInTotals ??= false;
-saveLS(LS_KEYS.prefs, PREFS);
-
+let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS); saveLS(LS_KEYS.prefs,PREFS);
 let HOLIDAYS_SET = new Set(HOLIDAYS);
 
-/** ============== STATE ============== **/
 let CANON = [];
-let DT = null, chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
 let lastFiltered = [];
-let fetchCtl = null;
+let DT = null;
 const { DateTime } = luxon;
 
-/** ============== TOASTS + LOADER ============== **/
-function toast(msg, variant="info", delay=3500){
-  const id = "t"+Math.random().toString(36).slice(2);
-  const wrap = document.createElement("div");
-  wrap.className = "toast align-items-center text-bg-" + (variant==="error"?"danger":variant) + " border-0";
-  wrap.id = id;
-  wrap.role = "alert";
-  wrap.ariaLive = "assertive";
-  wrap.ariaAtomic = "true";
-  wrap.innerHTML = `<div class="d-flex">
-    <div class="toast-body">${msg}</div>
-    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-  </div>`;
-  let area = document.getElementById("toastArea");
-  if(!area){
-    area = document.createElement("div");
-    area.id = "toastArea";
-    area.className = "toast-container position-fixed bottom-0 end-0 p-3";
-    area.style.zIndex = 2050;
-    document.body.appendChild(area);
-  }
-  area.appendChild(wrap);
-  const t = new bootstrap.Toast(wrap, { delay });
-  t.show();
-}
-function showLoader(show){ document.getElementById("loader").style.display = show ? "flex" : "none"; }
+// Charts CSV caches
+const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] };
 
-/** ============== THEME ============== **/
-const THEME = { mode: localStorage.getItem(LS_KEYS.theme) || "auto", mql: window.matchMedia("(prefers-color-scheme: dark)") };
-function getVar(name){ return getComputedStyle(document.body).getPropertyValue(name).trim(); }
-function resolveMode(){ return (THEME.mode==="light"||THEME.mode==="dark") ? THEME.mode : (THEME.mql.matches ? "dark":"light"); }
-function setThemeIcon(modeResolved){
-  const ico = document.getElementById("themeIcon");
-  if(ico) ico.className = (modeResolved === "dark") ? "bi bi-brightness-high" : "bi bi-moon-stars";
-  const btn = document.getElementById("themeBtn");
-  if(btn) btn.title = `Theme: ${THEME.mode.toUpperCase()} (click to cycle)`;
+/** Abortable fetch + parse **/
+let currentFetchController = null;
+let currentPapa = null, currentPapaReject = null;
+
+/** Telemetry **/
+const TELEMETRY = { last: {
+  source: "", parseMs: 0, rows: 0, fetchedAt: null, attempts: 0, refreshed: false, error: null
+}};
+
+/** ============== UI HELPERS ============== **/
+function toast(msg, variant="info", delay=3000){
+  const host = document.getElementById("toastHost");
+  const div = document.createElement("div");
+  div.className = `toast align-items-center text-bg-${variant} border-0`;
+  div.setAttribute("role","status");
+  div.setAttribute("aria-live","polite");
+  div.setAttribute("aria-atomic","true");
+  div.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${msg}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>`;
+  host.appendChild(div);
+  const prev = document.activeElement;
+  const t = new bootstrap.Toast(div, { delay });
+  t.show();
+  div.addEventListener("hidden.bs.toast", ()=>{
+    div.remove();
+    if(prev && typeof prev.focus==="function") try{ prev.focus(); }catch{}
+  });
 }
-function recolorChartDefaults(){
-  const tick = getVar("--muted") || "#64748b";
-  const grid = getVar("--line")  || "#e2e8f0";
-  const text = getVar("--fg")    || "#0f172a";
-  const card = getVar("--card")  || "#ffffff";
-  if (window.Chart){
-    Chart.defaults.color = tick;
-    Chart.defaults.borderColor = grid;
-    Chart.defaults.backgroundColor = card;
-    Chart.defaults.plugins.legend.labels.color = tick;
-    Chart.defaults.plugins.tooltip.backgroundColor = card;
-    Chart.defaults.plugins.tooltip.titleColor = text;
-    Chart.defaults.plugins.tooltip.bodyColor = text;
-  }
+function showLoading(text="Loading…", sub=""){ 
+  document.getElementById("loadingText").textContent=text;
+  document.getElementById("loadingSub").textContent=sub||"";
+  document.getElementById("loadingOverlay").style.display="flex";
 }
-function applyTheme(nextMode){
-  if (nextMode){ THEME.mode = nextMode; localStorage.setItem(LS_KEYS.theme, THEME.mode); }
-  const resolved = resolveMode();
-  document.body.classList.toggle("dark-mode", resolved === "dark");
-  document.documentElement.style.colorScheme = resolved;
-  setThemeIcon(resolved);
-  recolorChartDefaults();
-  try { if (DT) DT.columns.adjust().draw(false); } catch{}
-  try { renderHeatmap(); } catch{}
-  try { if (typeof renderCharts==="function" && Array.isArray(lastFiltered)) renderCharts(lastFiltered); } catch{}
+function setLoading(sub){ document.getElementById("loadingSub").textContent=sub||""; }
+function hideLoading(){ document.getElementById("loadingOverlay").style.display="none"; }
+
+function applyTheme(mode){
+  document.body.classList.toggle("dark-mode", mode === "dark");
+  localStorage.setItem("theme", mode);
+  document.getElementById("themeIcon").className = (mode === "dark") ? "bi bi-brightness-high" : "bi bi-moon-stars";
+  renderHeatmap();
 }
 function initTheme(){
-  THEME.mql.addEventListener("change", ()=> applyTheme());
-  applyTheme();
-  const btn = document.getElementById("themeBtn");
-  if(btn){
-    btn.addEventListener("click", ()=>{
-      const order=["light","dark","auto"];
-      const next = order[(order.indexOf(THEME.mode)+1)%order.length];
-      applyTheme(next);
-    });
-  }
+  const saved = localStorage.getItem("theme");
+  if (saved) applyTheme(saved);
+  else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
 
-/** ============== HELPERS ============== **/
-function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
+/** ============== DATE & FORMAT HELPERS ============== **/
 function hmsFromHours(hours){
   if(!isFinite(hours)) return "";
   const sign = hours<0 ? "-" : "";
@@ -528,42 +502,39 @@ function hmsFromHours(hours){
   const m = Math.round((total - h) * 60);
   return `${sign}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
-function fmtHours(hours){ return PREFS.hoursFormat === "decimal" ? (isFinite(hours) ? hours.toFixed(2) : "") : hmsFromHours(hours); }
+function fmtHours(h){ return PREFS.hoursFormat==="decimal" ? (isFinite(h)?h.toFixed(2):"") : hmsFromHours(h); }
 function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
 function toISODate(s){
   if(!s) return "";
   const x = String(s).trim(); if(!x) return "";
-  const { DateTime } = luxon;
-  const candidates = [
-    DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"),
-    DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"),
-    DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x)
-  ];
-  for(const t of candidates){ if(t.isValid) return t.toISODate(); }
+  const L = DateTime;
+  const c = [L.fromFormat(x,"d/M/yyyy"), L.fromFormat(x,"d/M/yy"), L.fromFormat(x,"yyyy-MM-dd"), L.fromFormat(x,"d-M-yyyy"), L.fromFormat(x,"M/d/yyyy"), L.fromISO(x)];
+  for(const t of c){ if(t.isValid) return t.toISODate(); }
   const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
   const s = String(val).trim(); if(!s || s === "-") return null;
-  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm"); if(a.isValid) return a;
-  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss"); if(b.isValid) return b;
-  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a"); if(c.isValid) return c;
-  const iso = DateTime.fromISO(s); if(iso.isValid) return iso;
+  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm",{zone:TZ}); if(a.isValid) return a;
+  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss",{zone:TZ}); if(b.isValid) return b;
+  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a",{zone:TZ}); if(c.isValid) return c;
+  const iso = DateTime.fromISO(s,{zone:TZ}); if(iso.isValid) return iso;
   const d = new Date(`${dateISO}T${s.length===5 ? (s+":00") : s}`);
-  return isNaN(d) ? null : DateTime.fromJSDate(d);
+  return isNaN(d) ? null : DateTime.fromJSDate(d).setZone(TZ);
 }
-function isWorkingDay(isoDate){
-  if(!isoDate) return false;
-  if(HOLIDAYS_SET.has(isoDate)) return false;
-  const wd = DateTime.fromISO(isoDate).weekday; // 1=Mon..7=Sun
+function isWorkingDay(iso){
+  if(!iso) return false;
+  if(HOLIDAYS_SET.has(iso)) return false;
+  const wd = DateTime.fromISO(iso,{zone:TZ}).weekday;
   return !WEEKEND.includes(wd);
 }
+function monthKey(iso){ return (iso||"").slice(0,7); }
 
 /** ============== STATUS & METRICS ============== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!dateISO) return "";
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
@@ -586,8 +557,8 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   return "Present";
 }
 function explainStatus(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   const s = computeStatusByPolicy(dateISO, signIn, signOut);
@@ -606,8 +577,8 @@ function explainStatus(dateISO, signIn, signOut){
   return parts.join(" • ");
 }
 function lateEarlyMinutes(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   let lateM=0, earlyM=0;
@@ -631,7 +602,7 @@ function mapRow(r){
   }
   const statusCSV = r["status"] || "";
   return {
-    month: month || (dateISO?DateTime.fromISO(dateISO).toFormat("LLLL"):""),
+    month: month || (dateISO?DateTime.fromISO(dateISO,{zone:TZ}).toFormat("LLLL"):""),
     date: dateISO,
     employee: r["employee name"]||r["employee"]||r["name"]||"",
     signIn: siRaw||"",
@@ -641,34 +612,22 @@ function mapRow(r){
   };
 }
 
-/** ============== AGG + CHART HELPERS ============== **/
+/** ============== AGG HELPERS ============== **/
 function aggregateBy(data, keyFn, valFn){
   const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
 }
-function monthKey(iso){ return (iso||"").slice(0,7); }
-function arrowDelta(curr, prev, suffix=""){ if(prev===0 || prev===undefined || isNaN(prev)) return ""; const diff = curr - prev; const sign = diff>0 ? "▲" : diff<0 ? "▼" : "•"; const pct = prev!==0 ? Math.round((diff/prev)*100) : 0; return `${sign} ${pct}%${suffix}`; }
-
-/** ============== SPARKLINES SAFE CACHE ============== **/
-const _sparkCache = new Map();
-function igniteSpark(id, value){
-  const c = document.getElementById(id); if(!c) return;
-  if (_sparkCache.has(id)){ try{ _sparkCache.get(id).destroy(); }catch{} _sparkCache.delete(id); }
-  const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*((value||1)/10))));
-  const chart = new Chart(c.getContext("2d"), {
-    type:"line",
-    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false }, tooltip:{ intersect:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
-  });
-  _sparkCache.set(id, chart);
+function arrowDelta(curr, prev, suffix=""){
+  if(prev===0 || prev===undefined || isNaN(prev)) return "";
+  const diff = curr - prev; const sign = diff>0 ? "▲" : diff<0 ? "▼" : "•";
+  const pct = prev!==0 ? Math.round((diff/prev)*100) : 0;
+  return `${sign} ${pct}%${suffix}`;
 }
-
-/** ============== KPIs & CHARTS & HEATMAP ============== **/
 function computeCohorts(data){
   const months = Array.from(new Set(data.map(r=>monthKey(r.date)).filter(Boolean))).sort();
   const curr = months.slice(-1)[0]; const prev = months.slice(-2)[0];
   function metrics(rows){
     const wd = new Set(rows.map(d=>d.date).filter(isWorkingDay)).size;
-    const hours = rows.reduce((a,b)=> a+(isFinite(b.totalHours)? b.totalHours:0),0);
+    const hours = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0),0);
     const statusCounts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
     const ontime = (rows.length? Math.round(100*(statusCounts["Present"]||0)/rows.length) : 0);
     return {wd, hours, ontime};
@@ -678,6 +637,26 @@ function computeCohorts(data){
   return {curr, prev, mc:metrics(rowsCurr), mp:metrics(rowsPrev)};
 }
 
+/** ============== CHART HELPERS ============== **/
+function destroyChartOnCanvas(canvasId){
+  const el = document.getElementById(canvasId);
+  if(!el) return;
+  const existing = Chart.getChart(el);
+  if(existing){ try{ existing.destroy(); }catch(_){} }
+}
+function igniteSpark(canvasId, value){
+  const el = document.getElementById(canvasId); if(!el) return;
+  destroyChartOnCanvas(canvasId);
+  const ctx = el.getContext("2d");
+  const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
+  new Chart(ctx, {
+    type:"line",
+    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+  });
+}
+
+/** ============== RENDER: KPIs & CHARTS ============== **/
 function renderKPIs(data){
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
@@ -720,37 +699,29 @@ function renderKPIs(data){
     document.getElementById("kpiOntimeVar").textContent = "";
   }
 
-  document.getElementById("stickyTotals").textContent = `Rows: ${data.length} • Hours: ${fmtHours(hours)} • On-time: ${ontimeRate}%`;
+  document.getElementById("stickyTotals").textContent =
+    `Rows: ${data.length} • Hours: ${fmtHours(hours)} • On-time: ${ontimeRate}%`;
 
   igniteSpark("sparkDays", uniqueWorkingDays || 1);
   igniteSpark("sparkHours", Math.round(hours) || 1);
 }
-
-function destroyCharts(){
-  try{ chartByEmp?.destroy(); }catch{} chartByEmp=null;
-  try{ chartOverTime?.destroy(); }catch{} chartOverTime=null;
-  try{ chartOverUnder?.destroy(); }catch{} chartOverUnder=null;
-  try{ chartLateEarly?.destroy(); }catch{} chartLateEarly=null;
-  try{ empChart?.destroy(); }catch{} empChart=null;
-}
-
 function renderCharts(data){
-  destroyCharts(); // ensure clean canvases
-
-  const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r => isWorkingDay(r.date)) : data;
+  const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=> isWorkingDay(r.date)) : data;
 
   // Hours by employee
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
-  const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
+  const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,50);
   const empData = empLabels.map(k=> byEmp[k]);
+  chartCSV.byEmp = [["Employee","Hours"]].concat(empLabels.map((e,i)=>[e, empData[i]]));
 
   // Hours over time
   const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
+  chartCSV.overTime = [["Date","Hours"]].concat(dateLabels.map((d,i)=>[d, dateData[i]]));
 
-  // Over/under
+  // Over/Under
   const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
@@ -763,57 +734,75 @@ function renderCharts(data){
     over.push(Math.max(0,d));
     under.push(Math.max(0,-d));
   });
+  chartCSV.overUnder = [["Employee","Overtime","Undertime"]].concat(empLabels.map((e,i)=>[e,over[i],under[i]]));
 
-  // Late/Early minutes
+  // Late/Early minutes by employee
   const lateMap={}, earlyMap={};
-  data.forEach(r=>{ const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
-    lateMap[r.employee]=(lateMap[r.employee]||0)+lateM; earlyMap[r.employee]=(earlyMap[r.employee]||0)+earlyM; });
-  const leLabels = Object.keys(lateMap).sort((a,b)=> (lateMap[b]+(earlyMap[b]||0))-(lateMap[a]+(earlyMap[a]||0))).slice(0,20);
+  data.forEach(r=>{
+    const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
+    lateMap[r.employee]=(lateMap[r.employee]||0)+lateM;
+    earlyMap[r.employee]=(earlyMap[r.employee]||0)+earlyM;
+  });
+  const leLabels = Object.keys(lateMap).sort((a,b)=> (lateMap[b]+(earlyMap[b]||0))-(lateMap[a]+(earlyMap[a]||0))).slice(0,50);
   const lateVals = leLabels.map(e=> lateMap[e]||0);
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
+  chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  const tick = getVar("--muted"), grid=getVar("--line");
+  // Destroy existing charts
+  ["chartByEmp","chartOverTime","chartOverUnder","chartLateEarly"].forEach(destroyChartOnCanvas);
 
-  chartByEmp = new Chart(document.getElementById("chartByEmp"), {
+  new Chart(document.getElementById("chartByEmp"), {
     type:"bar",
     data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:tick}, grid:{color:grid}}, y:{ ticks:{ color:tick}, grid:{color:grid}}}}
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverTime = new Chart(document.getElementById("chartOverTime"), {
+  new Chart(document.getElementById("chartOverTime"), {
     type:"line",
     data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:tick}, grid:{color:grid}}, y:{ ticks:{ color:tick}, grid:{color:grid}}}}
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverUnder = new Chart(document.getElementById("chartOverUnder"), {
+  new Chart(document.getElementById("chartOverUnder"), {
     type:"bar",
     data:{ labels:empLabels, datasets:[
       { label:"Overtime", data:over, stack:"x" },
       { label:"Undertime", data:under, stack:"x" }
     ]},
-    options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true, ticks:{ color:tick}, grid:{color:grid} }, y:{ stacked:true, ticks:{ color:tick}, grid:{color:grid} } } }
+    options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
   });
-  chartLateEarly = new Chart(document.getElementById("chartLateEarly"), {
+  new Chart(document.getElementById("chartLateEarly"), {
     type:"bar",
-    data:{ labels:leLabels, datasets:[ { label:"Late minutes", data:lateVals }, { label:"Early minutes", data:earlyVals } ]},
-    options:{ plugins:{ legend:{ position:"bottom" } }, scales:{ x:{ ticks:{ color:tick}, grid:{color:grid} }, y:{ ticks:{ color:tick}, grid:{color:grid} } } }
+    data:{ labels:leLabels, datasets:[
+      { label:"Late minutes", data:lateVals },
+      { label:"Early minutes", data:earlyVals }
+    ]},
+    options:{ plugins:{ legend:{ position:"bottom" } } }
   });
+
+  renderHeatmap();
 }
 
+/** ============== HEATMAP ============== **/
 function renderHeatmap(){
   const wrap=document.getElementById("heatmap"); if(!wrap) return;
   wrap.innerHTML=""; if(!lastFiltered.length) return;
+
+  const monthFilters = $("#monthFilter").val()||[];
+  if(monthFilters.length===1){
+    const any = lastFiltered.find(r=>r.month===monthFilters[0]);
+    if(any) document.getElementById("heatmapMonth").value = monthKey(any.date);
+  }
 
   const p = document.getElementById("heatmapMonth").value;
   let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
   document.getElementById("heatmapMonth").value = monthISO;
 
-  const first = DateTime.fromISO(monthISO+"-01"); const days=first.daysInMonth;
+  const first = DateTime.fromISO(monthISO+"-01",{zone:TZ}); const days=first.daysInMonth;
   const totals = {};
   lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
   const max = Math.max(1, ...Object.values(totals));
-  let startOffset = first.weekday % 7; // Sun=0
 
-  for(let i=0;i<startOffset;i++){ const cell=document.createElement("div"); cell.className="heat-cell"; cell.style.background="transparent"; cell.style.cursor="default"; wrap.appendChild(cell); }
+  let startOffset = first.weekday % 7; // Sunday=0
+  for(let i=0;i<startOffset;i++){ const cell=document.createElement("div"); cell.className="heat-cell"; cell.style.background="transparent"; wrap.appendChild(cell); }
 
   for(let d=1; d<=days; d++){
     const iso = first.set({day:d}).toISODate();
@@ -832,15 +821,53 @@ function renderHeatmap(){
     cell.setAttribute("data-bs-toggle","tooltip");
     cell.setAttribute("data-bs-title", `${iso}: ${fmtHours(val)} total${working?"":" (non-working)"}`);
     cell.innerHTML = `<span class="d">${d}</span>`;
-    cell.addEventListener("click", ()=>{
-      document.getElementById("startDate").value = iso;
-      document.getElementById("endDate").value = iso;
-      applyFilters();
-      document.getElementById("attendanceTable").scrollIntoView({behavior:"smooth", block:"start"});
-    });
     wrap.appendChild(cell);
   }
   document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
+}
+
+/** ============== ANOMALIES ============== **/
+function computeAnomalies(data){
+  const missing=[];
+  for(const r of data){
+    const working = isWorkingDay(r.date);
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const hasOut = !!(r.signOut && String(r.signOut).trim());
+    if(working && ((hasIn && !hasOut) || (!hasIn && hasOut))) missing.push(r);
+  }
+  return { missing };
+}
+function computeAndRenderAnomalies(data){
+  const a = computeAnomalies(data);
+  document.getElementById("anomalyBadge").textContent = a.missing.length;
+  const body = document.getElementById("anomaliesBody"); body.innerHTML="";
+
+  const col=document.createElement("div"); col.className="col-lg-12";
+  const html = [
+    `<div class="glass p-3 h-100">`,
+    `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
+    `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
+    `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
+  ];
+  a.missing.slice(0,300).forEach(r=>{
+    const hasIn  = !!(r.signIn && String(r.signIn).trim());
+    const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
+    html.push(`<tr>
+      <td>${r.date}</td>
+      <td>${r.employee}</td>
+      <td>${why}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-warning fix-missing-btn"
+                data-emp="${r.employee}" data-date="${r.date}"
+                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
+          <i class="bi bi-pencil-square me-1"></i>Fix
+        </button>
+      </td>
+    </tr>`);
+  });
+  if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
+  html.push(`</tbody></table></div></div>`);
+  col.innerHTML = html.join(""); body.appendChild(col);
 }
 
 /** ============== TABLE ============== **/
@@ -849,8 +876,12 @@ function renderTable(data){
   const rows = data.map(r => {
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
-    return ({ Month: r.month, Date: r.date, Employee: r.employee, In: r.signIn, Out: r.signOut, Hours: isFinite(r.totalHours)? r.totalHours : null, Status: statusDisplay, _raw:r });
+    return ({ Month: r.month, Date: r.date, Employee: r.employee,
+      In: r.signIn, Out: r.signOut,
+      Hours: isFinite(r.totalHours)? r.totalHours : null,
+      Status: statusDisplay, _raw:r });
   });
+
   const colDefs = [
     { title:"Month", data:"Month" },
     { title:"Date", data:"Date" },
@@ -870,16 +901,17 @@ function renderTable(data){
       }
     }
   ];
+
   if(!DT){
     DT = $("#attendanceTable").DataTable({
-      data: rows,
-      columns: colDefs,
-      responsive: true,
-      fixedHeader:true,
-      deferRender:true,
-      scroller:true,
+      data: rows, columns: colDefs,
+      responsive:true, fixedHeader:true,
       order: [[1,"desc"],[2,"asc"]],
-      pageLength: 12,
+      pageLength: 25,
+      deferRender: true,
+      scrollY: "60vh",
+      scrollCollapse: true,
+      scroller: true,
       dom:"Bfrtip",
       buttons: [
         {extend:"csv", title:"Attendance_Export"},
@@ -896,14 +928,16 @@ function renderTable(data){
         else if(s.includes("Late")) row.style.backgroundColor = "rgba(245,158,11,.06)";
         else if(s==="Present") row.style.backgroundColor = "rgba(22,163,74,.06)";
       },
-      drawCallback: function(){ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el)); }
+      drawCallback: function(){
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> new bootstrap.Tooltip(el));
+      }
     });
   } else {
     DT.clear().rows.add(rows).draw(false);
   }
 }
 
-/** ============== FILTERS & URL ============== **/
+/** ============== FILTERS ============== **/
 function populateSelect(id, values, placeholder){
   const sel=document.getElementById(id); sel.innerHTML="";
   [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v=>{
@@ -921,6 +955,8 @@ function getCriteria(){
     policy: document.getElementById("policySwitch").checked
   };
 }
+let _applyTimer=null;
+function scheduleApplyFilters(){ clearTimeout(_applyTimer); _applyTimer=setTimeout(applyFilters, 60); }
 function applyFilters(){
   POLICY.recompute = document.getElementById("policySwitch").checked;
   PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
@@ -944,12 +980,6 @@ function applyFilters(){
   renderCharts(filtered);
   updateURLFromFilters();
   computeAndRenderAnomalies(filtered);
-
-  // Keep heatmap month aligned with explicit month filter if present
-  if (c.months.length===1){
-    document.getElementById("heatmapMonth").value = DateTime.fromISO(filtered.find(f=>f.month===c.months[0])?.date || DateTime.now().toISODate()).toISODate().slice(0,7);
-  }
-  renderHeatmap();
 }
 function resetFilters(){
   $("#employeeFilter").val(null).trigger("change");
@@ -977,6 +1007,7 @@ function readFiltersFromURL(){
   const start = p.get("start")||"", end = p.get("end")||"", q = p.get("q")||"";
   const policy = p.get("policy") === "1";
   const fmt = p.get("fmt") === "dec" ? "decimal" : PREFS.hoursFormat;
+
   if(employees.length) $("#employeeFilter").val(employees).trigger("change");
   if(months.length) $("#monthFilter").val(months).trigger("change");
   if(statuses.length) $("#statusFilter").val(statuses).trigger("change");
@@ -986,134 +1017,240 @@ function readFiltersFromURL(){
   document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
-/** ============== ANOMALIES ============== **/
-function computeAnomalies(data){
-  const missing=[];
-  for(const r of data){
-    const working = isWorkingDay(r.date);
-    const hasIn  = !!(r.signIn && String(r.signIn).trim());
-    const hasOut = !!(r.signOut && String(r.signOut).trim());
-    if(working && ((hasIn && !hasOut) || (!hasIn && hasOut))) missing.push(r);
+/** ============== SAVED VIEWS ============== **/
+function renderSavedViews(){
+  const container = document.getElementById("savedViews"); container.innerHTML = "";
+  const views = loadLS(LS_KEYS.views, []);
+  views.forEach((v,idx)=>{
+    const chip = document.createElement("button");
+    chip.className = "btn btn-sm btn-outline-secondary";
+    chip.innerHTML = `<i class="bi bi-bookmark"></i> ${v.name}`;
+    chip.addEventListener("click", ()=>{
+      $("#employeeFilter").val(v.employees).trigger("change");
+      $("#monthFilter").val(v.months).trigger("change");
+      $("#statusFilter").val(v.statuses).trigger("change");
+      startDate.value = v.start||""; endDate.value = v.end||""; quickSearch.value = v.q||"";
+      document.getElementById("policySwitch").checked = !!v.policy;
+      document.getElementById("decimalSwitch").checked = (v.fmt==="decimal");
+      scheduleApplyFilters();
+    });
+    container.appendChild(chip);
+
+    const del = document.createElement("button");
+    del.className="btn btn-sm btn-outline-danger";
+    del.innerHTML = `<i class="bi bi-x"></i>`;
+    del.addEventListener("click", ()=>{
+      const fresh = loadLS(LS_KEYS.views, []).filter((_,i)=> i!==idx);
+      saveLS(LS_KEYS.views, fresh); renderSavedViews();
+    });
+    container.appendChild(del);
+  });
+}
+document.getElementById("saveViewBtn").addEventListener("click", ()=>{
+  const name = (document.getElementById("saveViewName").value||"").trim();
+  if(!name) return;
+  const c = getCriteria();
+  const views = loadLS(LS_KEYS.views, []);
+  views.push({ name, ...c, fmt:PREFS.hoursFormat });
+  saveLS(LS_KEYS.views, views);
+  document.getElementById("saveViewName").value="";
+  renderSavedViews();
+});
+
+/** ============== EXPORT HELPERS ============== **/
+function toCSV(rows){
+  if(!rows.length) return "";
+  const isArray = Array.isArray(rows[0]);
+  const header = isArray ? rows[0] : Object.keys(rows[0]);
+  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+  const lines = [];
+  lines.push(header.map(esc).join(","));
+  if(isArray){ for(let i=1;i<rows.length;i++) lines.push(rows[i].map(esc).join(",")); }
+  else{ for(const r of rows) lines.push(header.map(k=> esc(r[k])).join(",")); }
+  return lines.join("\n");
+}
+function downloadCSV(name, rows){
+  const blob = new Blob([toCSV(rows)], {type:"text/csv;charset=utf-8"});
+  saveAs(blob, `${name}.csv`);
+}
+document.getElementById("csvByEmp").addEventListener("click", ()=> downloadCSV("hours_by_employee", chartCSV.byEmp));
+document.getElementById("csvOverTime").addEventListener("click", ()=> downloadCSV("hours_over_time", chartCSV.overTime));
+document.getElementById("csvOverUnder").addEventListener("click", ()=> downloadCSV("over_under_by_employee", chartCSV.overUnder));
+document.getElementById("csvLateEarly").addEventListener("click", ()=> downloadCSV("late_early_minutes", chartCSV.lateEarly));
+
+/** ============== WRITEBACK (safe no-op if disabled) ============== **/
+async function sendWriteback(kind, payload){
+  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
+  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      kind,
+      employee: payload.Employee,
+      date: payload.Date,
+      time: (kind === "IN" ? payload.In : payload.Out)
+    }),
+    cache: "no-store"
+  });
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || "writeback_failed");
+  return j;
+}
+async function sendQueue(payload, reason=""){
+  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
+  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
+  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      employee: payload.Employee,
+      date: payload.Date,
+      in: payload.In || "",
+      out: payload.Out || "",
+      reason: reason || "Missing punch fix"
+    }),
+    cache: "no-store"
+  });
+  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
+  if (!j.ok) throw new Error(j.error || "queue_failed");
+  return j;
+}
+
+/** ============== CORRECTIONS FLOW ============== **/
+let __corrCtx = null;
+function openCorrectionModal(rowLike){
+  const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
+  const hasOut = !!(rowLike.Out && String(rowLike.Out).trim());
+  const kind = (!hasIn && hasOut) ? "IN" : (hasIn && !hasOut) ? "OUT" : (!hasIn && !hasOut ? "BOTH" : "NONE");
+
+  __corrCtx = { ...rowLike, kind };
+  document.getElementById("corrEmp").value = rowLike.Employee;
+  document.getElementById("corrDate").value = rowLike.Date;
+
+  document.getElementById("grpIn").style.display  = (kind==="IN"||kind==="BOTH") ? "" : "none";
+  document.getElementById("grpOut").style.display = (kind==="OUT"||kind==="BOTH") ? "" : "none";
+  document.getElementById("corrIn").value=""; document.getElementById("corrOut").value="";
+  document.getElementById("corrApprovalPass").value="";
+  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : "Immediate";
+  document.getElementById("corrAlert").classList.add("d-none");
+
+  new bootstrap.Modal("#corrModal").show();
+}
+async function applyLocalCorrection(){
+  const emp  = document.getElementById("corrEmp").value;
+  const date = document.getElementById("corrDate").value;
+  const inVal  = document.getElementById("corrIn").value.trim();
+  const outVal = document.getElementById("corrOut").value.trim();
+  const pass   = document.getElementById("corrApprovalPass").value.trim();
+  const al=document.getElementById("corrAlert");
+
+  if (__corrCtx.kind==="IN"  && !inVal){ al.textContent="Please enter Sign-In time.";  al.classList.remove("d-none"); return; }
+  if (__corrCtx.kind==="OUT" && !outVal){ al.textContent="Please enter Sign-Out time."; al.classList.remove("d-none"); return; }
+  if (__corrCtx.kind==="BOTH" && (!inVal || !outVal)){ al.textContent="Please enter both times."; al.classList.remove("d-none"); return; }
+
+  const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || "", Out: outVal || __corrCtx.Out || "" };
+
+  try {
+    const approvalNeeded = !!POLICY.requireApproval;
+    const passOK = (!!pass && pass === (POLICY.approvalPass||"12345678"));
+    if (approvalNeeded && !passOK) {
+      await sendQueue(rowLike, "Approval required");
+    } else {
+      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
+      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
+    }
+    toast("Correction sent.", "success");
+  } catch (e) {
+    console.warn("Writeback/Queue failed or disabled:", e);
+    al.textContent = "Saved locally (server update not applied). Export now, or try again.";
+    al.classList.remove("d-none");
+    toast("Saved locally. Writeback disabled or failed.", "warning");
   }
-  return { missing };
-}
-function computeAndRenderAnomalies(data){
-  const a = computeAnomalies(data);
-  document.getElementById("anomalyBadge").textContent = a.missing.length;
-  const body = document.getElementById("anomaliesBody"); body.innerHTML="";
-  const col=document.createElement("div"); col.className="col-lg-6";
-  const html = [
-    `<div class="glass p-3 h-100">`,
-    `<div class="d-flex justify-content-between align-items-center mb-2"><strong>Missing punches (working days)</strong><span class="badge text-bg-secondary">${a.missing.length}</span></div>`,
-    `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
-    `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
-  ];
-  a.missing.slice(0,150).forEach(r=>{
-    const hasIn  = !!(r.signIn && String(r.signIn).trim());
-    const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
-    html.push(`<tr>
-      <td>${r.date}</td>
-      <td>${r.employee}</td>
-      <td>${why}</td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-outline-warning fix-missing-btn"
-                data-emp="${r.employee}" data-date="${r.date}"
-                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
-          <i class="bi bi-pencil-square me-1"></i>Fix
-        </button>
-      </td>
-    </tr>`);
-  });
-  if(!a.missing.length) html.push(`<tr><td colspan="4" class="text-secondary">None 🎉</td></tr>`);
-  html.push(`</tbody></table></div></div>`);
-  col.innerHTML = html.join(""); body.appendChild(col);
-}
 
-/** ============== EMPLOYEE DRAWER ============== **/
-function openEmpDrawer(name){
-  const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
-  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
-  const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
-  const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
+  // Local patch
+  let patched=false;
+  for(const r of CANON){
+    if(r.employee===emp && r.date===date){
+      if(__corrCtx.kind==="IN"||__corrCtx.kind==="BOTH")  r.signIn  = inVal || r.signIn;
+      if(__corrCtx.kind==="OUT"||__corrCtx.kind==="BOTH") r.signOut = outVal || r.signOut;
+      const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
+      const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
+      r.totalHours = (si&&so)? so.diff(si,"hours").hours : 0;
+      r._edited = true;
+      patched=true; break;
+    }
+  }
+  if(!patched){ al.textContent="Could not find the row in current data."; al.classList.remove("d-none"); return; }
 
-  // minutes
-  let lateM=0, earlyM=0;
-  rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
-
-  document.getElementById("empDrawerLabel").textContent = name;
-  document.getElementById("empMeta").innerHTML =
-    `<div class="row g-2">
-      <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
-      <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
-      <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
-      <div class="col-6"><div class="chip w-100">Late: <b>${counts["Late"]||0}</b> • Left Early: <b>${(counts["Left Early"]||0)+(counts["Late & Left Early"]||0)}</b></div></div>
-      <div class="col-12"><div class="chip w-100">Late min: <b>${lateM}</b> • Early min: <b>${earlyM}</b></div></div>
-    </div>`;
-
-  const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
-  try{ empChart?.destroy(); }catch{} empChart=null;
-  empChart = new Chart(document.getElementById("empChart"), {
-    type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
-    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:getVar("--muted")}, grid:{color:getVar("--line")}}, y:{ ticks:{ color:getVar("--muted")}, grid:{color:getVar("--line")}}}}
-  });
-
-  const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
-  const body = rows.slice(-60).reverse().map(r=>{
-    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
-    const expl= explainStatus(r.date,r.signIn,r.signOut);
-    return `<tr>
-      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
-      <td class="text-end">${fmtHours(r.totalHours)}</td>
-      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
-    </tr>`;
-  }).join("");
-  document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
-  document.querySelectorAll("#empTable [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
-  new bootstrap.Offcanvas("#empDrawer").show();
+  bootstrap.Modal.getInstance(document.getElementById("corrModal")).hide();
+  applyFilters();
 }
 
 /** ============== EXPORTS ============== **/
 async function downloadFullReport(){
+  showLoading("Preparing PDF…");
   const el=document.body; const canvas=await html2canvas(el,{scale:2});
   const img=canvas.toDataURL("image/png");
   const doc={content:[{image:img,width:520}]};
+  hideLoading();
   pdfMake.createPdf(doc).download("Attendance_Report.pdf");
 }
-function toCSV(rows){
-  if(!rows.length) return "";
-  const cols=Object.keys(rows[0]);
-  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
-  const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
-  return lines.join("\n");
-}
-async function exportPack(){
+function exportPack(){
+  const simpleRows = lastFiltered.map(r=>({
+    Month:r.month, Date:r.date, Employee:r.employee,
+    FirstIn:r.signIn, LastOut:r.signOut,
+    Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
+    Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
+  }));
   const zip = new JSZip();
-  const simpleRows = lastFiltered.map(r=>({ Month:r.month, Date:r.date, Employee:r.employee, FirstIn:r.signIn, LastOut:r.signOut, Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2), Status: computeStatusByPolicy(r.date,r.signIn,r.signOut) }));
-  zip.file("attendance_filtered.csv", toCSV(simpleRows));
+  const csv = (rows)=>{
+    const cols=Object.keys(rows[0]||{});
+    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+    const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
+    return lines.join("\n");
+  };
+  zip.file("attendance_filtered.csv", csv(simpleRows));
+
   const wb = XLSX.utils.book_new();
-  const groups={}; lastFiltered.forEach(r=>{ (groups[r.employee] ||= []).push({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:r.totalHours, Status: computeStatusByPolicy(r.date,r.signIn,r.signOut) }); });
-  Object.entries(groups).forEach(([emp,rows])=>{ const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31)); });
+  const groups={}; lastFiltered.forEach(r=>{ (groups[r.employee] ||= []).push({
+    Date:r.date, In:r.signIn, Out:r.signOut,
+    Hours:r.totalHours, Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
+  }); });
+  Object.entries(groups).forEach(([emp,rows])=>{
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, emp.substring(0,31));
+  });
   const wbout = XLSX.write(wb, { bookType:"xlsx", type:"array" });
   zip.file("attendance_by_employee.xlsx", wbout);
-  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"attendance_export_pack.zip");
+  zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"attendance_export_pack.zip"));
 }
-async function exportMonthlyPacks(){
+function exportMonthlyPacks(){
   const zip = new JSZip();
   const byEmpMonth = {};
-  lastFiltered.forEach(r=>{ const mk = monthKey(r.date); if(!mk) return; const key = `${r.employee}::${mk}`; (byEmpMonth[key] ||= []).push(r); });
+  lastFiltered.forEach(r=>{
+    const mk = monthKey(r.date); if(!mk) return;
+    const key = `${r.employee}::${mk}`;
+    (byEmpMonth[key] ||= []).push(r);
+  });
+  const csv = (rows)=>{
+    const cols=["Date","In","Out","Hours","Status"];
+    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+    const head = cols.join(",");
+    const body = rows.map(r=> [r.date,r.signIn,r.signOut,(isFinite(r.totalHours)?r.totalHours:0).toFixed(2), computeStatusByPolicy(r.date,r.signIn,r.signOut)].map(esc).join(",")).join("\n");
+    return head+"\n"+body;
+  };
   Object.entries(byEmpMonth).forEach(([key,rows])=>{
     const [emp, mk] = key.split("::");
     const folder = zip.folder(`${mk}/${emp}`);
-    const csvRows = rows.map(r=>({ Date:r.date, In:r.signIn, Out:r.signOut, Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2), Status: computeStatusByPolicy(r.date,r.signIn,r.signOut) }));
-    folder.file(`${emp}_${mk}.csv`, toCSV(csvRows));
+    folder.file(`${emp}_${mk}.csv`, csv(rows));
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
     const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
     const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
     const abs  = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Absent").length;
     folder.file(`${emp}_${mk}_summary.txt`, `Employee: ${emp}\nMonth: ${mk}\nHours: ${hours}\nPresent: ${present}\nHalf: ${half}\nAbsent: ${abs}\nGenerated: ${new Date().toISOString()}`);
   });
-  const blob = await zip.generateAsync({type:"blob"}); saveAs(blob,"monthly_packs.zip");
+  zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"monthly_packs.zip"));
 }
 function exportICS(){
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Attendance//ICS//EN"];
@@ -1124,7 +1261,7 @@ function exportICS(){
       const dt = r.date.replace(/-/g,"");
       const uid = `${uidBase}-${i}@attendance`;
       const title = `${s} - ${r.employee}`;
-      lines.push("BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${dt}T000000Z`, `DTSTART;VALUE=DATE:${dt}`, `DTEND;VALUE=DATE:${dt}`, `SUMMARY:${title}`, "END:VEVENT");
+      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTAMP:${dt}T000000Z`,`DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${dt}`,`SUMMARY:${title}`,"END:VEVENT");
     }
   });
   lines.push("END:VCALENDAR");
@@ -1174,94 +1311,216 @@ function saveSettings(){
   POLICY.requireApproval = document.getElementById("setRequireApproval").checked;
   POLICY.approvalPass = document.getElementById("setApprovalPass").value || "12345678";
   saveLS(LS_KEYS.policy, POLICY);
+
   const wk=[]; for(let i=1;i<=7;i++) if(document.getElementById(`wkd_${i}`)?.checked) wk.push(i);
   if(wk.length){ WEEKEND = wk; saveLS(LS_KEYS.weekend, WEEKEND); }
+
   const lines = document.getElementById("holidayText").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
   HOLIDAYS = Array.from(new Set(lines)); HOLIDAYS_SET = new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
+
   applyFilters();
 }
-document.getElementById("settingsReset")?.addEventListener("click", ()=>{ 
-  POLICY={...DEFAULT_POLICY}; saveLS(LS_KEYS.policy,POLICY);
-  WEEKEND=[...DEFAULT_WEEKEND]; saveLS(LS_KEYS.weekend,WEEKEND);
-  HOLIDAYS=[...DEFAULT_HOLIDAYS]; HOLIDAYS_SET=new Set(HOLIDAYS); saveLS(LS_KEYS.holidays, HOLIDAYS);
-  openSettings();
-});
-document.getElementById("holidayAddBtn")?.addEventListener("click", ()=>{
-  const inp=document.getElementById("holidayAdd"); if(!inp) return;
-  const v=inp.value.trim(); if(!v) return;
-  const ta=document.getElementById("holidayText");
-  const lines=ta.value.split(/\n+/).filter(Boolean);
-  if(!lines.includes(v)) lines.push(v); ta.value=lines.join("\n"); inp.value="";
-});
 
-/** ============== IO & LOAD (cache-first + abortable) ============== **/
-function parseCSVtoRows(csv){
-  const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
-  return parsed.data.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+/** ============== DATA LOADING (cache-first, abortable, retry/backoff) ============== **/
+function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
+
+function parseCSVAsync(csvText){
+  if(currentPapa && typeof currentPapa.abort==="function"){
+    try{ currentPapa.abort(); }catch{}
+    if(currentPapaReject){ currentPapaReject(new Error("parse_aborted")); }
+  }
+  currentPapa = null; currentPapaReject = null;
+
+  return new Promise((resolve, reject)=>{
+    currentPapaReject = reject;
+    const t0 = performance.now();
+    currentPapa = Papa.parse(csvText, {
+      header:true, skipEmptyLines:true, worker:true,
+      complete: (res)=> {
+        try{
+          const arr = Array.isArray(res?.data) ? res.data : [];
+          const data = arr.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+          currentPapa = null; currentPapaReject = null;
+          TELEMETRY.last.parseMs = (performance.now()-t0|0);
+          TELEMETRY.last.rows = data.length;
+          resolve(data);
+        }catch(e){ currentPapa=null; currentPapaReject=null; reject(e); }
+      },
+      error: (err)=> { currentPapa=null; currentPapaReject=null; reject(err); }
+    });
+  });
 }
-function candidateFetch(url){
-  if (fetchCtl) { try{ fetchCtl.abort(); }catch{} }
-  fetchCtl = new AbortController();
-  return fetch(url, { cache:"no-store", signal: fetchCtl.signal });
-}
-async function refreshFromNetwork(){
-  const urls = candidateURLs();
-  let lastErr;
-  for (const url of urls){
+function sleep(ms){ return new Promise(r=> setTimeout(r, ms)); }
+async function fetchWithRetry(url, {tries=3, backoffMs=500, signal}={}){
+  let lastErr=null;
+  for(let i=0;i<tries;i++){
     try{
-      const res = await candidateFetch(url);
+      const res = await fetch(url, { cache:"no-store", signal });
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const txt = await res.text();
-      const old = localStorage.getItem(LS_KEYS.csv);
-      if(!old || old !== txt){ localStorage.setItem(LS_KEYS.csv, txt); }
-      return txt;
+      TELEMETRY.last.attempts = i+1;
+      return await res.text();
     }catch(e){
-      lastErr = e;
+      if(e.name==="AbortError") throw e;
+      lastErr=e;
+      if(i<tries-1) await sleep(backoffMs * Math.pow(2,i));
+    }
+  }
+  throw lastErr || new Error("fetch_failed");
+}
+async function fetchCSVNetwork(){
+  if(currentFetchController){ try{ currentFetchController.abort(); }catch{} }
+  currentFetchController = new AbortController();
+  const signal = currentFetchController.signal;
+
+  let lastErr;
+  for(const url of candidateURLs()){
+    try{
+      return await fetchWithRetry(url, {tries:3, backoffMs:600, signal});
+    }catch(e){
+      if(e.name==="AbortError") throw e;
+      lastErr=e; console.warn("Fetch failed", url, e);
     }
   }
   throw lastErr || new Error("All endpoints failed");
 }
-async function loadData(){
-  showLoader(true);
-  try{
-    // Use cached immediately if any
-    const cached = localStorage.getItem(LS_KEYS.csv);
-    if(cached){
-      parseAndRenderFromRows(parseCSVtoRows(cached));
-      // try silent refresh in bg
-      refreshFromNetwork().then(txt=>{
-        parseAndRenderFromRows(parseCSVtoRows(txt));
-        document.getElementById("lastSync").textContent = "Last auto-refresh: " + new Date().toLocaleTimeString();
-      }).catch(e=> console.warn("Network refresh failed:", e));
-    } else {
-      const txt = await refreshFromNetwork();
-      parseAndRenderFromRows(parseCSVtoRows(txt));
-      document.getElementById("lastSync").textContent = "Last sync: " + new Date().toLocaleTimeString();
-    }
-  }catch(e){
-    console.error(e);
-    toast("Failed to load data: "+ e.message, "error", 5000);
-  } finally {
-    showLoader(false);
-  }
-}
-function parseAndRenderFromRows(rows){
+
+async function parseAndRenderFromRows(rows){
   CANON = rows;
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
   populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
   populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
   readFiltersFromURL();
   applyFilters();
+
   const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0];
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
 }
 
+/** Telemetry UI **/
+function renderInsights(){
+  const ul = document.getElementById("insightsList");
+  const L = TELEMETRY.last;
+  const rows = [
+    ["Build", BUILD],
+    ["Rows", String(L.rows||0)],
+    ["Parse (ms)", String(L.parseMs||0)],
+    ["Fetch attempts", String(L.attempts||0)],
+    ["Source", L.source||""],
+    ["Fetched at", L.fetchedAt? new Date(L.fetchedAt).toLocaleString() : ""],
+    ["Refreshed", L.refreshed? "yes":"no"],
+    ["Error", L.error? String(L.error): "—"]
+  ];
+  ul.innerHTML = rows.map(([k,v])=> `<li class="list-group-item d-flex justify-content-between"><span class="text-secondary">${k}</span><span>${v}</span></li>`).join("");
+}
+document.getElementById("insightsBtn").addEventListener("click", ()=>{ renderInsights(); new bootstrap.Modal("#insightsModal").show(); });
+document.getElementById("insightsCopy").addEventListener("click", ()=>{
+  const L = TELEMETRY.last;
+  const text = `Build: ${BUILD}
+Rows: ${L.rows||0}
+Parse (ms): ${L.parseMs||0}
+Fetch attempts: ${L.attempts||0}
+Source: ${L.source||""}
+Fetched at: ${L.fetchedAt? new Date(L.fetchedAt).toISOString() : ""}
+Refreshed: ${L.refreshed? "yes":"no"}
+Error: ${L.error? String(L.error): "none"}\n`;
+  navigator.clipboard.writeText(text).then(()=> toast("Insights copied.", "success"));
+});
+
+async function loadData(){
+  try{
+    showLoading("Loading data…","Cache-first parse");
+    TELEMETRY.last.error = null;
+
+    const cached = localStorage.getItem(LS_KEYS.csv);
+    if(cached){
+      const t0 = performance.now();
+      const rows = await parseCSVAsync(cached);
+      const t1 = performance.now();
+      TELEMETRY.last.parseMs = (t1-t0|0);
+      TELEMETRY.last.rows = rows.length;
+      TELEMETRY.last.source = "cache";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = false;
+
+      await parseAndRenderFromRows(rows);
+      hideLoading();
+      document.getElementById("buildStamp").textContent = `${BUILD} • Parsed from cache in ${(t1-t0|0)} ms`;
+
+      // Background refresh
+      setTimeout(async ()=>{
+        try{
+          setLoading("Refreshing from network…");
+          const fresh = await fetchCSVNetwork();
+          if(fresh && fresh !== cached){
+            localStorage.setItem(LS_KEYS.csv, fresh);
+            const rows2 = await parseCSVAsync(fresh);
+            TELEMETRY.last.source = "network";
+            TELEMETRY.last.fetchedAt = Date.now();
+            TELEMETRY.last.refreshed = true;
+
+            await parseAndRenderFromRows(rows2);
+            document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
+            toast("Data refreshed from network.", "success");
+          } else {
+            TELEMETRY.last.source = "network (unchanged)";
+            TELEMETRY.last.fetchedAt = Date.now();
+            TELEMETRY.last.refreshed = false;
+            toast("No new data on refresh.", "secondary", 2000);
+          }
+        }catch(e){
+          if(e.name!=="AbortError"){
+            TELEMETRY.last.error = e.message || String(e);
+            toast("Network refresh failed.", "warning");
+          }
+          console.warn("Network refresh failed:", e);
+        }
+        hideLoading();
+      }, 0);
+    } else {
+      const t0 = performance.now();
+      const csv = await fetchCSVNetwork();
+      localStorage.setItem(LS_KEYS.csv, csv);
+      const rows = await parseCSVAsync(csv);
+      const t1 = performance.now();
+
+      TELEMETRY.last.source = "network";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = false;
+
+      await parseAndRenderFromRows(rows);
+      hideLoading();
+      document.getElementById("buildStamp").textContent = `${BUILD} • Parsed in ${(t1-t0|0)} ms`;
+      document.getElementById("lastSync").textContent = "Loaded: " + new Date().toLocaleTimeString();
+      toast("Data loaded.", "success");
+    }
+  } catch(e){
+    hideLoading();
+    if(e.name==="AbortError"){ console.warn("Load aborted"); return; }
+    console.error(e);
+    TELEMETRY.last.error = e.message || String(e);
+    toast("Failed to load data: "+e.message, "danger", 6000);
+  }
+}
+
 /** ============== EVENTS ============== **/
-document.getElementById("themeBtn").addEventListener("click", ()=>{}); // handled in initTheme cycle
+document.getElementById("themeBtn").addEventListener("click", ()=>{ const next = document.body.classList.contains("dark-mode") ? "light" : "dark"; applyTheme(next); });
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 document.getElementById("settingsSave").addEventListener("click", saveSettings);
+document.getElementById("settingsReset").addEventListener("click", ()=>{ 
+  POLICY={...DEFAULT_POLICY}; saveLS(LS_KEYS.policy,POLICY);
+  WEEKEND=[...DEFAULT_WEEKEND]; saveLS(LS_KEYS.weekend,WEEKEND);
+  HOLIDAYS=[...DEFAULT_HOLIDAYS]; HOLIDAYS_SET=new Set(HOLIDAYS); saveLS(LS_KEYS.holidays,HOLIDAYS);
+  openSettings();
+});
+document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
+  const inp=document.getElementById("holidayAdd"); if(!inp) return;
+  const v=inp.value.trim(); if(!v) return;
+  const ta=document.getElementById("holidayText");
+  const lines=ta.value.split(/\n+/).filter(Boolean);
+  if(!lines.includes(v)) lines.push(v); ta.value=lines.join("\n"); inp.value="";
+});
 
 document.getElementById("pdfBtn").addEventListener("click", downloadFullReport);
 document.getElementById("packBtn").addEventListener("click", exportPack);
@@ -1270,11 +1529,11 @@ document.getElementById("icsBtn").addEventListener("click", exportICS);
 document.getElementById("applyBtn").addEventListener("click", applyFilters);
 document.getElementById("resetBtn").addEventListener("click", resetFilters);
 document.getElementById("refreshBtn").addEventListener("click", loadData);
-document.getElementById("quickSearch").addEventListener("input", applyFilters);
+document.getElementById("quickSearch").addEventListener("input", scheduleApplyFilters);
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
 
-// links
+// Links & actions
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
 });
@@ -1289,80 +1548,87 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-/** ============== CORRECTION FLOW ============== **/
-let __corrCtx = null;
-function openCorrectionModal(rowLike){
-  const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
-  const hasOut = !!(rowLike.Out && String(rowLike.Out).trim());
-  const kind = (!hasIn && hasOut) ? "IN" : (hasIn && !hasOut) ? "OUT" : (!hasIn && !hasOut ? "BOTH" : "NONE");
-  __corrCtx = { ...rowLike, kind };
-  document.getElementById("corrEmp").value = rowLike.Employee;
-  document.getElementById("corrDate").value = rowLike.Date;
-  document.getElementById("grpIn").style.display  = (kind==="IN"||kind==="BOTH") ? "" : "none";
-  document.getElementById("grpOut").style.display = (kind==="OUT"||kind==="BOTH") ? "" : "none";
-  document.getElementById("corrIn").value=""; document.getElementById("corrOut").value="";
-  document.getElementById("corrApprovalPass").value="";
-  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : "Immediate";
-  document.getElementById("corrAlert").classList.add("d-none");
-  new bootstrap.Modal("#corrModal").show();
-}
-async function applyLocalCorrection(){
-  const emp  = document.getElementById("corrEmp").value;
-  const date = document.getElementById("corrDate").value;
-  const inVal  = document.getElementById("corrIn").value.trim();
-  const outVal = document.getElementById("corrOut").value.trim();
-  const pass   = document.getElementById("corrApprovalPass").value.trim();
-  const al=document.getElementById("corrAlert");
-  if (__corrCtx.kind==="IN"  && !inVal){ al.textContent="Please enter Sign-In time.";  al.classList.remove("d-none"); return; }
-  if (__corrCtx.kind==="OUT" && !outVal){ al.textContent="Please enter Sign-Out time."; al.classList.remove("d-none"); return; }
-  if (__corrCtx.kind==="BOTH" && (!inVal || !outVal)){ al.textContent="Please enter both times."; al.classList.remove("d-none"); return; }
-  const rowLike = { Employee: emp, Date: date, In: inVal || __corrCtx.In || "", Out: outVal || __corrCtx.Out || "" };
-  try {
-    const approvalNeeded = !!POLICY.requireApproval;
-    const passOK = (!!pass && pass === (POLICY.approvalPass||"12345678"));
-    if (approvalNeeded && !passOK) {
-      await sendQueue(rowLike, "Approval required");
-    } else {
-      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
-      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
-    }
-  } catch (e) {
-    console.warn("Writeback/Queue failed:", e);
-    al.textContent = "Saved locally, but server update failed. Export now, or try again.";
-    al.classList.remove("d-none");
+// Keyboard shortcuts
+document.addEventListener("keydown", (e)=>{
+  if(e.key==="/"){ e.preventDefault(); document.getElementById("quickSearch").focus(); }
+  if(e.key==="m"){ 
+    e.preventDefault(); 
+    const sel = $("#monthFilter");
+    if(sel.data("select2")) sel.select2("open"); else document.getElementById("monthFilter").focus();
   }
-  let patched=false;
-  for(const r of CANON){
-    if(r.employee===emp && r.date===date){
-      if(__corrCtx.kind==="IN"||__corrCtx.kind==="BOTH")  r.signIn  = inVal || r.signIn;
-      if(__corrCtx.kind==="OUT"||__corrCtx.kind==="BOTH") r.signOut = outVal || r.signOut;
-      const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
-      const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
-      r.totalHours = (si&&so)? so.diff(si,"hours").hours : 0;
-      r._edited = true;
-      patched=true; break;
-    }
+  if(e.key==="e"){ 
+    e.preventDefault(); 
+    const sel = $("#employeeFilter");
+    if(sel.data("select2")) sel.select2("open"); else document.getElementById("employeeFilter").focus();
   }
-  if(!patched){ al.textContent="Could not find the row in current data."; al.classList.remove("d-none"); return; }
-  bootstrap.Modal.getInstance(document.getElementById("corrModal")).hide();
-  applyFilters();
+  if(e.key==="t"){
+    e.preventDefault();
+    renderInsights(); new bootstrap.Modal("#insightsModal").show();
+  }
+  if(e.key==="?"){ e.preventDefault(); toast("Shortcuts: / search • m month • e employee • t insights", "secondary", 3000); }
+});
+
+// Select2 change -> debounce
+$("#employeeFilter,#monthFilter,#statusFilter").on("change", scheduleApplyFilters);
+
+/** Employee Drawer **/
+function openEmpDrawer(name){
+  const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
+  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
+  const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
+  const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
+
+  let lateM=0, earlyM=0;
+  rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
+
+  document.getElementById("empDrawerLabel").textContent = name;
+  document.getElementById("empMeta").innerHTML =
+    `<div class="row g-2">
+      <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
+      <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
+      <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
+      <div class="col-6"><div class="chip w-100">Late: <b>${counts["Late"]||0}</b> • Left Early: <b>${(counts["Left Early"]||0)+(counts["Late & Left Early"]||0)}</b></div></div>
+      <div class="col-12"><div class="chip w-100">Late min: <b>${lateM}</b> • Early min: <b>${earlyM}</b></div></div>
+    </div>`;
+
+  const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
+  const empCanvas = document.getElementById("empChart");
+  const ex = Chart.getChart(empCanvas); if(ex) ex.destroy();
+  new Chart(empCanvas, {
+    type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
+  });
+
+  const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
+  const body = rows.slice(-60).reverse().map(r=>{
+    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
+    const expl= explainStatus(r.date,r.signIn,r.signOut);
+    return `<tr>
+      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
+      <td class="text-end">${fmtHours(r.totalHours)}</td>
+      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
+  document.querySelectorAll("#empTable [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
+  new bootstrap.Offcanvas("#empDrawer").show();
 }
+
+/** ============== SCHEDULED REFRESH ============== **/
+setTimeout(()=> loadData(), 50);
+setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
 
 /** ============== BOOT ============== **/
-document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 initTheme();
-
-// stagger first load a bit, then periodic refresh
-setTimeout(()=> loadData(), Math.random()*60_000);
-setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
+document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
+renderSavedViews();
 
 /** ============== INLINE TESTS (console) ============== **/
 (function tests(){
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
-  ok("cachebust URL", /cachebust=\d+/.test((candidateURLs()[0]||"")));
-  ok("policy.persisted", !!POLICY && typeof POLICY.graceMin==="number");
-  ok("prefs.persist", PREFS && typeof PREFS === "object");
+  ok("prefs.persist", !!PREFS && typeof PREFS.chartsSkipNonWorkingDays==="boolean");
 })();
-  </script>
+</script>
 </body>
 </html>
