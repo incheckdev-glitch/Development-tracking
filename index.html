@@ -309,7 +309,7 @@
     </div></div>
   </div>
 
-  <!-- JS libs (app logic comes in Chunk 2) -->
+  <!-- JS libs (logic comes in Chunk 2) -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
@@ -335,7 +335,7 @@
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v3.5-full-fastfetch-monthfilter";
+const BUILD = "v3.6-full-fastfetch-monthfilter-fix-spark";
 
 /** Writeback & Queue API **/
 const WRITEBACK = {
@@ -403,8 +403,12 @@ let HOLIDAYS_SET = new Set(HOLIDAYS);
 let CANON = [];
 let DT = null, chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
 let lastFiltered = [];
-let _inflight = null; // {controller, startedAt, timer}
+let _inflight = null;
 const { DateTime } = luxon;
+
+// Sparkline chart refs to avoid "Canvas is already in use" error
+let sparkDaysChart = null;
+let sparkHoursChart = null;
 
 /** ============== LOADING UI ============== **/
 const overlay = document.getElementById("loadingOverlay");
@@ -693,13 +697,23 @@ function renderCharts(data){
 }
 function igniteSpark(id, value){
   const c = document.getElementById(id); if(!c) return;
+  // Destroy existing sparkline chart on this canvas (prevents "Canvas is already in use")
+  const existing = Chart.getChart(c);
+  if (existing) existing.destroy();
+
+  // Keep explicit refs (extra safety)
+  if (id === "sparkDays" && sparkDaysChart) { try { sparkDaysChart.destroy(); } catch{} }
+  if (id === "sparkHours" && sparkHoursChart) { try { sparkHoursChart.destroy(); } catch{} }
+
   const ctx = c.getContext("2d");
   const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-  new Chart(ctx, {
+  const chart = new Chart(ctx, {
     type:"line",
     data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
     options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
   });
+  if (id === "sparkDays") sparkDaysChart = chart;
+  if (id === "sparkHours") sparkHoursChart = chart;
 }
 
 /** ============== TABLE ============== **/
@@ -763,7 +777,6 @@ function renderTable(data){
     DT.clear().rows.add(rows).draw(false);
   }
 
-  // update sticky totals text here (also set in renderKPIs)
   lastFiltered = data;
 }
 
@@ -1152,10 +1165,11 @@ function saveSettings(){
 }
 
 /** ============== FAST FETCH PATH ============== **/
+// HEAD check for quick "unchanged" decision
 async function headCSVMeta(){
   try{
     const res = await fetch(PUBLISHED_CSV, { method:"HEAD", cache:"no-cache" });
-    return { ok: res.ok, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified"), contentLength: res.headers.get("content-length") };
+    return { ok: res.ok, etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") };
   }catch(e){ return { ok:false }; }
 }
 function sameMeta(a,b){
@@ -1188,55 +1202,38 @@ async function fetchCSVNetworkIfChanged(){
     _inflight=null;
   }
 }
+// Worker-based parsing, collect rows in step() — avoids res.data undefined
 function parseCSVWithWorker(csv){
   return new Promise((resolve, reject)=>{
     try{
       setProgress(40, "Parsing data…");
-
-      // We will accumulate rows ourselves in step()
       const out = [];
       const totalLines = Math.max(1, (csv.match(/\n/g)||[]).length);
       let seen = 0;
 
       Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true,
-        worker: true,
+        header:true, skipEmptyLines:true, worker:true,
         step: function(step){
-          // step?.data is one parsed row (object)
           const row = step && step.data;
           if (row && typeof row === "object" && Object.keys(row).length){
             out.push(row);
           }
           seen++;
-          // smooth progress between 40% → ~80%
           if (seen % 1000 === 0){
             const pct = 40 + Math.min(40, (seen/totalLines)*40);
             setProgress(pct, "Parsing data…");
           }
         },
-        complete: function(){
-          setProgress(85, "Mapping rows…");
-          resolve(out);            // <- no res.data here
-        },
-        error: function(err){
-          reject(err);
-        }
+        complete: function(){ setProgress(85, "Mapping rows…"); resolve(out); },
+        error: function(err){ reject(err); }
       });
 
-      // UX hint if parsing is slow
-      setTimeout(()=>{
-        if(overlay.classList.contains("show")){
-          hint.textContent = "taking longer than usual…";
-        }
-      }, 8000);
-
-    } catch(e){
-      reject(e);
-    }
+      setTimeout(()=>{ if(overlay.classList.contains("show")) hint.textContent = "taking longer than usual…"; }, 8000);
+    } catch(e){ reject(e); }
   });
 }
 function parseAndRenderFromRows(rows){
+  rows = Array.isArray(rows) ? rows : [];
   CANON = rows.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
 
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
@@ -1287,7 +1284,7 @@ async function loadData(initial=false){
   }
 }
 
-/** ============== APPLY FILTERS (drives charts, anomalies, heatmap) ============== **/
+/** ============== APPLY FILTERS (drives everything) ============== **/
 function applyFilters(){
   POLICY.recompute = document.getElementById("policySwitch").checked;
   PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
@@ -1389,7 +1386,7 @@ setInterval(()=>{ if(document.visibilityState==="visible") loadData(false); }, R
 initTheme();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
-/** ============== Smoke tests ============== **/
+/** ============== Smoke test ============== **/
 (function tests(){
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
   ok("prefs.persist", !!PREFS);
