@@ -77,10 +77,13 @@
   <div class="container-fluid p-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div>
-        <h2 class="mb-0">📊 Attendance Intelligence</h2>
-        <small id="buildStamp" class="text-secondary"></small>
-        <div><small id="lastSync" class="text-secondary"></small></div>
+      <div class="d-flex align-items-center gap-2">
+        <div>
+          <h2 class="mb-0">📊 Attendance Intelligence</h2>
+          <small id="buildStamp" class="text-secondary"></small>
+          <div><small id="lastSync" class="text-secondary"></small></div>
+        </div>
+        <button id="metricsBtn" class="btn btn-outline-secondary btn-sm ms-1" title="Show load metrics"><i class="bi bi-info-circle"></i></button>
       </div>
       <div class="d-flex gap-2">
         <button id="themeBtn" class="btn btn-outline-secondary"><i id="themeIcon" class="bi bi-moon-stars"></i></button>
@@ -149,6 +152,7 @@
           <label class="form-label">Quick Search</label>
           <input id="quickSearch" class="form-control" placeholder="Name, status, date..." />
         </div>
+
         <div class="col-lg-3">
           <label class="form-label">Start Date</label>
           <input type="date" id="startDate" class="form-control"/>
@@ -157,6 +161,7 @@
           <label class="form-label">End Date</label>
           <input type="date" id="endDate" class="form-control"/>
         </div>
+
         <div class="col-lg-3">
           <label class="form-label">Display</label>
           <div class="form-check form-switch">
@@ -168,7 +173,28 @@
             <label class="form-check-label" for="decimalSwitch">Hours in Decimals</label>
           </div>
         </div>
-        <div class="col-lg-3 text-end">
+
+        <div class="col-lg-3">
+          <label class="form-label">Views</label>
+          <div class="d-flex gap-2">
+            <input id="viewName" class="form-control" placeholder="Name">
+            <button id="saveViewBtn" class="btn btn-outline-secondary">Save</button>
+          </div>
+          <div class="d-flex gap-2 mt-1">
+            <select id="loadView" class="form-select"></select>
+            <button id="deleteViewBtn" class="btn btn-outline-danger">Delete</button>
+          </div>
+        </div>
+
+        <div class="col-lg-6 d-flex align-items-end gap-2">
+          <div class="btn-group" role="group" aria-label="Quick ranges">
+            <button id="thisMonthBtn" class="btn btn-outline-primary btn-sm">This Month</button>
+            <button id="lastMonthBtn" class="btn btn-outline-primary btn-sm">Last Month</button>
+            <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-sm">Clear</button>
+          </div>
+        </div>
+
+        <div class="col-lg-6 d-flex align-items-end justify-content-end gap-2">
           <button id="applyBtn" class="btn btn-primary">Apply</button>
           <button id="resetBtn" class="btn btn-warning">Reset</button>
         </div>
@@ -245,7 +271,6 @@
         <div class="col-md-3 d-flex align-items-end"><div class="form-check"><input id="setHalfDayUseNet" class="form-check-input" type="checkbox" checked><label class="form-check-label">Half-day uses Net</label></div></div>
 
         <div class="col-12"><hr></div>
-
         <div class="col-md-4 d-flex align-items-end">
           <div class="form-check">
             <input id="setRequireApproval" class="form-check-input" type="checkbox">
@@ -259,7 +284,6 @@
         </div>
 
         <div class="col-12"><hr></div>
-
         <div class="col-12">
           <label class="form-label">Weekend (check days off)</label>
           <div id="weekendChecks" class="row g-2"></div>
@@ -277,6 +301,19 @@
       <div class="modal-footer">
         <button id="settingsReset" class="btn btn-outline-danger">Reset Defaults</button>
         <button id="settingsSave" class="btn btn-primary">Save</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Metrics Modal -->
+  <div class="modal fade" id="metricsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Load & Render Metrics</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="metricsPre" class="small text-secondary mb-0"></pre>
       </div>
     </div></div>
   </div>
@@ -300,7 +337,7 @@
           </div>
         </div>
         <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
-        <div class="form-text mt-2">Writes back to Google Sheets or queues for approval (based on Settings).</div>
+        <div class="form-text mt-2">Writes back via server proxy if configured; otherwise saved to local queue.</div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -331,59 +368,29 @@
   <!-- Part 2 (script) next -->
   <!-- Part 2 (script) -->
   <script>
-/** ============== CONFIG ============== **/
+/** ====================== CONFIG ====================== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
+
+// Optional: host month-sliced JSON as `${MONTHLY_JSON_BASE}{YYYY-MM}.json`, plus optional `${MONTHLY_JSON_BASE}index.json`
+const MONTHLY_JSON_BASE = ""; // e.g. "https://your.cdn/attendance/monthly/" — leave blank to use CSV path
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v3.6-full-fastfetch-monthfilter-fix-spark";
+const BUILD = "v4.0-month-filter-all-debounced-fastfetch-sparks-fixed-views";
 
-/** Writeback & Queue API **/
+/** Server writeback is intentionally disabled client-side to avoid leaking secrets. 
+ *  Set WRITEBACK.enabled=true and url=/your/proxy if you have a server proxy. */
 const WRITEBACK = {
-  url: "https://script.google.com/macros/s/AKfycbx0X1tu8FU4tfo65KDpCQyT2UVSWI8FQiNckE1BO71Ynhklrw18orUehMAHpQ3-Y2OPnw/exec",
-  token: "3f529bb0b4ea4de2b3f38b7f65d9a2dc9fcd7e9a2e6c4acfb3fbf05f9e2f8c11"
+  enabled: false, // 🔐 keep false unless you have a secure proxy
+  url: "/api/attendance-write"
 };
-async function sendWriteback(kind, payload){
-  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      kind,
-      employee: payload.Employee,
-      date: payload.Date,
-      time: (kind === "IN" ? payload.In : payload.Out)
-    }),
-    cache: "no-store"
-  });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "writeback_failed");
-  return j;
-}
-async function sendQueue(payload, reason=""){
-  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      employee: payload.Employee,
-      date: payload.Date,
-      in: payload.In || "",
-      out: payload.Out || "",
-      reason: reason || "Missing punch fix"
-    }),
-    cache: "no-store"
-  });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "queue_failed");
-  return j;
-}
+const LOCAL_QUEUE_KEY = "attendance_write_queue_v1";
 
 /** Defaults & persisted settings **/
 const DEFAULT_POLICY = { dayStart:"08:00", dayEnd:"16:45", graceMin:20, earlyGraceMin:0, breakMin:30, workdayHours:8.75, useCalcTarget:false, recompute:true, markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true, requireApproval:false, approvalPass:"12345678" };
 const DEFAULT_WEEKEND = [6,7];
 const DEFAULT_HOLIDAYS = [];
 const DEFAULT_PREFS = { hoursFormat:"hms", chartsSkipNonWorkingDays:true, includeWeekendOvertimeInTotals:false };
-const LS_KEYS = { policy:"attendance_policy_v2", weekend:"attendance_weekend_v1", holidays:"attendance_holidays_v1", prefs:"attendance_prefs_v2", csv:"attendance_csv_v1", csv_meta:"attendance_csv_meta_v1" };
+const LS_KEYS = { policy:"attendance_policy_v2", weekend:"attendance_weekend_v1", holidays:"attendance_holidays_v1", prefs:"attendance_prefs_v2", csv:"attendance_csv_v1", csv_meta:"attendance_csv_meta_v1", months:"attendance_months_index_v1", views:"attendance_views_v1" };
 
 function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
@@ -393,24 +400,25 @@ let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
 let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
 let META     = loadLS(LS_KEYS.csv_meta, { etag:null, lastModified:null });
+let MONTH_INDEX = loadLS(LS_KEYS.months, []); // e.g., ["2025-08","2025-09"]
+let VIEWS = loadLS(LS_KEYS.views, {});
 PREFS.chartsSkipNonWorkingDays ??= true;
 PREFS.includeWeekendOvertimeInTotals ??= false;
 saveLS(LS_KEYS.prefs, PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
 
-/** ============== STATE ============== **/
+const { DateTime } = luxon;
+
+/** ====================== STATE ====================== **/
 let CANON = [];
 let DT = null, chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
 let lastFiltered = [];
+let sparkDaysChart = null, sparkHoursChart = null;
 let _inflight = null;
-const { DateTime } = luxon;
+const metrics = {};
 
-// Sparkline chart refs to avoid "Canvas is already in use" error
-let sparkDaysChart = null;
-let sparkHoursChart = null;
-
-/** ============== LOADING UI ============== **/
+/** ====================== UTIL & UI ====================== **/
 const overlay = document.getElementById("loadingOverlay");
 const bar = document.getElementById("loadingBar");
 const note = document.getElementById("loadingNote");
@@ -422,13 +430,11 @@ function showLoading(title="Loading…", subtitle=""){
   note.textContent = "Checking for updates…";
   overlay.classList.add("show");
 }
-function setProgress(p, msg){
-  bar.style.width = `${Math.max(10, Math.min(100, p))}%`;
-  if(msg) note.textContent = msg;
-}
+function setProgress(p, msg){ bar.style.width = `${Math.max(10, Math.min(100, p))}%`; if(msg) note.textContent = msg; }
 function hideLoading(){ overlay.classList.remove("show"); }
+function debounce(fn, wait=180){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); }; }
+function disposeTooltips(root=document){ root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=> bootstrap.Tooltip.getInstance(el)?.dispose()); }
 
-/** ============== THEME ============== **/
 function applyTheme(mode){
   document.body.classList.toggle("dark-mode", mode === "dark");
   localStorage.setItem("theme", mode);
@@ -440,14 +446,13 @@ function initTheme(){
   applyTheme(saved ? saved : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 }
 
-/** ============== HELPERS ============== **/
 function hmsFromHours(h){ if(!isFinite(h)) return ""; const s=h<0?"-":""; const t=Math.abs(h); const H=Math.floor(t); const M=Math.round((t-H)*60); return `${s}${String(H).padStart(2,"0")}:${String(M).padStart(2,"0")}`; }
 function fmtHours(h){ return PREFS.hoursFormat==="decimal" ? (isFinite(h)? h.toFixed(2) : "") : hmsFromHours(h); }
 function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
 function toISODate(s){
   if(!s) return ""; const x=String(s).trim(); if(!x) return "";
-  const candidates=[ DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"), DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"), DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x) ];
-  for(const t of candidates){ if(t.isValid) return t.toISODate(); }
+  const c=[ DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"), DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"), DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x) ];
+  for(const t of c){ if(t.isValid) return t.toISODate(); }
   const d=new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
@@ -467,8 +472,11 @@ function isWorkingDay(isoDate){
   return !WEEKEND.includes(wd);
 }
 function monthKey(iso){ return (iso||"").slice(0,7); }
+function monthNameFromISO(iso){ return DateTime.fromISO(iso+"-01").setLocale("en").toFormat("LLLL"); }
+function currentMonthISO(){ return DateTime.now().setZone(TZ).toISODate().slice(0,7); }
+function lastMonthISO(){ return DateTime.now().setZone(TZ).minus({months:1}).toISODate().slice(0,7); }
 
-/** ============== STATUS & METRICS ============== **/
+/** ====================== STATUS & METRICS ====================== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!dateISO) return "";
   const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
@@ -481,6 +489,7 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!inDT || !outDT) return "";
 
   let hours = outDT.diff(inDT,"hours").hours;
+  if(hours < 0) hours = 0; // DST/clock sanity
   if(POLICY.halfDayUseNet) hours -= (POLICY.breakMin/60);
   if(POLICY.halfDayThresholdHours>0 && hours>0 && hours < POLICY.halfDayThresholdHours) return "Half Day";
 
@@ -506,6 +515,7 @@ function explainStatus(dateISO, signIn, signOut){
   let lateMin  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
   let earlyMin = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
   let hours = outDT.diff(inDT,"hours").hours;
+  if(hours < 0) hours = 0; // DST guard
   let net   = POLICY.halfDayUseNet ? (hours - POLICY.breakMin/60) : hours;
   const parts = [];
   parts.push(`Worked ${fmtHours(hours)} (net ${fmtHours(net)})`);
@@ -514,18 +524,8 @@ function explainStatus(dateISO, signIn, signOut){
   if(net < POLICY.halfDayThresholdHours) parts.push(`Under half-day threshold ${POLICY.halfDayThresholdHours}h`);
   return parts.join(" • ");
 }
-function lateEarlyMinutes(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`);
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`);
-  const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
-  const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
-  let lateM=0, earlyM=0;
-  if(inDT)  lateM  = Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
-  if(outDT) earlyM = Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
-  return {lateM, earlyM};
-}
 
-/** ============== MAP ROW ============== **/
+/** ====================== MAP ROW ====================== **/
 function mapRow(r){
   const month = r["month name"] || r["month"] || "";
   const dateISO = toISODate(r["date"] || r["day"] || "");
@@ -536,7 +536,7 @@ function mapRow(r){
   if(!isFinite(total)){
     const si=dateISO?parsePunchWithDate(dateISO,siRaw):null;
     const so=dateISO?parsePunchWithDate(dateISO,soRaw):null;
-    total = (si&&so)? so.diff(si,"hours").hours : 0;
+    total = (si&&so)? Math.max(0, so.diff(si,"hours").hours) : 0;
   }
   const statusCSV = r["status"] || "";
   return {
@@ -550,7 +550,7 @@ function mapRow(r){
   };
 }
 
-/** ============== Aggregation helpers ============== **/
+/** ====================== AGG HELPERS ====================== **/
 function aggregateBy(data, keyFn, valFn){
   const m=new Map(); for(const r of data){ const k=keyFn(r); const v=valFn(r)||0; m.set(k,(m.get(k)||0)+v);} return Object.fromEntries(m);
 }
@@ -575,8 +575,9 @@ function arrowDelta(curr, prev, suffix=""){
   return `${sign} ${pct}%${suffix}`;
 }
 
-/** ============== KPIs & CHARTS ============== **/
+/** ====================== KPIs & CHARTS ====================== **/
 function renderKPIs(data){
+  const t0 = performance.now();
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
   const counts = data.reduce((acc,r)=>{
@@ -585,8 +586,12 @@ function renderKPIs(data){
     acc.half += (s==="Half Day");
     if(s==="Present") acc.present++;
     acc.total++;
-    const m = lateEarlyMinutes(r.date,r.signIn,r.signOut);
-    acc.lateM += m.lateM; acc.earlyM += m.earlyM;
+    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
+    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
+    const inDT  = r.signIn? parsePunchWithDate(r.date, r.signIn) : null;
+    const outDT = r.signOut? parsePunchWithDate(r.date, r.signOut) : null;
+    if(inDT)  acc.lateM  += Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
+    if(outDT) acc.earlyM += Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
     return acc;
   }, {abs:0,half:0, present:0, total:0, lateM:0, earlyM:0});
   const ontimeRate = counts.total? Math.round(100*counts.present/counts.total) : 0;
@@ -623,22 +628,22 @@ function renderKPIs(data){
 
   igniteSpark("sparkDays", uniqueWorkingDays || 1);
   igniteSpark("sparkHours", Math.round(hours) || 1);
+
+  metrics.kpi_ms = Math.round(performance.now() - t0);
 }
 function renderCharts(data){
+  const t0 = performance.now();
   const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=>isWorkingDay(r.date)) : data;
 
-  // Hours by employee (optionally exclude weekend OT)
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
   const empData = empLabels.map(k=> byEmp[k]||0);
 
-  // Hours over time (dates)
   const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
 
-  // Over/Under vs expected
   const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
@@ -652,10 +657,14 @@ function renderCharts(data){
     under.push(Math.max(0,-d));
   });
 
-  // Late/Early minutes by employee
   const lateMap={}, earlyMap={};
   data.forEach(r=>{
-    const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
+    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
+    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
+    const inDT  = r.signIn? parsePunchWithDate(r.date,r.signIn) : null;
+    const outDT = r.signOut? parsePunchWithDate(r.date,r.signOut) : null;
+    const lateM = inDT ? Math.max(0, Math.round(inDT.diff(start,"minutes").minutes)) : 0;
+    const earlyM= outDT? Math.max(0, Math.round(end.diff(outDT,"minutes").minutes)) : 0;
     lateMap[r.employee]=(lateMap[r.employee]||0)+lateM;
     earlyMap[r.employee]=(earlyMap[r.employee]||0)+earlyM;
   });
@@ -694,14 +703,13 @@ function renderCharts(data){
     ]},
     options:{ plugins:{ legend:{ position:"bottom" } } }
   });
+
+  metrics.charts_ms = Math.round(performance.now() - t0);
 }
 function igniteSpark(id, value){
   const c = document.getElementById(id); if(!c) return;
-  // Destroy existing sparkline chart on this canvas (prevents "Canvas is already in use")
   const existing = Chart.getChart(c);
   if (existing) existing.destroy();
-
-  // Keep explicit refs (extra safety)
   if (id === "sparkDays" && sparkDaysChart) { try { sparkDaysChart.destroy(); } catch{} }
   if (id === "sparkHours" && sparkHoursChart) { try { sparkHoursChart.destroy(); } catch{} }
 
@@ -716,8 +724,9 @@ function igniteSpark(id, value){
   if (id === "sparkHours") sparkHoursChart = chart;
 }
 
-/** ============== TABLE ============== **/
+/** ====================== TABLE ====================== **/
 function renderTable(data){
+  disposeTooltips(document);
   const rows = data.map(r => {
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
@@ -780,7 +789,7 @@ function renderTable(data){
   lastFiltered = data;
 }
 
-/** ============== FILTERS & URL ============== **/
+/** ====================== FILTERS & URL ====================== **/
 function populateSelect(id, values, placeholder){
   const sel=document.getElementById(id); sel.innerHTML="";
   [...new Set(values.filter(Boolean))].sort((a,b)=> a.localeCompare(b)).forEach(v=>{
@@ -825,7 +834,7 @@ function readFiltersFromURL(){
   document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
-/** ============== HEATMAP ============== **/
+/** ====================== HEATMAP ====================== **/
 function renderHeatmap(){
   const wrap=document.getElementById("heatmap"); if(!wrap) return;
   wrap.innerHTML=""; if(!lastFiltered.length) return;
@@ -870,7 +879,7 @@ function renderHeatmap(){
   document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
 }
 
-/** ============== ANOMALIES (missing punches on working days) ============== **/
+/** ====================== ANOMALIES ====================== **/
 function computeAnomalies(data){
   const missing=[];
   for(const r of data){
@@ -893,7 +902,7 @@ function computeAndRenderAnomalies(data){
     `<div class="table-responsive"><table class="table table-sm table-striped mb-0">`,
     `<thead><tr><th>Date</th><th>Employee</th><th>Why</th><th>Action</th></tr></thead><tbody>`
   ];
-  a.missing.slice(0,150).forEach(r=>{
+  a.missing.slice(0,200).forEach(r=>{
     const hasIn  = !!(r.signIn && String(r.signIn).trim());
     const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
     html.push(`<tr>
@@ -914,7 +923,7 @@ function computeAndRenderAnomalies(data){
   col.innerHTML = html.join(""); body.appendChild(col);
 }
 
-/** ============== EMPLOYEE DRAWER ============== **/
+/** ====================== EMPLOYEE DRAWER ====================== **/
 function openEmpDrawer(name){
   const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
   const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
@@ -922,7 +931,14 @@ function openEmpDrawer(name){
   const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
 
   let lateM=0, earlyM=0;
-  rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
+  rows.forEach(r=>{ 
+    const start = DateTime.fromISO(`${r.date}T${POLICY.dayStart}:00`);
+    const end   = DateTime.fromISO(`${r.date}T${POLICY.dayEnd}:00`);
+    const inDT  = r.signIn? parsePunchWithDate(r.date,r.signIn) : null;
+    const outDT = r.signOut? parsePunchWithDate(r.date,r.signOut) : null;
+    if(inDT)  lateM  += Math.max(0, Math.round(inDT.diff(start,"minutes").minutes));
+    if(outDT) earlyM += Math.max(0, Math.round(end.diff(outDT,"minutes").minutes));
+  });
 
   document.getElementById("empDrawerLabel").textContent = name;
   document.getElementById("empMeta").innerHTML =
@@ -957,7 +973,27 @@ function openEmpDrawer(name){
   new bootstrap.Offcanvas("#empDrawer").show();
 }
 
-/** ============== CORRECTION FLOW ============== **/
+/** ====================== CORRECTIONS ====================== **/
+function queueLocalCorrection(entry){
+  const q = loadLS(LOCAL_QUEUE_KEY, []);
+  q.push({ ...entry, queuedAt: new Date().toISOString() });
+  saveLS(LOCAL_QUEUE_KEY, q);
+}
+async function sendWrite(kind, payload){
+  if(!WRITEBACK.enabled){
+    queueLocalCorrection({ kind, ...payload, info:"local-queue-no-proxy" });
+    return { ok:true, local:true };
+  }
+  const res = await fetch(WRITEBACK.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, payload })
+  });
+  const j = await res.json();
+  if(!j.ok) throw new Error(j.error || "write_failed");
+  return j;
+}
+
 let __corrCtx = null;
 function openCorrectionModal(rowLike){
   const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
@@ -972,7 +1008,7 @@ function openCorrectionModal(rowLike){
   document.getElementById("grpOut").style.display = (kind==="OUT"||kind==="BOTH") ? "" : "none";
   document.getElementById("corrIn").value=""; document.getElementById("corrOut").value="";
   document.getElementById("corrApprovalPass").value="";
-  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : "Immediate";
+  document.getElementById("approvalModeBadge").textContent = POLICY.requireApproval ? "Queue" : (WRITEBACK.enabled ? "Immediate" : "Local Queue");
   document.getElementById("corrAlert").classList.add("d-none");
 
   new bootstrap.Modal("#corrModal").show();
@@ -995,14 +1031,14 @@ async function applyLocalCorrection(){
     const approvalNeeded = !!POLICY.requireApproval;
     const passOK = (!!pass && pass === (POLICY.approvalPass||"12345678"));
     if (approvalNeeded && !passOK) {
-      await sendQueue(rowLike, "Approval required");
+      queueLocalCorrection({ action:"queue", ...rowLike, info:"approval-required" });
     } else {
-      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
-      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
+      if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWrite("IN",  { ...rowLike, In: inVal });
+      if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWrite("OUT", { ...rowLike, Out: outVal });
     }
   } catch (e) {
     console.warn("Writeback/Queue failed:", e);
-    al.textContent = "Saved locally, but server update failed. Export now, or try again.";
+    al.textContent = "Saved locally; server update failed or disabled.";
     al.classList.remove("d-none");
   }
 
@@ -1013,7 +1049,7 @@ async function applyLocalCorrection(){
       if(__corrCtx.kind==="OUT"||__corrCtx.kind==="BOTH") r.signOut = outVal || r.signOut;
       const si=r.date?parsePunchWithDate(r.date,r.signIn):null;
       const so=r.date?parsePunchWithDate(r.date,r.signOut):null;
-      r.totalHours = (si&&so)? so.diff(si,"hours").hours : 0;
+      r.totalHours = (si&&so)? Math.max(0, so.diff(si,"hours").hours) : 0;
       r._edited = true;
       patched=true; break;
     }
@@ -1024,7 +1060,7 @@ async function applyLocalCorrection(){
   applyFilters();
 }
 
-/** ============== EXPORTS ============== **/
+/** ====================== EXPORTS ====================== **/
 async function downloadFullReport(){
   const el=document.body; const canvas=await html2canvas(el,{scale:2});
   const img=canvas.toDataURL("image/png");
@@ -1112,7 +1148,7 @@ function exportICS(){
   saveAs(blob, "absences_halfdays.ics");
 }
 
-/** ============== SETTINGS UI ============== **/
+/** ====================== SETTINGS ====================== **/
 function renderWeekendChecks(){
   const cont=document.getElementById("weekendChecks"); if(!cont) return; cont.innerHTML="";
   const names=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -1164,8 +1200,7 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ============== FAST FETCH PATH ============== **/
-// HEAD check for quick "unchanged" decision
+/** ====================== FAST FETCH & PARSE ====================== **/
 async function headCSVMeta(){
   try{
     const res = await fetch(PUBLISHED_CSV, { method:"HEAD", cache:"no-cache" });
@@ -1198,11 +1233,8 @@ async function fetchCSVNetworkIfChanged(){
     const txt = await res.text();
     clearTimeout(_inflight.timer);
     return { changed:true, meta: { etag: res.headers.get("etag"), lastModified: res.headers.get("last-modified") }, text: txt };
-  } finally {
-    _inflight=null;
-  }
+  } finally { _inflight=null; }
 }
-// Worker-based parsing, collect rows in step() — avoids res.data undefined
 function parseCSVWithWorker(csv){
   return new Promise((resolve, reject)=>{
     try{
@@ -1233,6 +1265,7 @@ function parseCSVWithWorker(csv){
   });
 }
 function parseAndRenderFromRows(rows){
+  const t0 = performance.now();
   rows = Array.isArray(rows) ? rows : [];
   CANON = rows.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
 
@@ -1247,9 +1280,17 @@ function parseAndRenderFromRows(rows){
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
+
+  metrics.map_ms = Math.round(performance.now() - t0);
+
+  // Build month index for faster later loads
+  const monthSet = [...new Set(CANON.map(r=> monthKey(r.date)).filter(Boolean))].sort();
+  MONTH_INDEX = monthSet;
+  saveLS(LS_KEYS.months, MONTH_INDEX);
 }
 async function loadData(initial=false){
   showLoading(initial ? "Loading data…" : "Refreshing…", "");
+  const t0 = performance.now();
   const cached = localStorage.getItem(LS_KEYS.csv);
   if(cached && initial){
     setProgress(30, "Using cached data…");
@@ -1257,6 +1298,18 @@ async function loadData(initial=false){
     parseAndRenderFromRows(rows);
   }
   try{
+    if (MONTHLY_JSON_BASE) {
+      // optional monthly JSON mode (index file is optional)
+      try{
+        const idxRes = await fetch(`${MONTHLY_JSON_BASE}index.json`, { cache:"no-cache" });
+        if(idxRes.ok){
+          const idx = await idxRes.json();
+          MONTH_INDEX = Array.isArray(idx) ? idx : MONTH_INDEX;
+          saveLS(LS_KEYS.months, MONTH_INDEX);
+        }
+      }catch{}
+    }
+
     const net = await fetchCSVNetworkIfChanged();
     if(net.changed && net.text){
       setProgress(70, "Updating cache…");
@@ -1279,13 +1332,14 @@ async function loadData(initial=false){
       alert("Failed to fetch data. Please check your connection and try again.");
     }
   } finally {
+    metrics.load_ms = Math.round(performance.now() - t0);
     setProgress(100, "Done");
     hideLoading();
   }
 }
 
-/** ============== APPLY FILTERS (drives everything) ============== **/
-function applyFilters(){
+/** ====================== APPLY FILTERS (debounced) ====================== **/
+function realApplyFilters(){
   POLICY.recompute = document.getElementById("policySwitch").checked;
   PREFS.hoursFormat = document.getElementById("decimalSwitch").checked ? "decimal" : "hms";
   saveLS(LS_KEYS.prefs, PREFS);
@@ -1295,7 +1349,7 @@ function applyFilters(){
     const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
     if(c.employees.length && !c.employees.includes(r.employee)) return false;
-    if(c.months.length && !c.months.includes(r.month)) return false; // month filter enforced globally
+    if(c.months.length && !c.months.includes(r.month)) return false;
     if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
     if(c.start && r.date < c.start) return false;
     if(c.end && r.date > c.end) return false;
@@ -1321,9 +1375,119 @@ function applyFilters(){
   computeAndRenderAnomalies(filtered);
   updateURLFromFilters();
 }
+const applyFilters = debounce(realApplyFilters, 150);
 
-/** ============== EVENTS ============== **/
+/** ====================== VIEWS & QUICK CHIPS ====================== **/
+function refreshViewsUI(){
+  const sel = document.getElementById("loadView");
+  sel.innerHTML = "";
+  Object.keys(VIEWS).sort().forEach(name=>{
+    const o = document.createElement("option");
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+}
+function saveCurrentView(){
+  const name = (document.getElementById("viewName").value||"").trim();
+  if(!name) return;
+  VIEWS[name] = {
+    criteria: getCriteria(),
+    prefs: { hoursFormat: PREFS.hoursFormat },
+    policy: document.getElementById("policySwitch").checked
+  };
+  saveLS(LS_KEYS.views, VIEWS);
+  refreshViewsUI();
+}
+function loadViewByName(name){
+  const v = VIEWS[name]; if(!v) return;
+  $("#employeeFilter").val(v.criteria.employees||[]).trigger("change");
+  $("#monthFilter").val(v.criteria.months||[]).trigger("change");
+  $("#statusFilter").val(v.criteria.statuses||[]).trigger("change");
+  startDate.value = v.criteria.start||"";
+  endDate.value = v.criteria.end||"";
+  quickSearch.value = v.criteria.q||"";
+  document.getElementById("policySwitch").checked = !!v.policy;
+  PREFS.hoursFormat = v.prefs?.hoursFormat || PREFS.hoursFormat;
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
+  applyFilters();
+}
+function deleteSelectedView(){
+  const name = document.getElementById("loadView").value;
+  if(!name) return;
+  delete VIEWS[name];
+  saveLS(LS_KEYS.views, VIEWS);
+  refreshViewsUI();
+}
+function setThisMonth(){
+  const iso = currentMonthISO();
+  const monthName = monthNameFromISO(iso);
+  $("#monthFilter").val([monthName]).trigger("change");
+  startDate.value = `${iso}-01`;
+  endDate.value = "";
+  applyFilters();
+}
+function setLastMonth(){
+  const iso = lastMonthISO();
+  const monthName = monthNameFromISO(iso);
+  $("#monthFilter").val([monthName]).trigger("change");
+  startDate.value = `${iso}-01`;
+  endDate.value = "";
+  applyFilters();
+}
+function clearFilters(){
+  $("#employeeFilter").val(null).trigger("change");
+  $("#monthFilter").val(null).trigger("change");
+  $("#statusFilter").val(null).trigger("change");
+  startDate.value=""; endDate.value=""; quickSearch.value="";
+  document.getElementById("policySwitch").checked = POLICY.recompute;
+  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
+  applyFilters();
+}
+
+/** ====================== SERVICE WORKER (inline) ====================== **/
+(function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  try{
+    const swCode = `
+      const CACHE = 'ai-cache-v1';
+      const CORE = [
+        location.origin + location.pathname,
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+        'https://code.jquery.com/jquery-3.7.1.min.js',
+        'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+        'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'
+      ];
+      self.addEventListener('install', e=>{
+        e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));
+      });
+      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch', e=>{
+        const url = new URL(e.request.url);
+        if(url.origin===location.origin || url.hostname.endsWith('jsdelivr.net') || url.hostname==='code.jquery.com'){
+          e.respondWith(
+            caches.match(e.request).then(r=> r || fetch(e.request).then(resp=>{
+              const clone = resp.clone();
+              caches.open(CACHE).then(c=>c.put(e.request, clone));
+              return resp;
+            }).catch(()=>r))
+          );
+        }
+      });
+    `;
+    const blob = new Blob([swCode], {type:'text/javascript'});
+    const url = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(url);
+  }catch(e){ console.warn("SW registration failed", e); }
+})();
+
+/** ====================== EVENTS ====================== **/
 document.getElementById("themeBtn").addEventListener("click", ()=>applyTheme(document.body.classList.contains("dark-mode")?"light":"dark"));
+document.getElementById("metricsBtn").addEventListener("click", ()=>{
+  const pre = document.getElementById("metricsPre");
+  pre.textContent = JSON.stringify(metrics, null, 2);
+  new bootstrap.Modal("#metricsModal").show();
+});
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 document.getElementById("settingsSave").addEventListener("click", saveSettings);
 document.getElementById("settingsReset").addEventListener("click", ()=>{ 
@@ -1345,16 +1509,10 @@ document.getElementById("packBtn").addEventListener("click", exportPack);
 document.getElementById("packsMonthlyBtn").addEventListener("click", exportMonthlyPacks);
 document.getElementById("icsBtn").addEventListener("click", exportICS);
 document.getElementById("applyBtn").addEventListener("click", applyFilters);
-document.getElementById("resetBtn").addEventListener("click", ()=>{ 
-  $("#employeeFilter").val(null).trigger("change");
-  $("#monthFilter").val(null).trigger("change");
-  $("#statusFilter").val(null).trigger("change");
-  startDate.value=""; endDate.value=""; quickSearch.value="";
-  document.getElementById("policySwitch").checked = POLICY.recompute;
-  document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
-  applyFilters();
-});
+document.getElementById("resetBtn").addEventListener("click", clearFilters);
+document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
 document.getElementById("refreshBtn").addEventListener("click", ()=>loadData(false));
+
 $('#employeeFilter, #monthFilter, #statusFilter').on('change', applyFilters);
 document.getElementById("startDate").addEventListener("change", applyFilters);
 document.getElementById("endDate").addEventListener("change", applyFilters);
@@ -1363,6 +1521,12 @@ document.getElementById("decimalSwitch").addEventListener("change", applyFilters
 document.getElementById("quickSearch").addEventListener("input", applyFilters);
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
+
+document.getElementById("saveViewBtn").addEventListener("click", saveCurrentView);
+document.getElementById("deleteViewBtn").addEventListener("click", deleteSelectedView);
+document.getElementById("loadView").addEventListener("change", (e)=> loadViewByName(e.target.value));
+document.getElementById("thisMonthBtn").addEventListener("click", setThisMonth);
+document.getElementById("lastMonthBtn").addEventListener("click", setLastMonth);
 
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
@@ -1384,9 +1548,10 @@ setInterval(()=>{ if(document.visibilityState==="visible") loadData(false); }, R
 
 // boot
 initTheme();
+refreshViewsUI();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
-/** ============== Smoke test ============== **/
+/** ====================== Smoke test ====================== **/
 (function tests(){
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
   ok("prefs.persist", !!PREFS);
