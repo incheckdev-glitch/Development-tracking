@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.1/css/fixedHeader.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"/>
 
   <style>
@@ -54,6 +55,9 @@
       background:rgba(0,0,0,.35); backdrop-filter:blur(2px); z-index:3000;
     }
     #loadingCard{ background:var(--card); border:1px solid var(--line); padding:16px 18px; border-radius:12px; min-width:260px; }
+
+    /* Toasts */
+    #toastHost{ position:fixed; bottom:0; right:0; padding:1rem; z-index:4000; }
     .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:rgba(148,163,184,.2); padding:.1rem .35rem; border-radius:6px;}
   </style>
 </head>
@@ -67,6 +71,9 @@
       <div class="small text-secondary mt-1" id="loadingSub"></div>
     </div>
   </div>
+
+  <!-- Toast host -->
+  <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
 
   <div class="container-fluid p-4">
     <!-- Header -->
@@ -94,7 +101,7 @@
           <div class="text-secondary">Working Days</div>
           <div class="fs-3 fw-bold" id="kpiDays">0</div>
           <small id="kpiDaysNote" class="text-secondary"></small>
-          <div class="mt-2"><canvas id="sparkDays" width="110" height="50"></canvas></div>
+          <div class="mt-2"><canvas id="sparkDays" width="110" height="50" role="img" aria-label="Sparkline for working days"></canvas></div>
         </div>
       </div>
       <div class="col-md-3">
@@ -102,7 +109,7 @@
           <div class="text-secondary">Total Hours <small id="kpiHoursVar" class="ms-1"></small></div>
           <div class="fs-3 fw-bold" id="kpiHours">0</div>
           <small class="text-secondary">vs Target: <span id="kpiVar"></span></small>
-          <div class="mt-2"><canvas id="sparkHours" width="110" height="50"></canvas></div>
+          <div class="mt-2"><canvas id="sparkHours" width="110" height="50" role="img" aria-label="Sparkline for total hours"></canvas></div>
         </div>
       </div>
       <div class="col-md-3">
@@ -184,7 +191,7 @@
     <!-- Table -->
     <div class="card p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <div><small class="text-secondary" id="stickyTotals"></small></div>
+        <div><small class="text-secondary" id="stickyTotals" aria-live="polite"></small></div>
       </div>
       <table id="attendanceTable" class="display nowrap" style="width:100%"></table>
     </div>
@@ -195,36 +202,36 @@
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center">
             <h6 class="mb-0">Hours by Employee</h6>
-            <button id="csvByEmp" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+            <button id="csvByEmp" class="btn btn-sm btn-outline-secondary" aria-label="Download Hours by Employee CSV"><i class="bi bi-download"></i> CSV</button>
           </div>
-          <canvas id="chartByEmp" height="220"></canvas>
+          <canvas id="chartByEmp" height="220" role="img" aria-label="Bar chart showing hours by employee"></canvas>
         </div>
       </div>
       <div class="col-lg-6">
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center">
             <h6 class="mb-0">Hours over Time</h6>
-            <button id="csvOverTime" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+            <button id="csvOverTime" class="btn btn-sm btn-outline-secondary" aria-label="Download Hours over Time CSV"><i class="bi bi-download"></i> CSV</button>
           </div>
-          <canvas id="chartOverTime" height="220"></canvas>
+          <canvas id="chartOverTime" height="220" role="img" aria-label="Line chart showing hours over time"></canvas>
         </div>
       </div>
       <div class="col-lg-6">
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center">
             <h6 class="mb-0">Over/Under Time by Employee</h6>
-            <button id="csvOverUnder" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+            <button id="csvOverUnder" class="btn btn-sm btn-outline-secondary" aria-label="Download Over/Under CSV"><i class="bi bi-download"></i> CSV</button>
           </div>
-          <canvas id="chartOverUnder" height="220"></canvas>
+          <canvas id="chartOverUnder" height="220" role="img" aria-label="Stacked bar chart with overtime and undertime by employee"></canvas>
         </div>
       </div>
       <div class="col-lg-6">
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center">
             <h6 class="mb-0">Late vs Early Minutes (Employee)</h6>
-            <button id="csvLateEarly" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</button>
+            <button id="csvLateEarly" class="btn btn-sm btn-outline-secondary" aria-label="Download Late vs Early CSV"><i class="bi bi-download"></i> CSV</button>
           </div>
-          <canvas id="chartLateEarly" height="220"></canvas>
+          <canvas id="chartLateEarly" height="220" role="img" aria-label="Bar chart of late and early minutes by employee"></canvas>
         </div>
       </div>
     </div>
@@ -233,7 +240,7 @@
     <div class="card p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="mb-0">Calendar Heatmap</h6>
-        <input type="month" id="heatmapMonth" class="form-control" style="max-width:200px" />
+        <input type="month" id="heatmapMonth" class="form-control" style="max-width:200px" aria-label="Select heatmap month" />
       </div>
       <div id="heatmap"></div>
     </div>
@@ -249,14 +256,14 @@
   </div>
 
   <!-- Employee Drawer -->
-  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer">
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="empDrawer" aria-labelledby="empDrawerLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="empDrawerLabel">Employee</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
       <div id="empMeta" class="mb-3"></div>
-      <canvas id="empChart" height="160" class="mb-3"></canvas>
+      <canvas id="empChart" height="160" class="mb-3" role="img" aria-label="Employee hours trend"></canvas>
       <div class="table-responsive">
         <table class="table table-sm" id="empTable"></table>
       </div>
@@ -264,11 +271,11 @@
   </div>
 
   <!-- Settings Modal -->
-  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true" aria-labelledby="settingsLabel">
     <div class="modal-dialog modal-lg"><div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Policy & Calendar</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="settingsLabel">Policy & Calendar</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close settings"></button>
       </div>
       <div class="modal-body row g-3">
         <div class="col-md-3"><label class="form-label">Day Start</label><input id="setStart" type="time" class="form-control" value="08:00"></div>
@@ -320,11 +327,11 @@
   </div>
 
   <!-- Correction Modal -->
-  <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="corrModal" tabindex="-1" aria-hidden="true" aria-labelledby="corrLabel">
     <div class="modal-dialog"><div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Fix missing punch</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="corrLabel">Fix missing punch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close correction"></button>
       </div>
       <div class="modal-body">
         <div class="row g-2">
@@ -337,7 +344,7 @@
             <span class="badge bg-secondary" id="approvalModeBadge">Queue</span>
           </div>
         </div>
-        <div id="corrAlert" class="alert alert-danger d-none mt-3"></div>
+        <div id="corrAlert" class="alert alert-danger d-none mt-3" role="alert"></div>
         <div class="form-text mt-2">Writes back to Google Sheets or queues for approval (based on Settings).</div>
       </div>
       <div class="modal-footer">
@@ -358,6 +365,7 @@
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
   <script src="https://cdn.datatables.net/fixedheader/3.4.1/js/dataTables.fixedHeader.min.js"></script>
+  <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -372,12 +380,9 @@
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4.0.1-debug-solid";
+const BUILD = "v4.2.0-toasts-abort-scroller";
 
-// Optional: per-month JSON (drop-in). Leave empty to use CSV only.
-const MONTHLY_JSON_BASE = "";
-
-// Writeback proxy (disabled by default; safe no-op if left blank)
+/** Writeback (disabled by default for safety; keep empty strings) **/
 const WRITEBACK = { url: "", token: "" };
 
 /** ============== STATE & STORAGE ============== **/
@@ -396,7 +401,7 @@ const DEFAULT_POLICY = {
   markAbsentOnWorkingDay:true, halfDayThresholdHours:4, halfDayUseNet:true,
   requireApproval:false, approvalPass:"12345678"
 };
-const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
+const DEFAULT_WEEKEND = [6,7]; // 1..7 (Mon..Sun)
 const DEFAULT_HOLIDAYS = [];
 const DEFAULT_PREFS = {
   hoursFormat:"hms",
@@ -404,31 +409,53 @@ const DEFAULT_PREFS = {
   includeWeekendOvertimeInTotals:false
 };
 
-function loadLS(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)||"null"); return v ?? def; } catch{ return def; } }
-function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function loadLS(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v ?? d; }catch{ return d; } }
+function saveLS(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
 
 let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
-let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-saveLS(LS_KEYS.prefs, PREFS);
+let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS); saveLS(LS_KEYS.prefs,PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
 let CANON = [];
 let lastFiltered = [];
 let DT = null;
-let chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
-const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] };
 const { DateTime } = luxon;
 
+// Charts (handled via Chart.getChart(canvas))
+const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] };
+
+/** Abortable fetch + parse **/
+let currentFetchController = null;
+let currentPapa = null;
+let currentPapaReject = null;
+
 /** ============== UI HELPERS ============== **/
-function showLoading(text="Loading…", sub=""){ 
-  const o=document.getElementById("loadingOverlay"); 
-  document.getElementById("loadingText").textContent = text; 
-  document.getElementById("loadingSub").textContent = sub || ""; 
-  o.style.display="flex";
+function toast(msg, variant="info", delay=3000){
+  const host = document.getElementById("toastHost");
+  const div = document.createElement("div");
+  div.className = `toast align-items-center text-bg-${variant} border-0`;
+  div.setAttribute("role","status");
+  div.setAttribute("aria-live","polite");
+  div.setAttribute("aria-atomic","true");
+  div.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${msg}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>`;
+  host.appendChild(div);
+  const t = new bootstrap.Toast(div, { delay });
+  t.show();
+  div.addEventListener("hidden.bs.toast", ()=> div.remove());
 }
-function setLoading(sub){ document.getElementById("loadingSub").textContent = sub || ""; }
+
+function showLoading(text="Loading…", sub=""){ 
+  document.getElementById("loadingText").textContent=text;
+  document.getElementById("loadingSub").textContent=sub||"";
+  document.getElementById("loadingOverlay").style.display="flex";
+}
+function setLoading(sub){ document.getElementById("loadingSub").textContent=sub||""; }
 function hideLoading(){ document.getElementById("loadingOverlay").style.display="none"; }
 
 function applyTheme(mode){
@@ -452,33 +479,30 @@ function hmsFromHours(hours){
   const m = Math.round((total - h) * 60);
   return `${sign}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
-function fmtHours(hours){ return PREFS.hoursFormat === "decimal" ? (isFinite(hours) ? hours.toFixed(2) : "") : hmsFromHours(hours); }
+function fmtHours(h){ return PREFS.hoursFormat==="decimal" ? (isFinite(h)?h.toFixed(2):"") : hmsFromHours(h); }
 function normalizeHeaders(r){ const o={}; for(const k in r){ if(!k) continue; o[k.trim().toLowerCase()] = r[k]; } return o; }
 function toISODate(s){
   if(!s) return "";
   const x = String(s).trim(); if(!x) return "";
-  const candidates = [
-    DateTime.fromFormat(x,"d/M/yyyy"), DateTime.fromFormat(x,"d/M/yy"),
-    DateTime.fromFormat(x,"yyyy-MM-dd"), DateTime.fromFormat(x,"d-M-yyyy"),
-    DateTime.fromFormat(x,"M/d/yyyy"), DateTime.fromISO(x)
-  ];
-  for(const t of candidates){ if(t.isValid) return t.toISODate(); }
+  const L = DateTime;
+  const c = [L.fromFormat(x,"d/M/yyyy"), L.fromFormat(x,"d/M/yy"), L.fromFormat(x,"yyyy-MM-dd"), L.fromFormat(x,"d-M-yyyy"), L.fromFormat(x,"M/d/yyyy"), L.fromISO(x)];
+  for(const t of c){ if(t.isValid) return t.toISODate(); }
   const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
   const s = String(val).trim(); if(!s || s === "-") return null;
-  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm", { zone: TZ }); if(a.isValid) return a;
-  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss", { zone: TZ }); if(b.isValid) return b;
-  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a", { zone: TZ }); if(c.isValid) return c;
-  const iso = DateTime.fromISO(s, { zone: TZ }); if(iso.isValid) return iso;
+  const a = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm",{zone:TZ}); if(a.isValid) return a;
+  const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss",{zone:TZ}); if(b.isValid) return b;
+  const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a",{zone:TZ}); if(c.isValid) return c;
+  const iso = DateTime.fromISO(s,{zone:TZ}); if(iso.isValid) return iso;
   const d = new Date(`${dateISO}T${s.length===5 ? (s+":00") : s}`);
   return isNaN(d) ? null : DateTime.fromJSDate(d).setZone(TZ);
 }
-function isWorkingDay(isoDate){
-  if(!isoDate) return false;
-  if(HOLIDAYS_SET.has(isoDate)) return false;
-  const wd = DateTime.fromISO(isoDate, { zone: TZ }).weekday; // 1..7
+function isWorkingDay(iso){
+  if(!iso) return false;
+  if(HOLIDAYS_SET.has(iso)) return false;
+  const wd = DateTime.fromISO(iso,{zone:TZ}).weekday;
   return !WEEKEND.includes(wd);
 }
 function monthKey(iso){ return (iso||"").slice(0,7); }
@@ -486,8 +510,8 @@ function monthKey(iso){ return (iso||"").slice(0,7); }
 /** ============== STATUS & METRICS ============== **/
 function computeStatusByPolicy(dateISO, signIn, signOut){
   if(!dateISO) return "";
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
 
@@ -510,8 +534,8 @@ function computeStatusByPolicy(dateISO, signIn, signOut){
   return "Present";
 }
 function explainStatus(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   const s = computeStatusByPolicy(dateISO, signIn, signOut);
@@ -530,8 +554,8 @@ function explainStatus(dateISO, signIn, signOut){
   return parts.join(" • ");
 }
 function lateEarlyMinutes(dateISO, signIn, signOut){
-  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`, { zone: TZ });
-  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,   { zone: TZ });
+  const start = DateTime.fromISO(`${dateISO}T${POLICY.dayStart}:00`,{zone:TZ});
+  const end   = DateTime.fromISO(`${dateISO}T${POLICY.dayEnd}:00`,{zone:TZ});
   const inDT  = signIn? parsePunchWithDate(dateISO, signIn) : null;
   const outDT = signOut? parsePunchWithDate(dateISO, signOut) : null;
   let lateM=0, earlyM=0;
@@ -555,7 +579,7 @@ function mapRow(r){
   }
   const statusCSV = r["status"] || "";
   return {
-    month: month || (dateISO?DateTime.fromISO(dateISO, { zone: TZ }).toFormat("LLLL"):""),
+    month: month || (dateISO?DateTime.fromISO(dateISO,{zone:TZ}).toFormat("LLLL"):""),
     date: dateISO,
     employee: r["employee name"]||r["employee"]||r["name"]||"",
     signIn: siRaw||"",
@@ -660,10 +684,9 @@ function renderKPIs(data){
 }
 
 function renderCharts(data){
-  // Optionally exclude non-working days from charts
   const chartRows = PREFS.chartsSkipNonWorkingDays ? data.filter(r=> isWorkingDay(r.date)) : data;
 
-  // Hours by employee (optionally exclude weekend OT)
+  // Hours by employee
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,50);
@@ -703,29 +726,34 @@ function renderCharts(data){
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
   chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  // Destroy charts attached to canvases (strong method)
+  // Destroy any existing charts bound to canvases
   ["chartByEmp","chartOverTime","chartOverUnder","chartLateEarly"].forEach(destroyChartOnCanvas);
 
   new Chart(document.getElementById("chartByEmp"), {
-    type:"bar", data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
+    type:"bar",
+    data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
   new Chart(document.getElementById("chartOverTime"), {
-    type:"line", data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
+    type:"line",
+    data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
   new Chart(document.getElementById("chartOverUnder"), {
-    type:"bar", data:{ labels:empLabels, datasets:[
+    type:"bar",
+    data:{ labels:empLabels, datasets:[
       { label:"Overtime", data:over, stack:"x" },
       { label:"Undertime", data:under, stack:"x" }
     ]},
     options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
   });
   new Chart(document.getElementById("chartLateEarly"), {
-    type:"bar", data:{ labels:leLabels, datasets:[
+    type:"bar",
+    data:{ labels:leLabels, datasets:[
       { label:"Late minutes", data:lateVals },
       { label:"Early minutes", data:earlyVals }
-    ]}, options:{ plugins:{ legend:{ position:"bottom" } } }
+    ]},
+    options:{ plugins:{ legend:{ position:"bottom" } } }
   });
 
   renderHeatmap();
@@ -746,7 +774,7 @@ function renderHeatmap(){
   let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
   document.getElementById("heatmapMonth").value = monthISO;
 
-  const first = DateTime.fromISO(monthISO+"-01", { zone: TZ }); const days=first.daysInMonth;
+  const first = DateTime.fromISO(monthISO+"-01",{zone:TZ}); const days=first.daysInMonth;
   const totals = {};
   lastFiltered.forEach(r => { if(r.date.startsWith(monthISO)) totals[r.date] = (totals[r.date]||0) + (isFinite(r.totalHours)? r.totalHours:0); });
   const max = Math.max(1, ...Object.values(totals));
@@ -854,8 +882,14 @@ function renderTable(data){
 
   if(!DT){
     DT = $("#attendanceTable").DataTable({
-      data: rows, columns: colDefs, responsive: true, fixedHeader:true,
-      order: [[1,"desc"],[2,"asc"]], pageLength: 12,
+      data: rows, columns: colDefs,
+      responsive:true, fixedHeader:true,
+      order: [[1,"desc"],[2,"asc"]],
+      pageLength: 25,
+      deferRender: true,
+      scrollY: "60vh",
+      scrollCollapse: true,
+      scroller: true,
       dom:"Bfrtip",
       buttons: [
         {extend:"csv", title:"Attendance_Export"},
@@ -877,7 +911,7 @@ function renderTable(data){
       }
     });
   } else {
-    DT.clear().rows.add(rows).draw();
+    DT.clear().rows.add(rows).draw(false);
   }
 }
 
@@ -1004,17 +1038,13 @@ document.getElementById("saveViewBtn").addEventListener("click", ()=>{
 /** ============== EXPORT HELPERS ============== **/
 function toCSV(rows){
   if(!rows.length) return "";
-  // rows expected as array-of-arrays with header at index 0 (we also support array-of-objects gracefully)
   const isArray = Array.isArray(rows[0]);
   const header = isArray ? rows[0] : Object.keys(rows[0]);
   const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
   const lines = [];
   lines.push(header.map(esc).join(","));
-  if(isArray){
-    for(let i=1;i<rows.length;i++) lines.push(rows[i].map(esc).join(","));
-  }else{
-    for(const r of rows) lines.push(header.map(k=> esc(r[k])).join(","));
-  }
+  if(isArray){ for(let i=1;i<rows.length;i++) lines.push(rows[i].map(esc).join(",")); }
+  else{ for(const r of rows) lines.push(header.map(k=> esc(r[k])).join(",")); }
   return lines.join("\n");
 }
 function downloadCSV(name, rows){
@@ -1108,10 +1138,12 @@ async function applyLocalCorrection(){
       if (__corrCtx.kind === "IN" || __corrCtx.kind === "BOTH")  await sendWriteback("IN",  { ...rowLike, In: inVal });
       if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
     }
+    toast("Correction sent.", "success");
   } catch (e) {
     console.warn("Writeback/Queue failed or disabled:", e);
     al.textContent = "Saved locally (server update not applied). Export now, or try again.";
     al.classList.remove("d-none");
+    toast("Saved locally. Writeback disabled or failed.", "warning");
   }
 
   // Local patch
@@ -1267,37 +1299,54 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ============== DATA LOADING (fast & robust) ============== **/
-function candidateURLs(){
-  const t = Date.now();
-  return [`${PUBLISHED_CSV}&cachebust=${t}`];
-}
+/** ============== DATA LOADING (cache-first, abortable) ============== **/
+function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
+
 function parseCSVAsync(csvText){
+  // Abort previous parse if running
+  if(currentPapa && typeof currentPapa.abort==="function"){
+    try{ currentPapa.abort(); }catch{}
+    if(currentPapaReject){ currentPapaReject(new Error("parse_aborted")); }
+  }
+  currentPapa = null; currentPapaReject = null;
+
   return new Promise((resolve, reject)=>{
-    Papa.parse(csvText, {
+    currentPapaReject = reject;
+    currentPapa = Papa.parse(csvText, {
       header:true, skipEmptyLines:true, worker:true,
       complete: (res)=> {
         try{
           const arr = Array.isArray(res?.data) ? res.data : [];
           const data = arr.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+          currentPapa = null; currentPapaReject = null;
           resolve(data);
-        }catch(e){ reject(e); }
+        }catch(e){ currentPapa=null; currentPapaReject=null; reject(e); }
       },
-      error: reject
+      error: (err)=> { currentPapa=null; currentPapaReject=null; reject(err); }
     });
   });
 }
+
 async function fetchCSVNetwork(){
+  // Abort previous fetch if running
+  if(currentFetchController){ try{ currentFetchController.abort(); }catch{} }
+  currentFetchController = new AbortController();
+  const signal = currentFetchController.signal;
+
   let lastErr;
   for(const url of candidateURLs()){
     try{
-      const res = await fetch(url, { cache:"no-store" });
+      const res = await fetch(url, { cache:"no-store", signal });
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.text();
-    }catch(e){ lastErr=e; console.warn("Fetch failed", url, e); }
+    }catch(e){
+      if(e.name==="AbortError") throw e;
+      lastErr=e; console.warn("Fetch failed", url, e);
+    }
   }
   throw lastErr || new Error("All endpoints failed");
 }
+
 async function parseAndRenderFromRows(rows){
   CANON = rows;
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
@@ -1311,9 +1360,10 @@ async function parseAndRenderFromRows(rows){
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
 }
+
 async function loadData(){
   try{
-    showLoading("Loading data…", "Cache-first. Parsing…");
+    showLoading("Loading data…","Cache-first parse");
     const cached = localStorage.getItem(LS_KEYS.csv);
     if(cached){
       const t0 = performance.now();
@@ -1322,7 +1372,7 @@ async function loadData(){
       await parseAndRenderFromRows(rows);
       hideLoading();
       document.getElementById("buildStamp").textContent = `${BUILD} • Parsed from cache in ${(t1-t0|0)} ms`;
-      // Revalidate in background
+      // Background refresh
       setTimeout(async ()=>{
         try{
           setLoading("Refreshing from network…");
@@ -1332,8 +1382,14 @@ async function loadData(){
             const rows2 = await parseCSVAsync(fresh);
             await parseAndRenderFromRows(rows2);
             document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
+            toast("Data refreshed from network.", "success");
+          } else {
+            toast("No new data on refresh.", "secondary", 2000);
           }
-        }catch(e){ console.warn("Network refresh failed:", e); }
+        }catch(e){
+          if(e.name!=="AbortError") toast("Network refresh failed.", "warning");
+          console.warn("Network refresh failed:", e);
+        }
         hideLoading();
       }, 0);
     } else {
@@ -1346,8 +1402,14 @@ async function loadData(){
       hideLoading();
       document.getElementById("buildStamp").textContent = `${BUILD} • Parsed in ${(t1-t0|0)} ms`;
       document.getElementById("lastSync").textContent = "Loaded: " + new Date().toLocaleTimeString();
+      toast("Data loaded.", "success");
     }
-  } catch(e){ console.error(e); hideLoading(); alert("Failed to load data: "+e.message); }
+  } catch(e){
+    hideLoading();
+    if(e.name==="AbortError"){ console.warn("Load aborted"); return; }
+    console.error(e);
+    toast("Failed to load data: "+e.message, "danger", 6000);
+  }
 }
 
 /** ============== EVENTS ============== **/
@@ -1379,7 +1441,7 @@ document.getElementById("quickSearch").addEventListener("input", scheduleApplyFi
 document.getElementById("heatmapMonth").addEventListener("change", renderHeatmap);
 document.getElementById("corrSave").addEventListener("click", applyLocalCorrection);
 
-// links
+// Links
 document.addEventListener("click", (e)=>{
   const a=e.target.closest(".emp-link"); if(a){ e.preventDefault(); openEmpDrawer(a.dataset.emp); }
 });
@@ -1394,7 +1456,7 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-// Keyboard shortcuts with Select2 guards (prevents errors if not initialized yet)
+// Keyboard shortcuts with Select2 guards
 document.addEventListener("keydown", (e)=>{
   if(e.key==="/"){ e.preventDefault(); document.getElementById("quickSearch").focus(); }
   if(e.key==="m"){ 
@@ -1407,17 +1469,63 @@ document.addEventListener("keydown", (e)=>{
     const sel = $("#employeeFilter");
     if(sel.data("select2")) sel.select2("open"); else document.getElementById("employeeFilter").focus();
   }
-  if(e.key==="?"){ e.preventDefault(); alert("Shortcuts:\n/ focus search\nm open month\ne open employee"); }
+  if(e.key==="?"){ e.preventDefault(); toast("Shortcuts: / search • m month • e employee", "secondary", 3000); }
 });
 
-// Select2 change -> debounce re-render
+// Select2 change -> debounce
 $("#employeeFilter,#monthFilter,#statusFilter").on("change", scheduleApplyFilters);
 
-// periodic refresh (5 min)
-setTimeout(()=> loadData(), 50); // initial
+/** Employee Drawer (mini analytics) **/
+let empChart=null;
+function openEmpDrawer(name){
+  const rows = lastFiltered.filter(r=> r.employee===name).sort((a,b)=> a.date.localeCompare(b.date));
+  const counts = rows.reduce((acc,r)=>{ const s=computeStatusByPolicy(r.date,r.signIn,r.signOut); acc[s]=(acc[s]||0)+1; return acc; },{});
+  const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
+  const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
+
+  let lateM=0, earlyM=0;
+  rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
+
+  document.getElementById("empDrawerLabel").textContent = name;
+  document.getElementById("empMeta").innerHTML =
+    `<div class="row g-2">
+      <div class="col-6"><div class="chip w-100">Days: <b>${rows.length}</b></div></div>
+      <div class="col-6"><div class="chip w-100">Hours: <b>${fmtHours(totalH)}</b></div></div>
+      <div class="col-6"><div class="chip w-100">On-time: <b>${ontimeRate}%</b></div></div>
+      <div class="col-6"><div class="chip w-100">Late: <b>${counts["Late"]||0}</b> • Left Early: <b>${(counts["Left Early"]||0)+(counts["Late & Left Early"]||0)}</b></div></div>
+      <div class="col-12"><div class="chip w-100">Late min: <b>${lateM}</b> • Early min: <b>${earlyM}</b></div></div>
+    </div>`;
+
+  const labels = rows.map(r=> r.date); const data = rows.map(r=> isFinite(r.totalHours)? r.totalHours:0);
+  // Destroy previous emp chart if exists
+  const empCanvas = document.getElementById("empChart");
+  const ex = Chart.getChart(empCanvas); if(ex) ex.destroy();
+  empChart = new Chart(empCanvas, {
+    type:"line", data:{ labels, datasets:[{ label:"Hours", data, tension:.3, fill:false }]},
+    options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
+  });
+
+  const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
+  const body = rows.slice(-60).reverse().map(r=>{
+    const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
+    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
+    const expl= explainStatus(r.date,r.signIn,r.signOut);
+    return `<tr>
+      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
+      <td class="text-end">${fmtHours(r.totalHours)}</td>
+      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
+  document.querySelectorAll("#empTable [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
+  new bootstrap.Offcanvas("#empDrawer").show();
+}
+
+/** ============== SCHEDULED REFRESH ============== **/
+setTimeout(()=> loadData(), 50);
 setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
 
-// boot
+/** ============== BOOT ============== **/
 initTheme();
 document.getElementById("buildStamp").textContent = `${BUILD} • ${DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm")}`;
 
