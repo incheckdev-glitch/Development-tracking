@@ -222,7 +222,6 @@
 
         <div class="col-12"><hr></div>
 
-        <!-- Approval controls (kept as-is) -->
         <div class="col-md-4 d-flex align-items-end">
           <div class="form-check">
             <input id="setRequireApproval" class="form-check-input" type="checkbox">
@@ -305,14 +304,14 @@
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Part 2 (script) next -->
+  <!-- Part 2 (script) goes below -->
   <!-- Part 2 (script) -->
   <script>
 /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v3.1-charts-skip-nonworking";
+const BUILD = "v3.2-global-filters";
 
 /** (Optional) Writeback & Queue API — leave as-is if you’re not using corrections now **/
 const WRITEBACK = {
@@ -364,11 +363,10 @@ const DEFAULT_POLICY = {
 };
 const DEFAULT_WEEKEND = [6,7]; // 1=Mon..7=Sun
 const DEFAULT_HOLIDAYS = [];
-// NEW: chart knobs (no UI switches added — defaults applied)
 const DEFAULT_PREFS = {
   hoursFormat:"hms",
-  chartsSkipNonWorkingDays: true,          // exclude weekends/holidays from charts
-  includeWeekendOvertimeInTotals: false    // do not add weekend OT to per-emp totals
+  chartsSkipNonWorkingDays: true,
+  includeWeekendOvertimeInTotals: false
 };
 const LS_KEYS = {
   policy:"attendance_policy_v2",
@@ -385,17 +383,11 @@ let POLICY   = loadLS(LS_KEYS.policy, DEFAULT_POLICY);
 let WEEKEND  = loadLS(LS_KEYS.weekend, DEFAULT_WEEKEND);
 let HOLIDAYS = loadLS(LS_KEYS.holidays, DEFAULT_HOLIDAYS);
 let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
-// Ensure new keys exist
 PREFS.chartsSkipNonWorkingDays = PREFS.chartsSkipNonWorkingDays ?? true;
 PREFS.includeWeekendOvertimeInTotals = PREFS.includeWeekendOvertimeInTotals ?? false;
 saveLS(LS_KEYS.prefs, PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
-
-function candidateURLs(){
-  const t = Date.now();
-  return [`${PUBLISHED_CSV}&cachebust=${t}`];
-}
 
 /** ============== STATE ============== **/
 let CANON = [];
@@ -417,6 +409,10 @@ function initTheme(){
 }
 
 /** ============== HELPERS ============== **/
+function candidateURLs(){
+  const t = Date.now();
+  return [`${PUBLISHED_CSV}&cachebust=${t}`];
+}
 function hmsFromHours(hours){
   if(!isFinite(hours)) return "";
   const sign = hours<0 ? "-" : "";
@@ -602,7 +598,6 @@ function renderKPIs(data){
   document.getElementById("kpiDaysNote").textContent = `Excludes weekends (${WEEKEND.join(",")}) and ${HOLIDAYS_SET.size} holidays`;
   document.getElementById("kpiUpdated").textContent = DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm:ss ZZZZ");
 
-  // Cohorts (current vs previous month)
   const cohorts = computeCohorts(data);
   if(cohorts.prev){
     document.getElementById("kpiHoursVar").textContent = arrowDelta(cohorts.mc.hours, cohorts.mp.hours);
@@ -612,7 +607,6 @@ function renderKPIs(data){
     document.getElementById("kpiOntimeVar").textContent = "";
   }
 
-  // Sticky totals
   document.getElementById("stickyTotals").textContent =
     `Rows: ${data.length} • Hours: ${fmtHours(hours)} • On-time: ${ontimeRate}%`;
 
@@ -621,23 +615,19 @@ function renderKPIs(data){
 }
 
 function renderCharts(data){
-  // NEW: Optionally exclude non-working days from charts
   const chartRows = PREFS.chartsSkipNonWorkingDays
     ? data.filter(r => isWorkingDay(r.date))
     : data;
 
-  // Hours by employee — optionally exclude weekend OT from totals
   const byEmpSource = PREFS.includeWeekendOvertimeInTotals ? data : chartRows;
   const byEmp = aggregateBy(byEmpSource, r=>r.employee, r=>r.totalHours);
   const empLabels = Object.keys(byEmp).sort((a,b)=> byEmp[b]-byEmp[a]).slice(0,20);
   const empData = empLabels.map(k=> byEmp[k]);
 
-  // Hours over time — uses chartRows (no weekends/holidays if enabled)
   const byDate = aggregateBy(chartRows, r=>r.date, r=>r.totalHours);
   const dateLabels = Object.keys(byDate).sort();
   const dateData = dateLabels.map(k=> byDate[k]);
 
-  // Over/Under bands
   const perEmpDays = aggregateBy(chartRows, r=>r.employee, r=> isWorkingDay(r.date)?1:0);
   const targetPerDay = POLICY.useCalcTarget ?
     (DateTime.fromFormat(POLICY.dayEnd,"H:mm").diff(DateTime.fromFormat(POLICY.dayStart,"H:mm"),"hours").hours - (POLICY.breakMin/60)) :
@@ -651,7 +641,6 @@ function renderCharts(data){
     under.push(Math.max(0,-d));
   });
 
-  // Late/Early minutes by employee
   const lateMap={}, earlyMap={};
   data.forEach(r=>{
     const {lateM, earlyM} = lateEarlyMinutes(r.date,r.signIn,r.signOut);
@@ -806,11 +795,14 @@ function applyFilters(){
     return true;
   });
 
+  lastFiltered = filtered; // global filtered set
+
   renderTable(filtered);
   renderKPIs(filtered);
   renderCharts(filtered);
-  updateURLFromFilters();
+  renderHeatmap(); // ✅ ensure heatmap follows filters
   computeAndRenderAnomalies(filtered);
+  updateURLFromFilters();
 }
 function resetFilters(){
   $("#employeeFilter").val(null).trigger("change");
@@ -848,13 +840,18 @@ function readFiltersFromURL(){
   document.getElementById("decimalSwitch").checked = (PREFS.hoursFormat==="decimal");
 }
 
-/** ============== HEATMAP ============== **/
+/** ============== HEATMAP (UPDATED TO RESPECT FILTERS) ============== **/
 function renderHeatmap(){
   const wrap=document.getElementById("heatmap"); if(!wrap) return;
   wrap.innerHTML=""; if(!lastFiltered.length) return;
 
+  // Prefer selected month from filter; fall back to #heatmapMonth or latest in data
+  const selectedMonth = $("#monthFilter").val()?.[0];
   const p = document.getElementById("heatmapMonth").value;
-  let monthISO = p || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
+  let monthISO = selectedMonth
+    || p
+    || (lastFiltered.map(r=>r.date).sort().slice(-1)[0] || DateTime.now().toISODate()).slice(0,7);
+
   document.getElementById("heatmapMonth").value = monthISO;
 
   const first = DateTime.fromISO(monthISO+"-01"); const days=first.daysInMonth;
@@ -890,7 +887,7 @@ function renderHeatmap(){
   document.querySelectorAll("#heatmap [data-bs-toggle='tooltip']").forEach(el=> new bootstrap.Tooltip(el));
 }
 
-/** ============== ANOMALIES (missing punches on working days) ============== **/
+/** ============== ANOMALIES ============== **/
 function computeAnomalies(data){
   const missing=[];
   for(const r of data){
@@ -941,7 +938,6 @@ function openEmpDrawer(name){
   const totalH = rows.reduce((a,b)=> a+(isFinite(b.totalHours)?b.totalHours:0), 0);
   const ontimeRate = rows.length? Math.round(100*(counts["Present"]||0)/rows.length):0;
 
-  // minutes
   let lateM=0, earlyM=0;
   rows.forEach(r=>{ const m=lateEarlyMinutes(r.date,r.signIn,r.signOut); lateM+=m.lateM; earlyM+=m.earlyM; });
 
@@ -978,7 +974,7 @@ function openEmpDrawer(name){
   new bootstrap.Offcanvas("#empDrawer").show();
 }
 
-/** ============== CORRECTION FLOW (Approval-aware) ============== **/
+/** ============== CORRECTION FLOW ============== **/
 let __corrCtx = null;
 function openCorrectionModal(rowLike){
   const hasIn  = !!(rowLike.In  && String(rowLike.In).trim());
@@ -1101,7 +1097,6 @@ async function exportMonthlyPacks(){
       Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
     }));
     folder.file(`${emp}_${mk}.csv`, toCSV(csvRows));
-    // mini text card
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
     const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
     const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
@@ -1223,7 +1218,8 @@ function parseAndRender(csv){
   populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
   populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
 
-  readFiltersFromURL(); applyFilters();
+  readFiltersFromURL(); 
+  applyFilters(); // ensure everything re-renders from filtered view
 
   const lastDate = CANON.map(r=>r.date).sort().slice(-1)[0];
   const mo = lastDate? lastDate.slice(0,7) : DateTime.now().toISODate().slice(0,7);
@@ -1235,6 +1231,7 @@ async function loadData(){
     const csv = await fetchCSV(); parseAndRender(csv);
     const refreshed = await refreshFromNetwork(true);
     document.getElementById("lastSync").textContent = "Last auto-refresh: " + new Date().toLocaleTimeString();
+    applyFilters(); // ✅ reapply filters globally after refresh
     return refreshed;
   } catch(e){ console.error(e); alert("Failed to load data: "+e.message); }
 }
