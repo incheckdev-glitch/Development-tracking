@@ -263,7 +263,7 @@
     </div>
   </div>
 
-  <!-- Settings Modal (unchanged UI, behavior improved in JS) -->
+  <!-- Settings Modal -->
   <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg"><div class="modal-content">
       <div class="modal-header">
@@ -372,10 +372,10 @@
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4.0-full-filters-fast-load";
+const BUILD = "v4.0.1-debug-solid";
 
 // Optional: per-month JSON (drop-in). Leave empty to use CSV only.
-const MONTHLY_JSON_BASE = ""; // e.g. "https://your.cdn/data" -> expects /YYYY-MM.json schema compatible
+const MONTHLY_JSON_BASE = "";
 
 // Writeback proxy (disabled by default; safe no-op if left blank)
 const WRITEBACK = { url: "", token: "" };
@@ -387,8 +387,6 @@ const LS_KEYS = {
   holidays:"attendance_holidays_v1",
   prefs:"attendance_prefs_v3",
   csv:"attendance_csv_v1",
-  etag:"attendance_csv_etag_v1",
-  lastModified:"attendance_csv_lm_v1",
   views:"attendance_saved_views_v1"
 };
 
@@ -416,12 +414,11 @@ let PREFS    = loadLS(LS_KEYS.prefs, DEFAULT_PREFS);
 saveLS(LS_KEYS.prefs, PREFS);
 
 let HOLIDAYS_SET = new Set(HOLIDAYS);
-let CANON = [];              // all rows (normalized)
-let lastFiltered = [];       // current filtered rows
-let DT = null;               // DataTable
+let CANON = [];
+let lastFiltered = [];
+let DT = null;
 let chartByEmp=null, chartOverTime=null, chartOverUnder=null, chartLateEarly=null, empChart=null;
-const sparkCharts = {};      // spark instances by canvas id
-const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] }; // for CSV exports
+const chartCSV = { byEmp:[], overTime:[], overUnder:[], lateEarly:[] };
 const { DateTime } = luxon;
 
 /** ============== UI HELPERS ============== **/
@@ -593,23 +590,26 @@ function computeCohorts(data){
   return {curr, prev, mc:metrics(rowsCurr), mp:metrics(rowsPrev)};
 }
 
-/** ============== RENDER: KPIs & CHARTS ============== **/
-function safeDestroyChart(instance){
-  if(instance && typeof instance.destroy === "function"){
-    try{ instance.destroy(); }catch(_){}
-  }
+/** ============== CHART HELPERS ============== **/
+function destroyChartOnCanvas(canvasId){
+  const el = document.getElementById(canvasId);
+  if(!el) return;
+  const existing = Chart.getChart(el);
+  if(existing){ try{ existing.destroy(); }catch(_){} }
 }
 function igniteSpark(canvasId, value){
-  const c = document.getElementById(canvasId); if(!c) return;
-  if(sparkCharts[canvasId]){ safeDestroyChart(sparkCharts[canvasId]); sparkCharts[canvasId]=null; }
-  const ctx = c.getContext("2d");
+  const el = document.getElementById(canvasId); if(!el) return;
+  destroyChartOnCanvas(canvasId);
+  const ctx = el.getContext("2d");
   const data = Array.from({length:8}, (_,i)=> Math.max(1, Math.round((i+1)*(value/10))));
-  sparkCharts[canvasId] = new Chart(ctx, {
+  new Chart(ctx, {
     type:"line",
     data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, pointRadius:0, tension:.3 }]},
     options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
   });
 }
+
+/** ============== RENDER: KPIs & CHARTS ============== **/
 function renderKPIs(data){
   const uniqueWorkingDays = new Set(data.map(d=>d.date).filter(isWorkingDay)).size;
   const hours = data.reduce((a,b)=> a + (isFinite(b.totalHours)? b.totalHours : 0), 0);
@@ -703,25 +703,25 @@ function renderCharts(data){
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
   chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  // Destroy old charts safely
-  [chartByEmp, chartOverTime, chartOverUnder, chartLateEarly].forEach(safeDestroyChart);
+  // Destroy charts attached to canvases (strong method)
+  ["chartByEmp","chartOverTime","chartOverUnder","chartLateEarly"].forEach(destroyChartOnCanvas);
 
-  chartByEmp = new Chart(document.getElementById("chartByEmp"), {
+  new Chart(document.getElementById("chartByEmp"), {
     type:"bar", data:{ labels:empLabels, datasets:[{ label:"Hours", data:empData }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverTime = new Chart(document.getElementById("chartOverTime"), {
+  new Chart(document.getElementById("chartOverTime"), {
     type:"line", data:{ labels:dateLabels, datasets:[{ label:"Hours", data:dateData, tension:.3, fill:false }] },
     options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:"#64748b"}}, y:{ ticks:{ color:"#64748b"}}}}
   });
-  chartOverUnder = new Chart(document.getElementById("chartOverUnder"), {
+  new Chart(document.getElementById("chartOverUnder"), {
     type:"bar", data:{ labels:empLabels, datasets:[
       { label:"Overtime", data:over, stack:"x" },
       { label:"Undertime", data:under, stack:"x" }
     ]},
     options:{ plugins:{ legend:{ position:"bottom" }}, scales:{ x:{ stacked:true }, y:{ stacked:true } } }
   });
-  chartLateEarly = new Chart(document.getElementById("chartLateEarly"), {
+  new Chart(document.getElementById("chartLateEarly"), {
     type:"bar", data:{ labels:leLabels, datasets:[
       { label:"Late minutes", data:lateVals },
       { label:"Early minutes", data:earlyVals }
@@ -736,7 +736,6 @@ function renderHeatmap(){
   const wrap=document.getElementById("heatmap"); if(!wrap) return;
   wrap.innerHTML=""; if(!lastFiltered.length) return;
 
-  // If user picked a single Month filter, default the heatmap month to it.
   const monthFilters = $("#monthFilter").val()||[];
   if(monthFilters.length===1){
     const any = lastFiltered.find(r=>r.month===monthFilters[0]);
@@ -1005,11 +1004,17 @@ document.getElementById("saveViewBtn").addEventListener("click", ()=>{
 /** ============== EXPORT HELPERS ============== **/
 function toCSV(rows){
   if(!rows.length) return "";
-  const cols=rows[0].map? rows[0].map((_,i)=>`col${i+1}`) : Object.keys(rows[0]);
-  const data = rows.map(r=> (Array.isArray(r)? r : cols.map(c=> r[c])));
-  const head = Array.isArray(rows[0]) ? rows[0] : cols;
+  // rows expected as array-of-arrays with header at index 0 (we also support array-of-objects gracefully)
+  const isArray = Array.isArray(rows[0]);
+  const header = isArray ? rows[0] : Object.keys(rows[0]);
   const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
-  const lines=[head.join(",")].concat(data.slice(1).map(r=> r.map(esc).join(",")));
+  const lines = [];
+  lines.push(header.map(esc).join(","));
+  if(isArray){
+    for(let i=1;i<rows.length;i++) lines.push(rows[i].map(esc).join(","));
+  }else{
+    for(const r of rows) lines.push(header.map(k=> esc(r[k])).join(","));
+  }
   return lines.join("\n");
 }
 function downloadCSV(name, rows){
@@ -1104,13 +1109,12 @@ async function applyLocalCorrection(){
       if (__corrCtx.kind === "OUT" || __corrCtx.kind === "BOTH") await sendWriteback("OUT", { ...rowLike, Out: outVal });
     }
   } catch (e) {
-    // safe soft-fail; keep local patch
     console.warn("Writeback/Queue failed or disabled:", e);
     al.textContent = "Saved locally (server update not applied). Export now, or try again.";
     al.classList.remove("d-none");
   }
 
-  // Local patch for instant UX
+  // Local patch
   let patched=false;
   for(const r of CANON){
     if(r.employee===emp && r.date===date){
@@ -1186,7 +1190,6 @@ function exportMonthlyPacks(){
     const [emp, mk] = key.split("::");
     const folder = zip.folder(`${mk}/${emp}`);
     folder.file(`${emp}_${mk}.csv`, csv(rows));
-    // mini text card
     const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
     const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
     const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
@@ -1269,14 +1272,14 @@ function candidateURLs(){
   const t = Date.now();
   return [`${PUBLISHED_CSV}&cachebust=${t}`];
 }
-
 function parseCSVAsync(csvText){
   return new Promise((resolve, reject)=>{
     Papa.parse(csvText, {
       header:true, skipEmptyLines:true, worker:true,
       complete: (res)=> {
         try{
-          const data = (res.data||[]).map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
+          const arr = Array.isArray(res?.data) ? res.data : [];
+          const data = arr.map(r => mapRow(normalizeHeaders(r))).filter(r => r.employee && r.date);
           resolve(data);
         }catch(e){ reject(e); }
       },
@@ -1284,7 +1287,6 @@ function parseCSVAsync(csvText){
     });
   });
 }
-
 async function fetchCSVNetwork(){
   let lastErr;
   for(const url of candidateURLs()){
@@ -1296,7 +1298,6 @@ async function fetchCSVNetwork(){
   }
   throw lastErr || new Error("All endpoints failed");
 }
-
 async function parseAndRenderFromRows(rows){
   CANON = rows;
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
@@ -1310,7 +1311,6 @@ async function parseAndRenderFromRows(rows){
   document.getElementById("heatmapMonth").value = mo;
   renderHeatmap();
 }
-
 async function loadData(){
   try{
     showLoading("Loading data…", "Cache-first. Parsing…");
@@ -1394,11 +1394,19 @@ document.addEventListener("click", (e)=>{
   openCorrectionModal({ Employee:btn.dataset.emp, Date:btn.dataset.date, In:btn.dataset.in||"", Out:btn.dataset.out||"", Status:"Need Correction" });
 });
 
-// Command-like shortcuts
+// Keyboard shortcuts with Select2 guards (prevents errors if not initialized yet)
 document.addEventListener("keydown", (e)=>{
   if(e.key==="/"){ e.preventDefault(); document.getElementById("quickSearch").focus(); }
-  if(e.key==="m"){ e.preventDefault(); $("#monthFilter").select2("open"); }
-  if(e.key==="e"){ e.preventDefault(); $("#employeeFilter").select2("open"); }
+  if(e.key==="m"){ 
+    e.preventDefault(); 
+    const sel = $("#monthFilter");
+    if(sel.data("select2")) sel.select2("open"); else document.getElementById("monthFilter").focus();
+  }
+  if(e.key==="e"){ 
+    e.preventDefault(); 
+    const sel = $("#employeeFilter");
+    if(sel.data("select2")) sel.select2("open"); else document.getElementById("employeeFilter").focus();
+  }
   if(e.key==="?"){ e.preventDefault(); alert("Shortcuts:\n/ focus search\nm open month\ne open employee"); }
 });
 
@@ -1406,7 +1414,7 @@ document.addEventListener("keydown", (e)=>{
 $("#employeeFilter,#monthFilter,#statusFilter").on("change", scheduleApplyFilters);
 
 // periodic refresh (5 min)
-setTimeout(()=> loadData(), 50); // immediate
+setTimeout(()=> loadData(), 50); // initial
 setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
 
 // boot
