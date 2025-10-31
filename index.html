@@ -393,15 +393,19 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- Part 2/2 script comes next -->
-<script>
-/** ============== CONFIG ============== **/
+  
+  <script>
+    /** ============== CONFIG ============== **/
 const PUBLISHED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTw_QmgTO1onutiMdiVyThLtl7omNOqpDH-NNSoMwbGcpU4RfRjKO4pPJXbQrsHn5_ZuK4HEhkJ_SJZ/pub?gid=390845393&single=true&output=csv";
 const REFRESH_MS = 300_000; // 5 minutes
 const TZ = "Asia/Beirut";
-const BUILD = "v4.4.0-retry-telemetry-a11y";
+const BUILD = "v4.5.0-secure-writeback";
 
-/** Writeback (disabled by default for safety; keep empty strings) **/
-const WRITEBACK = { url: "", token: "" };
+/** Writeback (SET THESE) **/
+const WRITEBACK = {
+  url: "",     // <-- e.g. "https://your.api/attendance"
+  token: ""    // <-- e.g. "YOUR_SECRET_BEARER_TOKEN"
+};
 
 /** ============== STATE & STORAGE ============== **/
 const LS_KEYS = {
@@ -461,7 +465,7 @@ function toast(msg, variant="info", delay=3000){
   div.setAttribute("aria-atomic","true");
   div.innerHTML = `
     <div class="d-flex">
-      <div class="toast-body">${msg}</div>
+      <div class="toast-body">${String(msg)}</div>
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>`;
   host.appendChild(div);
@@ -493,6 +497,20 @@ function initTheme(){
   else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
 
+/** ============== ESCAPING & STATUS CLASS HELPERS ============== **/
+const esc = s => String(s ?? "")
+  .replace(/&/g,"&amp;")
+  .replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;")
+  .replace(/'/g,"&#39;");
+
+const statusClass = s => `status-${String(s||"")
+  .trim()
+  .replace(/\s*&\s*/g, "_")   // "Late & Left Early" -> "Late_Left Early"
+  .replace(/\s+/g, "_")       // spaces -> "_"
+  .replace(/[^A-Za-z0-9_]/g, "")}`;
+
 /** ============== DATE & FORMAT HELPERS ============== **/
 function hmsFromHours(hours){
   if(!isFinite(hours)) return "";
@@ -510,7 +528,7 @@ function toISODate(s){
   const L = DateTime;
   const c = [L.fromFormat(x,"d/M/yyyy"), L.fromFormat(x,"d/M/yy"), L.fromFormat(x,"yyyy-MM-dd"), L.fromFormat(x,"d-M-yyyy"), L.fromFormat(x,"M/d/yyyy"), L.fromISO(x)];
   for(const t of c){ if(t.isValid) return t.toISODate(); }
-  const d = new Date(x); return isNaN(d) ? "" : d.toISOString().slice(0,10);
+  const d = new Date(x); return isNaN(d) ? "" : new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
 function parsePunchWithDate(dateISO,val){
   if(!dateISO||!val) return null;
@@ -519,8 +537,16 @@ function parsePunchWithDate(dateISO,val){
   const b = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd H:mm:ss",{zone:TZ}); if(b.isValid) return b;
   const c = DateTime.fromFormat(`${dateISO} ${s}`,"yyyy-MM-dd h:mm a",{zone:TZ}); if(c.isValid) return c;
   const iso = DateTime.fromISO(s,{zone:TZ}); if(iso.isValid) return iso;
-  const d = new Date(`${dateISO}T${s.length===5 ? (s+":00") : s}`);
-  return isNaN(d) ? null : DateTime.fromJSDate(d).setZone(TZ);
+  // TZ-safe fallback from HH[:mm[:ss]]
+  const parts = s.split(":").map(x=>x.trim());
+  if(parts.length>=1 && parts[0]){
+    const hh = parts[0].padStart(2,"0");
+    const mm = (parts[1]||"00").padStart(2,"0");
+    const ss = (parts[2]||"00").padStart(2,"0");
+    const dt2 = DateTime.fromISO(`${dateISO}T${hh}:${mm}:${ss}`,{zone:TZ});
+    if(dt2.isValid) return dt2;
+  }
+  return null;
 }
 function isWorkingDay(iso){
   if(!iso) return false;
@@ -589,7 +615,6 @@ function lateEarlyMinutes(dateISO, signIn, signOut){
 
 /** ============== MAP ROW ============== **/
 function mapRow(r){
-  const month = r["month name"] || r["month"] || "";
   const dateISO = toISODate(r["date"] || r["day"] || "");
   const siRaw = r["first in"] || r["sign in"] || r["in"] || "";
   const soRaw = r["last out"] || r["sign out"] || r["out"] || "";
@@ -601,8 +626,12 @@ function mapRow(r){
     total = (si&&so)? so.diff(si,"hours").hours : 0;
   }
   const statusCSV = r["status"] || "";
+  const mk = dateISO ? monthKey(dateISO) : "";
+  const monthName = mk ? DateTime.fromISO(mk+"-01",{zone:TZ}).toFormat("LLLL yyyy") : "";
+
   return {
-    month: month || (dateISO?DateTime.fromISO(dateISO,{zone:TZ}).toFormat("LLLL"):""),
+    month: mk,                // canonical key: YYYY-MM
+    monthName,                // pretty label
     date: dateISO,
     employee: r["employee name"]||r["employee"]||r["name"]||"",
     signIn: siRaw||"",
@@ -687,7 +716,11 @@ function renderKPIs(data){
   const delta = hours - expected;
   const emoji = delta >= 0 ? "✅" : "⚠️";
   document.getElementById("kpiVar").textContent = `${emoji} ${delta>=0?"+":""}${fmtHours(delta)}`;
-  document.getElementById("kpiDaysNote").textContent = `Excludes weekends (${WEEKEND.join(",")}) and ${HOLIDAYS_SET.size} holidays`;
+
+  const wdNames=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const weekendNames = WEEKEND.map(i=>wdNames[i-1]).join(", ");
+  document.getElementById("kpiDaysNote").textContent = `Excludes weekends (${weekendNames}) and ${HOLIDAYS_SET.size} holidays`;
+
   document.getElementById("kpiUpdated").textContent = DateTime.now().setZone(TZ).toFormat("yyyy-LL-dd HH:mm:ss ZZZZ");
 
   const cohorts = computeCohorts(data);
@@ -748,7 +781,6 @@ function renderCharts(data){
   const earlyVals= leLabels.map(e=> earlyMap[e]||0);
   chartCSV.lateEarly = [["Employee","Late Minutes","Early Minutes"]].concat(leLabels.map((e,i)=>[e,lateVals[i],earlyVals[i]]));
 
-  // Destroy existing charts
   ["chartByEmp","chartOverTime","chartOverUnder","chartLateEarly"].forEach(destroyChartOnCanvas);
 
   new Chart(document.getElementById("chartByEmp"), {
@@ -854,12 +886,12 @@ function computeAndRenderAnomalies(data){
     const why = hasIn ? "Missing Sign-Out" : "Missing Sign-In";
     html.push(`<tr>
       <td>${r.date}</td>
-      <td>${r.employee}</td>
-      <td>${why}</td>
+      <td>${esc(r.employee)}</td>
+      <td>${esc(why)}</td>
       <td class="text-end">
         <button class="btn btn-sm btn-outline-warning fix-missing-btn"
-                data-emp="${r.employee}" data-date="${r.date}"
-                data-in="${r.signIn||""}" data-out="${r.signOut||""}">
+                data-emp="${esc(r.employee)}" data-date="${r.date}"
+                data-in="${esc(r.signIn||"")}" data-out="${esc(r.signOut||"")}">
           <i class="bi bi-pencil-square me-1"></i>Fix
         </button>
       </td>
@@ -876,28 +908,32 @@ function renderTable(data){
   const rows = data.map(r => {
     const comp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisplay = POLICY.recompute ? comp : (r.status || comp);
-    return ({ Month: r.month, Date: r.date, Employee: r.employee,
+    return ({ 
+      Month: r.monthName,   // pretty label in table
+      Date: r.date, 
+      Employee: r.employee,
       In: r.signIn, Out: r.signOut,
       Hours: isFinite(r.totalHours)? r.totalHours : null,
-      Status: statusDisplay, _raw:r });
+      Status: statusDisplay, _raw:r 
+    });
   });
 
   const colDefs = [
     { title:"Month", data:"Month" },
     { title:"Date", data:"Date" },
-    { title:"Employee", data:"Employee", render:(d)=> `<a href="#" class="emp-link" data-emp="${d}">${d}</a>` },
-    { title:"First In", data:"In" },
-    { title:"Last Out", data:"Out" },
+    { title:"Employee", data:"Employee", render:(d)=> `<a href="#" class="emp-link" data-emp="${esc(d)}">${esc(d)}</a>` },
+    { title:"First In", data:"In", render:(d)=> esc(d||"") },
+    { title:"Last Out", data:"Out", render:(d)=> esc(d||"") },
     { title:"Hours", data:"Hours", className:"text-end", render:d=> d==null?"":fmtHours(d) },
     { title:"Status", data:"Status", render:function(d,type,row){
-        const expl = explainStatus(row.Date,row.In,row.Out);
-        const cls = `status-${(d||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
+        const expl = esc(explainStatus(row.Date,row.In,row.Out));
+        const cls = statusClass(d);
         const clickable = (d === "Need Correction") ? 'data-need-corr="1"' : "";
         return `<span class="status-badge ${cls}" ${clickable}
-                 data-emp="${row.Employee}" data-date="${row.Date}"
-                 data-in="${row.In||""}" data-out="${row.Out||""}"
-                 data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">
-                 ${d||""}${row._raw._edited ? ' <i class="bi bi-pencil ms-1"></i>' : ""}</span>`;
+                 data-emp="${esc(row.Employee)}" data-date="${row.Date}"
+                 data-in="${esc(row.In||"")}" data-out="${esc(row.Out||"")}"
+                 data-bs-toggle="tooltip" data-bs-title="${expl}">
+                 ${esc(d||"")}${row._raw._edited ? ' <i class="bi bi-pencil ms-1"></i>' : ""}</span>`;
       }
     }
   ];
@@ -948,7 +984,7 @@ function populateSelect(id, values, placeholder){
 function getCriteria(){
   return {
     employees: $("#employeeFilter").val()||[],
-    months: $("#monthFilter").val()||[],
+    months: $("#monthFilter").val()||[],        // values are YYYY-MM keys
     statuses: $("#statusFilter").val()||[],
     start: startDate.value, end: endDate.value,
     q: (quickSearch.value||"").toLowerCase(),
@@ -967,7 +1003,7 @@ function applyFilters(){
     const statusComp = computeStatusByPolicy(r.date, r.signIn, r.signOut);
     const statusDisp = POLICY.recompute ? statusComp : (r.status || statusComp);
     if(c.employees.length && !c.employees.includes(r.employee)) return false;
-    if(c.months.length && !c.months.includes(r.month)) return false;
+    if(c.months.length && !c.months.includes(r.month)) return false;     // filter by YYYY-MM key
     if(c.statuses.length && !c.statuses.includes(statusDisp)) return false;
     if(c.start && r.date < c.start) return false;
     if(c.end && r.date > c.end) return false;
@@ -993,7 +1029,7 @@ function resetFilters(){
 function updateURLFromFilters(){
   const c=getCriteria(); const p=new URLSearchParams();
   if(c.employees.length) p.set("emp", c.employees.join(","));
-  if(c.months.length)    p.set("month", c.months.join(","));
+  if(c.months.length)    p.set("month", c.months.join(","));   // YYYY-MM
   if(c.statuses.length)  p.set("status", c.statuses.join(","));
   if(c.start) p.set("start", c.start); if(c.end) p.set("end", c.end);
   if(c.q) p.set("q", c.q); if(c.policy) p.set("policy","1");
@@ -1024,7 +1060,7 @@ function renderSavedViews(){
   views.forEach((v,idx)=>{
     const chip = document.createElement("button");
     chip.className = "btn btn-sm btn-outline-secondary";
-    chip.innerHTML = `<i class="bi bi-bookmark"></i> ${v.name}`;
+    chip.innerHTML = `<i class="bi bi-bookmark"></i> ${esc(v.name)}`;
     chip.addEventListener("click", ()=>{
       $("#employeeFilter").val(v.employees).trigger("change");
       $("#monthFilter").val(v.months).trigger("change");
@@ -1062,11 +1098,11 @@ function toCSV(rows){
   if(!rows.length) return "";
   const isArray = Array.isArray(rows[0]);
   const header = isArray ? rows[0] : Object.keys(rows[0]);
-  const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+  const escCSV=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
   const lines = [];
-  lines.push(header.map(esc).join(","));
-  if(isArray){ for(let i=1;i<rows.length;i++) lines.push(rows[i].map(esc).join(",")); }
-  else{ for(const r of rows) lines.push(header.map(k=> esc(r[k])).join(",")); }
+  lines.push(header.map(escCSV).join(","));
+  if(isArray){ for(let i=1;i<rows.length;i++) lines.push(rows[i].map(escCSV).join(",")); }
+  else{ for(const r of rows) lines.push(header.map(k=> escCSV(r[k])).join(",")); }
   return lines.join("\n");
 }
 function downloadCSV(name, rows){
@@ -1078,42 +1114,55 @@ document.getElementById("csvOverTime").addEventListener("click", ()=> downloadCS
 document.getElementById("csvOverUnder").addEventListener("click", ()=> downloadCSV("over_under_by_employee", chartCSV.overUnder));
 document.getElementById("csvLateEarly").addEventListener("click", ()=> downloadCSV("late_early_minutes", chartCSV.lateEarly));
 
-/** ============== WRITEBACK (safe no-op if disabled) ============== **/
+/** ============== SECURE WRITEBACK (JSON + Bearer) ============== **/
 async function sendWriteback(kind, payload){
-  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
-  const qs = new URLSearchParams({ token: WRITEBACK.token, kind });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+  if(!WRITEBACK.url) throw new Error("writeback_disabled");
+  const body = {
+    kind,
+    employee: payload.Employee,
+    date: payload.Date,
+    time: (kind === "IN" ? payload.In : payload.Out) || ""
+  };
+  const res = await fetch(WRITEBACK.url, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      kind,
-      employee: payload.Employee,
-      date: payload.Date,
-      time: (kind === "IN" ? payload.In : payload.Out)
-    }),
+    mode: "cors",
+    credentials: "omit",
+    headers: {
+      "Content-Type": "application/json",
+      ...(WRITEBACK.token ? { "Authorization": `Bearer ${WRITEBACK.token}` } : {})
+    },
+    body: JSON.stringify(body),
     cache: "no-store"
   });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "writeback_failed");
+  const txt = await res.text();
+  let j={}; try{ j = JSON.parse(txt); }catch{ j = { ok: res.ok, raw: txt }; }
+  if(!res.ok || j.ok===false) throw new Error(j.error || `writeback_failed (${res.status})`);
   return j;
 }
 async function sendQueue(payload, reason=""){
-  if(!WRITEBACK.url || !WRITEBACK.token) throw new Error("writeback_disabled");
-  const qs = new URLSearchParams({ token: WRITEBACK.token, action: "queue" });
-  const res = await fetch(`${WRITEBACK.url}?${qs.toString()}`, {
+  if(!WRITEBACK.url) throw new Error("writeback_disabled");
+  const body = {
+    action: "queue",
+    employee: payload.Employee,
+    date: payload.Date,
+    in: payload.In || "",
+    out: payload.Out || "",
+    reason: reason || "Missing punch fix"
+  };
+  const res = await fetch(WRITEBACK.url, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      employee: payload.Employee,
-      date: payload.Date,
-      in: payload.In || "",
-      out: payload.Out || "",
-      reason: reason || "Missing punch fix"
-    }),
+    mode: "cors",
+    credentials: "omit",
+    headers: {
+      "Content-Type": "application/json",
+      ...(WRITEBACK.token ? { "Authorization": `Bearer ${WRITEBACK.token}` } : {})
+    },
+    body: JSON.stringify(body),
     cache: "no-store"
   });
-  const txt = await res.text(); let j={}; try{ j=JSON.parse(txt);}catch{}
-  if (!j.ok) throw new Error(j.error || "queue_failed");
+  const txt = await res.text();
+  let j={}; try{ j = JSON.parse(txt); }catch{ j = { ok: res.ok, raw: txt }; }
+  if(!res.ok || j.ok===false) throw new Error(j.error || `queue_failed (${res.status})`);
   return j;
 }
 
@@ -1198,7 +1247,7 @@ async function downloadFullReport(){
 }
 function exportPack(){
   const simpleRows = lastFiltered.map(r=>({
-    Month:r.month, Date:r.date, Employee:r.employee,
+    Month:r.monthName, Date:r.date, Employee:r.employee,
     FirstIn:r.signIn, LastOut:r.signOut,
     Hours:(isFinite(r.totalHours)? r.totalHours:0).toFixed(2),
     Status: computeStatusByPolicy(r.date,r.signIn,r.signOut)
@@ -1206,8 +1255,8 @@ function exportPack(){
   const zip = new JSZip();
   const csv = (rows)=>{
     const cols=Object.keys(rows[0]||{});
-    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
-    const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>esc(r[c])).join(",")));
+    const escQ=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
+    const lines=[cols.join(",")].concat(rows.map(r=> cols.map(c=>escQ(r[c])).join(",")));
     return lines.join("\n");
   };
   zip.file("attendance_filtered.csv", csv(simpleRows));
@@ -1225,33 +1274,8 @@ function exportPack(){
   zip.file("attendance_by_employee.xlsx", wbout);
   zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"attendance_export_pack.zip"));
 }
-function exportMonthlyPacks(){
-  const zip = new JSZip();
-  const byEmpMonth = {};
-  lastFiltered.forEach(r=>{
-    const mk = monthKey(r.date); if(!mk) return;
-    const key = `${r.employee}::${mk}`;
-    (byEmpMonth[key] ||= []).push(r);
-  });
-  const csv = (rows)=>{
-    const cols=["Date","In","Out","Hours","Status"];
-    const esc=v=> '"'+String(v??"").replace(/"/g,'""')+'"';
-    const head = cols.join(",");
-    const body = rows.map(r=> [r.date,r.signIn,r.signOut,(isFinite(r.totalHours)?r.totalHours:0).toFixed(2), computeStatusByPolicy(r.date,r.signIn,r.signOut)].map(esc).join(",")).join("\n");
-    return head+"\n"+body;
-  };
-  Object.entries(byEmpMonth).forEach(([key,rows])=>{
-    const [emp, mk] = key.split("::");
-    const folder = zip.folder(`${mk}/${emp}`);
-    folder.file(`${emp}_${mk}.csv`, csv(rows));
-    const hours = rows.reduce((a,b)=>a+(isFinite(b.totalHours)?b.totalHours:0),0).toFixed(2);
-    const present = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Present").length;
-    const half = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Half Day").length;
-    const abs  = rows.filter(r=>computeStatusByPolicy(r.date,r.signIn,r.signOut)==="Absent").length;
-    folder.file(`${emp}_${mk}_summary.txt`, `Employee: ${emp}\nMonth: ${mk}\nHours: ${hours}\nPresent: ${present}\nHalf: ${half}\nAbsent: ${abs}\nGenerated: ${new Date().toISOString()}`);
-  });
-  zip.generateAsync({type:"blob"}).then(blob=> saveAs(blob,"monthly_packs.zip"));
-}
+const icsEscape = s => String(s??"")
+  .replace(/\\/g,"\\\\").replace(/,/g,"\\,").replace(/;/g,"\\;").replace(/\n/g,"\\n");
 function exportICS(){
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Attendance//ICS//EN"];
   const uidBase = Date.now();
@@ -1260,8 +1284,9 @@ function exportICS(){
     if(s==="Absent" || s==="Half Day"){
       const dt = r.date.replace(/-/g,"");
       const uid = `${uidBase}-${i}@attendance`;
-      const title = `${s} - ${r.employee}`;
-      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTAMP:${dt}T000000Z`,`DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${dt}`,`SUMMARY:${title}`,"END:VEVENT");
+      const title = icsEscape(`${s} - ${r.employee}`);
+      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTAMP:${dt}T000000Z`,
+        `DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${dt}`,`SUMMARY:${title}`,"END:VEVENT");
     }
   });
   lines.push("END:VCALENDAR");
@@ -1321,7 +1346,7 @@ function saveSettings(){
   applyFilters();
 }
 
-/** ============== DATA LOADING (cache-first, abortable, retry/backoff) ============== **/
+/** ============== DATA LOADING (cache-first, retry/backoff) ============== **/
 function candidateURLs(){ const t = Date.now(); return [`${PUBLISHED_CSV}&cachebust=${t}`]; }
 
 function parseCSVAsync(csvText){
@@ -1387,7 +1412,7 @@ async function fetchCSVNetwork(){
 async function parseAndRenderFromRows(rows){
   CANON = rows;
   populateSelect("employeeFilter", CANON.map(r=>r.employee), "Employees");
-  populateSelect("monthFilter", CANON.map(r=>r.month), "Months");
+  populateSelect("monthFilter", CANON.map(r=> r.month), "Months (YYYY-MM)"); // keys in select
   populateSelect("statusFilter", CANON.map(r=> computeStatusByPolicy(r.date,r.signIn,r.signOut)), "Statuses");
   readFiltersFromURL();
   applyFilters();
@@ -1412,7 +1437,7 @@ function renderInsights(){
     ["Refreshed", L.refreshed? "yes":"no"],
     ["Error", L.error? String(L.error): "—"]
   ];
-  ul.innerHTML = rows.map(([k,v])=> `<li class="list-group-item d-flex justify-content-between"><span class="text-secondary">${k}</span><span>${v}</span></li>`).join("");
+  ul.innerHTML = rows.map(([k,v])=> `<li class="list-group-item d-flex justify-content-between"><span class="text-secondary">${k}</span><span>${esc(v)}</span></li>`).join("");
 }
 document.getElementById("insightsBtn").addEventListener("click", ()=>{ renderInsights(); new bootstrap.Modal("#insightsModal").show(); });
 document.getElementById("insightsCopy").addEventListener("click", ()=>{
@@ -1448,40 +1473,12 @@ async function loadData(){
       hideLoading();
       document.getElementById("buildStamp").textContent = `${BUILD} • Parsed from cache in ${(t1-t0|0)} ms`;
 
-      // Background refresh
-      setTimeout(async ()=>{
-        try{
-          setLoading("Refreshing from network…");
-          const fresh = await fetchCSVNetwork();
-          if(fresh && fresh !== cached){
-            localStorage.setItem(LS_KEYS.csv, fresh);
-            const rows2 = await parseCSVAsync(fresh);
-            TELEMETRY.last.source = "network";
-            TELEMETRY.last.fetchedAt = Date.now();
-            TELEMETRY.last.refreshed = true;
-
-            await parseAndRenderFromRows(rows2);
-            document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
-            toast("Data refreshed from network.", "success");
-          } else {
-            TELEMETRY.last.source = "network (unchanged)";
-            TELEMETRY.last.fetchedAt = Date.now();
-            TELEMETRY.last.refreshed = false;
-            toast("No new data on refresh.", "secondary", 2000);
-          }
-        }catch(e){
-          if(e.name!=="AbortError"){
-            TELEMETRY.last.error = e.message || String(e);
-            toast("Network refresh failed.", "warning");
-          }
-          console.warn("Network refresh failed:", e);
-        }
-        hideLoading();
-      }, 0);
+      // Quiet background refresh
+      setTimeout(refreshFromNetwork, 0);
     } else {
       const t0 = performance.now();
       const csv = await fetchCSVNetwork();
-      localStorage.setItem(LS_KEYS.csv, csv);
+      try { localStorage.setItem(LS_KEYS.csv, csv); }catch(e){ console.warn("CSV too large for localStorage; skipping cache."); }
       const rows = await parseCSVAsync(csv);
       const t1 = performance.now();
 
@@ -1501,6 +1498,35 @@ async function loadData(){
     console.error(e);
     TELEMETRY.last.error = e.message || String(e);
     toast("Failed to load data: "+e.message, "danger", 6000);
+  }
+}
+async function refreshFromNetwork(){
+  try{
+    setLoading("Refreshing from network…");
+    const fresh = await fetchCSVNetwork();
+    const cached = localStorage.getItem(LS_KEYS.csv);
+    if(fresh && fresh !== cached){
+      try { localStorage.setItem(LS_KEYS.csv, fresh); }catch(e){ console.warn("CSV too large for localStorage; skipping cache."); }
+      const rows2 = await parseCSVAsync(fresh);
+      TELEMETRY.last.source = "network";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = true;
+
+      await parseAndRenderFromRows(rows2);
+      document.getElementById("lastSync").textContent = "Auto-refresh: " + new Date().toLocaleTimeString();
+      toast("Data refreshed from network.", "success");
+    } else {
+      TELEMETRY.last.source = "network (unchanged)";
+      TELEMETRY.last.fetchedAt = Date.now();
+      TELEMETRY.last.refreshed = false;
+    }
+  }catch(e){
+    if(e.name!=="AbortError"){
+      TELEMETRY.last.error = e.message || String(e);
+      console.warn("Background refresh failed:", e);
+    }
+  }finally{
+    hideLoading();
   }
 }
 
@@ -1602,12 +1628,12 @@ function openEmpDrawer(name){
   const head = `<thead><tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">Hours</th><th>Status</th></tr></thead>`;
   const body = rows.slice(-60).reverse().map(r=>{
     const s=computeStatusByPolicy(r.date,r.signIn,r.signOut);
-    const cls = `status-${(s||"").replace(/[^A-Za-z0-9]+/g,"_")}`;
-    const expl= explainStatus(r.date,r.signIn,r.signOut);
+    const cls = statusClass(s);
+    const expl= esc(explainStatus(r.date,r.signIn,r.signOut));
     return `<tr>
-      <td>${r.date}</td><td>${r.signIn||""}</td><td>${r.signOut||""}</td>
+      <td>${r.date}</td><td>${esc(r.signIn||"")}</td><td>${esc(r.signOut||"")}</td>
       <td class="text-end">${fmtHours(r.totalHours)}</td>
-      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl.replace(/\\"/g,"&quot;")}">${s||""}</span></td>
+      <td><span class="status-badge ${cls}" data-bs-toggle="tooltip" data-bs-title="${expl}">${esc(s||"")}</span></td>
     </tr>`;
   }).join("");
   document.getElementById("empTable").innerHTML=head+"<tbody>"+body+"</tbody>";
@@ -1617,7 +1643,7 @@ function openEmpDrawer(name){
 
 /** ============== SCHEDULED REFRESH ============== **/
 setTimeout(()=> loadData(), 50);
-setInterval(()=>{ if(document.visibilityState==="visible") loadData(); }, REFRESH_MS);
+setInterval(()=>{ if(document.visibilityState==="visible") refreshFromNetwork(); }, REFRESH_MS);
 
 /** ============== BOOT ============== **/
 initTheme();
@@ -1629,6 +1655,7 @@ renderSavedViews();
   function ok(n,cond){ (cond?console.log:console.error)(`[TEST] ${n}: ${cond?"OK":"FAIL"}`); }
   ok("prefs.persist", !!PREFS && typeof PREFS.chartsSkipNonWorkingDays==="boolean");
 })();
-</script>
+  </script>
 </body>
 </html>
+
