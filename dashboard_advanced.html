@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>InCheck360 Audit Dashboard - Advanced Visual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="advanced.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">360</div>
+      <div>
+        <h2>InCheck360</h2>
+        <p>Audit Intelligence</p>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">Audit Module</div>
+      <a class="nav-link active" href="dashboard_advanced.html"><span class="nav-icon">📊</span>Dashboard</a>
+      <a class="nav-link" href="report_advanced.html"><span class="nav-icon">📄</span>Audit Report</a>
+      <a class="nav-link"><span class="nav-icon">✅</span>Checklist Builder</a>
+      <a class="nav-link"><span class="nav-icon">⚙️</span>Rules Engine</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">Views</div>
+      <a class="nav-link"><span class="nav-icon">🏢</span>Client View</a>
+      <a class="nav-link"><span class="nav-icon">📍</span>Location View</a>
+      <a class="nav-link"><span class="nav-icon">👥</span>Team View</a>
+    </div>
+
+    <div class="sidebar-card">
+      <b>Static Demo</b>
+      <p>This page uses fixed demo data. Filters and widgets are visual only for layout approval.</p>
+    </div>
+  </aside>
+
+  <main class="content">
+    <section class="hero">
+      <div>
+        <h1>Audit Dashboard</h1>
+        <p>Monitor completed auditing checklists by client, group, location, template, section, item, and auditor. Critical failures override the final result and are highlighted across the dashboard.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn">Configure Widgets</button>
+        <a class="btn secondary" href="report_advanced.html">Open Report</a>
+      </div>
+    </section>
+
+    <section class="filters">
+      <div class="filter"><span>Date Range</span><b>01 Jun - 22 Jun 2026</b></div>
+      <div class="filter"><span>Client</span><b>SAS Horeca S.A.L</b></div>
+      <div class="filter"><span>Group</span><b>Lebanon Operations</b></div>
+      <div class="filter"><span>Location</span><b>All Locations</b></div>
+      <div class="filter"><span>Checklist Template</span><b>Food Safety Audit</b></div>
+      <div class="filter"><span>Auditor</span><b>All Teams</b></div>
+    </section>
+
+    <section class="kpis">
+      <div class="card">
+        <div class="kpi-top"><div><div class="kpi-label">Average Score</div><div class="kpi-value">86.4%</div></div><div class="kpi-icon">🎯</div></div>
+        <span class="delta good">▲ 4.2%</span>
+        <div class="kpi-foot">Weighted by completed audits</div>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><div><div class="kpi-label">Pass Rate</div><div class="kpi-value">78%</div></div><div class="kpi-icon">✅</div></div>
+        <span class="delta good">18 Passed</span>
+        <div class="kpi-foot">18 passed / 23 completed</div>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><div><div class="kpi-label">Failed Audits</div><div class="kpi-value">5</div></div><div class="kpi-icon">🚨</div></div>
+        <span class="delta bad">2 Critical</span>
+        <div class="kpi-foot">Critical sections forced failure</div>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><div><div class="kpi-label">Completed vs Planned</div><div class="kpi-value">23/28</div></div><div class="kpi-icon">📅</div></div>
+        <span class="delta good">82%</span>
+        <div class="kpi-foot">5 audits still pending</div>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><div><div class="kpi-label">Urgent Findings</div><div class="kpi-value">7</div></div><div class="kpi-icon">⚠️</div></div>
+        <span class="delta bad">3 Open</span>
+        <div class="kpi-foot">Urgent + failed checklist items</div>
+      </div>
+    </section>
+
+    <section class="section-grid">
+      <div class="card">
+        <div class="widget-head">
+          <div><div class="widget-title">Average Audit Score by Location</div><div class="widget-sub">Widget parameter: selected checklist template + all sections</div></div>
+          <span class="pill">Location ranking</span>
+        </div>
+        <div class="bar-chart">
+          <div class="bar-item"><div class="bar" data-score="92%" style="height:220px"></div><div class="bar-label">Hamra</div></div>
+          <div class="bar-item"><div class="bar" data-score="88%" style="height:210px"></div><div class="bar-label">Achrafieh</div></div>
+          <div class="bar-item"><div class="bar" data-score="84%" style="height:200px"></div><div class="bar-label">Verdun</div></div>
+          <div class="bar-item"><div class="bar fail" data-score="68%" style="height:162px"></div><div class="bar-label">Dbayeh</div></div>
+          <div class="bar-item"><div class="bar" data-score="90%" style="height:215px"></div><div class="bar-label">Jounieh</div></div>
+          <div class="bar-item"><div class="bar" data-score="81%" style="height:193px"></div><div class="bar-label">Tripoli</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="widget-head">
+          <div><div class="widget-title">Pass vs Fail Rate</div><div class="widget-sub">Final result after formula + rule overrides</div></div>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut">
+            <div class="donut-inner"><div><b>78%</b><br><span>Pass rate</span></div></div>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--green)"></i>18 Pass</span>
+          <span><i style="background:var(--red)"></i>5 Fail</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-grid-3">
+      <div class="card">
+        <div class="widget-head">
+          <div><div class="widget-title">Pass / Fail Rate Over Time</div><div class="widget-sub">Daily completed audits</div></div>
+          <span class="pill">Trend</span>
+        </div>
+        <div class="area-chart">
+          <svg viewBox="0 0 600 255" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,180 C80,130 110,150 170,105 C230,60 285,105 340,82 C400,55 470,75 600,38 L600,255 L0,255 Z" fill="url(#g1)"/>
+            <path d="M0,180 C80,130 110,150 170,105 C230,60 285,105 340,82 C400,55 470,75 600,38" fill="none" stroke="#67e8f9" stroke-width="5"/>
+            <path d="M0,205 C90,220 170,188 235,200 C310,218 360,155 430,178 C495,198 548,175 600,165" fill="none" stroke="#fb7185" stroke-width="4" stroke-dasharray="8 8"/>
+          </svg>
+          <div class="axis"><span>Jun 1</span><span>Jun 7</span><span>Jun 14</span><span>Jun 22</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="widget-head">
+          <div><div class="widget-title">Top Failed Items</div><div class="widget-sub">Most repeated failed questions</div></div>
+        </div>
+        <table class="table">
+          <tr><th>Question</th><th>Fails</th><th>Rate</th></tr>
+          <tr><td>Fridge temperature within range?</td><td>6</td><td><span class="badge fail">26%</span></td></tr>
+          <tr><td>Cleaning log completed?</td><td>5</td><td><span class="badge fail">22%</span></td></tr>
+          <tr><td>Pest control evidence available?</td><td>4</td><td><span class="badge warn">17%</span></td></tr>
+          <tr><td>Staff hygiene checklist signed?</td><td>3</td><td><span class="badge warn">13%</span></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="widget-head">
+          <div><div class="widget-title">Failure Rate by Section</div><div class="widget-sub">Section status result breakdown</div></div>
+        </div>
+        <div class="progress-row"><span>Food Safety</span><div class="track"><span class="danger" style="width:31%"></span></div><b>31%</b></div>
+        <div class="progress-row"><span>Cleaning</span><div class="track"><span class="danger" style="width:24%"></span></div><b>24%</b></div>
+        <div class="progress-row"><span>Staff Hygiene</span><div class="track"><span style="width:18%"></span></div><b>18%</b></div>
+        <div class="progress-row"><span>Documents</span><div class="track"><span style="width:12%"></span></div><b>12%</b></div>
+        <div class="progress-row"><span>Maintenance</span><div class="track"><span style="width:8%"></span></div><b>8%</b></div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="widget-head">
+        <div><div class="widget-title">Recent Completed Audits</div><div class="widget-sub">Clickable rows can open the detailed audit report</div></div>
+        <span class="pill">23 completed</span>
+      </div>
+
+      <div class="audit-row">
+        <small>22 Jun 2026</small><b>Dbayeh Branch</b><span>Omar Chatila</span><b>68%</b><span class="badge fail">Fail</span><small>Critical section failed: Food Safety</small>
+      </div>
+      <div class="audit-row">
+        <small>21 Jun 2026</small><b>Hamra Branch</b><span>Rana N.</span><b>94%</b><span class="badge pass">Pass</span><small>No critical failure</small>
+      </div>
+      <div class="audit-row">
+        <small>20 Jun 2026</small><b>Achrafieh Branch</b><span>Omar Chatila</span><b>88%</b><span class="badge pass">Pass</span><small>No critical failure</small>
+      </div>
+      <div class="audit-row">
+        <small>19 Jun 2026</small><b>Verdun Branch</b><span>Rana N.</span><b>72%</b><span class="badge fail">Fail</span><small>Formula threshold not reached</small>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="watermark">InCheck360 Advanced Static Canvas</div>
+</body>
+</html>
