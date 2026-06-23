@@ -162,6 +162,14 @@ function closeConfigPanel(){
   overlay?.setAttribute("aria-hidden", "true");
 }
 
+function openWidgetBuilder(){
+  openConfigPanel();
+  setTimeout(() => {
+    const widgetSection = document.getElementById("widgetBuilderSection");
+    widgetSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 80);
+}
+
 document.addEventListener("click", (event)=>{
   const btn = event.target.closest("[data-segment]");
   if(!btn) return;
@@ -179,6 +187,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   applyConfig(savedConfig);
 
   document.getElementById("openConfigBtn")?.addEventListener("click", openConfigPanel);
+  document.getElementById("openWidgetBuilderBtn")?.addEventListener("click", openWidgetBuilder);
   document.getElementById("closeConfigBtn")?.addEventListener("click", closeConfigPanel);
 
   document.getElementById("configOverlay")?.addEventListener("click", event => {
