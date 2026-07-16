@@ -93,7 +93,8 @@
   }
 
   function drill(active){
-    return `<div class="module-card full" id="drilldownPagesModule"><div class="module-head"><div><div class="module-title">Drill-down Pages</div><div class="module-sub">Full detail views for location, auditor, failed item, and section history.</div></div><span class="chip info">4 Pages</span></div><div class="drill-tabs"><button class="${active==='location'?'active':''}" data-drill="location">Location</button><button class="${active==='auditor'?'active':''}" data-drill="auditor">Auditor</button><button class="${active==='item'?'active':''}" data-drill="item">Failed Item</button><button class="${active==='section'?'active':''}" data-drill="section">Section</button></div><div class="drill-page-body" id="drillPageBody">${drillContent(active)}</div></div>`;
+    const safeActive = active === 'auditor' ? 'auditor' : 'location';
+    return `<div class="module-card full" id="drilldownPagesModule"><div class="module-head"><div><div class="module-title">Drill-down Pages</div><div class="module-sub">Full detail views for location and auditor history.</div></div><span class="chip info">2 Pages</span></div><div class="drill-tabs"><button class="${safeActive==='location'?'active':''}" data-drill="location">Location</button><button class="${safeActive==='auditor'?'active':''}" data-drill="auditor">Auditor</button></div><div class="drill-page-body" id="drillPageBody">${drillContent(safeActive)}</div></div>`;
   }
 
   function drillContent(type){
