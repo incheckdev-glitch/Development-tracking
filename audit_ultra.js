@@ -16,16 +16,12 @@ const data = {
 };
 
 const baseWidgetRegistry = {
-  locationPerformance: { title: "Location Performance", size: "large" },
-  riskMatrix: { title: "Risk Matrix", size: "medium" },
+  locationPerformance: { title: "Location Performance", size: "full" },
   trend: { title: "Pass / Fail Trend", size: "medium" },
   passFail: { title: "Pass vs Fail", size: "medium" },
   sectionFailure: { title: "Section Failure Rate", size: "medium" },
-  heatmap: { title: "Section Heatmap", size: "large" },
   urgentFindings: { title: "Urgent Findings", size: "medium" },
-  topFailedItems: { title: "Top Failed Items", size: "medium" },
-  scoringEngine: { title: "Scoring Engine", size: "full" },
-  triggerLogic: { title: "Trigger Logic", size: "medium" },
+  topFailedItems: { title: "Top Failed Items", size: "full" },
   recentAudits: { title: "Recent Audits", size: "full" }
 };
 
@@ -33,9 +29,10 @@ const customWidgetTemplates = {
   auditorAverage: { title: "Average Score by Auditor", size: "medium" },
   correctiveActions: { title: "Corrective Action Tracker", size: "medium" },
   scoreDistribution: { title: "Score Distribution", size: "medium" },
-  completionCalendar: { title: "Audit Completion Calendar", size: "medium" },
   offlineSync: { title: "Offline Sync Status", size: "small" }
 };
+
+const retiredWidgetIds = new Set(["riskMatrix", "heatmap", "scoringEngine", "triggerLogic"]);
 
 const defaultDashboardConfig = {
   theme: "dark",
@@ -50,41 +47,29 @@ const defaultDashboardConfig = {
   refresh: "Manual",
   widgets: {
     locationPerformance: true,
-    riskMatrix: true,
     trend: true,
     passFail: true,
     sectionFailure: true,
-    heatmap: true,
     urgentFindings: true,
     topFailedItems: true,
-    scoringEngine: true,
-    triggerLogic: true,
     recentAudits: true
   },
   sizes: {
-    locationPerformance: "large",
-    riskMatrix: "medium",
+    locationPerformance: "full",
     trend: "medium",
     passFail: "medium",
     sectionFailure: "medium",
-    heatmap: "large",
     urgentFindings: "medium",
-    topFailedItems: "medium",
-    scoringEngine: "full",
-    triggerLogic: "medium",
+    topFailedItems: "full",
     recentAudits: "full"
   },
   order: [
     "locationPerformance",
-    "riskMatrix",
     "trend",
     "passFail",
     "sectionFailure",
-    "heatmap",
     "urgentFindings",
     "topFailedItems",
-    "scoringEngine",
-    "triggerLogic",
     "recentAudits"
   ],
   customWidgets: []
@@ -96,12 +81,23 @@ function cloneConfig(obj){
 
 function mergeConfig(saved){
   const merged = cloneConfig(defaultDashboardConfig);
-  if(!saved || typeof saved !== "object") return merged;
-  Object.assign(merged, saved);
-  merged.widgets = Object.assign({}, defaultDashboardConfig.widgets, saved.widgets || {});
-  merged.sizes = Object.assign({}, defaultDashboardConfig.sizes, saved.sizes || {});
-  merged.order = Array.isArray(saved.order) && saved.order.length ? saved.order : cloneConfig(defaultDashboardConfig.order);
-  merged.customWidgets = Array.isArray(saved.customWidgets) ? saved.customWidgets : [];
+  if(saved && typeof saved === "object") Object.assign(merged, saved);
+  merged.widgets = Object.assign({}, defaultDashboardConfig.widgets, saved?.widgets || {});
+  merged.sizes = Object.assign({}, defaultDashboardConfig.sizes, saved?.sizes || {});
+  merged.order = Array.isArray(saved?.order) && saved.order.length ? saved.order.slice() : cloneConfig(defaultDashboardConfig.order);
+  merged.customWidgets = Array.isArray(saved?.customWidgets)
+    ? saved.customWidgets.filter(widget => widget?.type !== "completionCalendar")
+    : [];
+
+  retiredWidgetIds.forEach(id => {
+    delete merged.widgets[id];
+    delete merged.sizes[id];
+  });
+  merged.order = merged.order.filter(id => !retiredWidgetIds.has(id));
+  const validIds = new Set([...Object.keys(baseWidgetRegistry), ...merged.customWidgets.map(widget => widget.id)]);
+  merged.order = merged.order.filter(id => validIds.has(id));
+  Object.keys(merged.widgets).forEach(id => { if(!validIds.has(id)) delete merged.widgets[id]; });
+  Object.keys(merged.sizes).forEach(id => { if(!validIds.has(id)) delete merged.sizes[id]; });
   return merged;
 }
 
@@ -374,10 +370,6 @@ function customWidgetHtml(widget){
   if(widget.type === "scoreDistribution"){
     return `<div class="widget-toolbar"><button class="widget-remove" data-remove-custom="${widget.id}" type="button">Remove</button></div><div class="card-title-row"><div><div class="card-title">Score Distribution</div><div class="card-subtitle">Audit count by score band.</div></div></div><div class="mini-bars"><i style="height:38%;background:linear-gradient(180deg,var(--red),var(--rose))"></i><i style="height:52%;background:linear-gradient(180deg,var(--amber),var(--orange))"></i><i style="height:72%"></i><i style="height:95%"></i><i style="height:68%"></i></div>`;
   }
-  if(widget.type === "completionCalendar"){
-    const cells = Array.from({length:28}, (_,i) => `<span class="${[4,12,21].includes(i) ? "fail" : i % 3 === 0 ? "done" : ""}">${i+1}</span>`).join("");
-    return `<div class="widget-toolbar"><button class="widget-remove" data-remove-custom="${widget.id}" type="button">Remove</button></div><div class="card-title-row"><div><div class="card-title">Audit Completion Calendar</div><div class="card-subtitle">Monthly completion overview.</div></div></div><div class="calendar-grid">${cells}</div>`;
-  }
   return `<div class="widget-toolbar"><button class="widget-remove" data-remove-custom="${widget.id}" type="button">Remove</button></div><div class="card-title-row"><div><div class="card-title">Offline Sync Status</div><div class="card-subtitle">Mobile uploads waiting for sync.</div></div><span class="chip warn">4 queued</span></div><table class="table"><tr><td>Dbayeh</td><td><span class="status warn">Queued</span></td></tr><tr><td>Hamra</td><td><span class="status pass">Synced</span></td></tr></table>`;
 }
 
@@ -409,8 +401,9 @@ function applyConfig(config){
   if(filters[1]) filters[1].textContent = config.client;
   if(filters[3]) filters[3].textContent = config.location;
   if(filters[4]) filters[4].textContent = config.template;
-  const passRateCaption = Array.from(document.querySelectorAll(".kpi-caption")).find(el => el.textContent.includes("override"));
-  if(passRateCaption) passRateCaption.textContent = `After override rules • Pass threshold ${config.threshold}%`;
+  const passRateCard = Array.from(document.querySelectorAll(".kpi")).find(card => card.querySelector(".kpi-label")?.textContent.trim() === "Pass Rate");
+  const passRateCaption = passRateCard?.querySelector(".kpi-caption");
+  if(passRateCaption) passRateCaption.textContent = `Pass threshold ${config.threshold}%`;
 
   const orderMap = new Map((config.order || []).map((id, index) => [id, index]));
   getDashboardWidgets().forEach(widget => {
@@ -544,15 +537,6 @@ function bindGlobalActions(){
     if(progress){
       openDrilldown("Section Failure Breakdown", detailCards([["Section", progress.children[0]?.textContent || "-"],["Failure rate", progress.children[2]?.textContent || "-"],["Top cause", "Repeated item failures"],["Recommended action", "Review failed questions"]]));
       return;
-    }
-    const heat = event.target.closest(".heat-cell");
-    if(heat){
-      openDrilldown("Heatmap Score", detailCards([["Score", heat.textContent],["Status", heat.classList.contains("bad") ? "High risk" : heat.classList.contains("mid") ? "Watch" : "Good"],["Drill-down", "Open related audit rows"],["Filter", "Section + Date"]]));
-      return;
-    }
-    const risk = event.target.closest(".risk-cell");
-    if(risk){
-      openDrilldown("Risk Matrix Cell", detailCards([["Risk level", risk.classList.contains("high") ? "High" : risk.classList.contains("med") ? "Medium" : "Low"],["Items", risk.textContent.trim() || "0"],["Impact", "Business impact × probability"],["Next action", "Open failed audits"]]));
     }
   });
 }

@@ -1,18 +1,190 @@
+const defaultConfig = {
+  layout: 'executive',
+  client: 'SAS Horeca S.A.L',
+  location: 'All Locations',
+  template: 'Food Safety Audit',
+  dateRange: '01 Jun - 22 Jun 2026',
+  threshold: '80',
+  urgent: '3',
+  groupBy: 'Location',
+  refresh: 'Manual',
+  widgets: {
+    locationPerformance: true,
+    trend: true,
+    passFail: true,
+    sectionFailure: true,
+    urgentFindings: true,
+    topFailedItems: true,
+    recentAudits: true
+  }
+};
 
-const defaultConfig={layout:'executive',client:'SAS Horeca S.A.L',location:'All Locations',template:'Food Safety Audit',dateRange:'01 Jun - 22 Jun 2026',threshold:'80',urgent:'3',groupBy:'Location',refresh:'Manual',widgets:{locationPerformance:true,riskMatrix:true,trend:true,passFail:true,sectionFailure:true,heatmap:true,urgentFindings:true,topFailedItems:true,scoringEngine:true,triggerLogic:true,recentAudits:true}};
-function clone(o){return JSON.parse(JSON.stringify(o))}
-function saved(){try{return JSON.parse(localStorage.getItem('auditDashboardConfig'))||clone(defaultConfig)}catch{return clone(defaultConfig)}}
-function persist(c){localStorage.setItem('auditDashboardConfig',JSON.stringify(c))}
-function q(s){return document.querySelector(s)}
-function qa(s){return [...document.querySelectorAll(s)]}
-function setVal(id,v){const e=q('#'+id);if(e)e.value=v}
-function getVal(id){return q('#'+id)?.value||''}
-function loadPanel(c){const r=q(`input[name="layout"][value="${c.layout}"]`);if(r)r.checked=true;setVal('cfgClient',c.client);setVal('cfgLocation',c.location);setVal('cfgTemplate',c.template);setVal('cfgDate',c.dateRange);setVal('cfgThreshold',c.threshold);setVal('cfgUrgent',c.urgent);setVal('cfgGroupBy',c.groupBy);setVal('cfgRefresh',c.refresh);qa('[data-toggle-widget]').forEach(i=>i.checked=c.widgets?.[i.dataset.toggleWidget]!==false)}
-function collect(){let widgets={};qa('[data-toggle-widget]').forEach(i=>widgets[i.dataset.toggleWidget]=i.checked);return{layout:q('input[name="layout"]:checked')?.value||'executive',client:getVal('cfgClient'),location:getVal('cfgLocation'),template:getVal('cfgTemplate'),dateRange:getVal('cfgDate'),threshold:getVal('cfgThreshold'),urgent:getVal('cfgUrgent'),groupBy:getVal('cfgGroupBy'),refresh:getVal('cfgRefresh'),widgets}}
-function apply(c){qa('[data-widget]').forEach(w=>w.classList.toggle('widget-hidden',c.widgets?.[w.dataset.widget]===false));const main=q('#dashboardMain');if(main){main.classList.toggle('compact',c.layout==='compact')}const f=qa('.filters .filter b');if(f[0])f[0].textContent=c.dateRange;if(f[1])f[1].textContent=c.client;if(f[3])f[3].textContent=c.location;if(f[4])f[4].textContent=c.template;const cap=qa('.kpi-caption').find(e=>e.textContent.includes('override'));if(cap)cap.textContent=`After override rules • Pass threshold ${c.threshold}%`;const title=q('#activeLayoutLabel');if(title)title.textContent=c.layout.charAt(0).toUpperCase()+c.layout.slice(1)+' View'}
-function openConfig(){loadPanel(saved());q('#configOverlay')?.classList.add('open')}
-function closeConfig(){q('#configOverlay')?.classList.remove('open')}
-function toast(msg){let t=q('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
-function setBars(mode){qa('[data-bar]').forEach((wrap,i)=>{const scores={score:[92,88,84,68,90,81],section:[96,81,78,55,87,75],urgent:[1,2,2,5,1,3]};let val=scores[mode][i];const bar=wrap.querySelector('.bar');let height=mode==='urgent'?Math.max(35,val*42):Math.max(35,val*2.45);bar.style.setProperty('--h',height+'px');bar.dataset.value=mode==='urgent'?val+' flags':val+'%';bar.classList.toggle('fail',(mode!=='urgent'&&val<72)||(mode==='urgent'&&val>=4));bar.classList.toggle('mid',mode!=='urgent'&&val>=72&&val<84)})}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-segment]');if(b){qa('[data-segment]').forEach(x=>x.classList.remove('active'));b.classList.add('active');setBars(b.dataset.segment)}})
-document.addEventListener('DOMContentLoaded',()=>{const c=saved();loadPanel(c);apply(c);setBars('score');q('#openConfigBtn')?.addEventListener('click',openConfig);q('#closeConfigBtn')?.addEventListener('click',closeConfig);q('#configOverlay')?.addEventListener('click',e=>{if(e.target.id==='configOverlay')closeConfig()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeConfig()});q('#saveConfigBtn')?.addEventListener('click',()=>{const c=collect();persist(c);apply(c);closeConfig();toast('Dashboard configuration saved')});q('#resetConfigBtn')?.addEventListener('click',()=>{const c=clone(defaultConfig);persist(c);loadPanel(c);apply(c);toast('Dashboard reset to default')});qa('[data-toggle-widget],input[name="layout"],#cfgClient,#cfgLocation,#cfgTemplate,#cfgDate,#cfgThreshold').forEach(e=>e.addEventListener('change',()=>apply(collect())));});
+const allowedWidgetIds = new Set(Object.keys(defaultConfig.widgets));
+const clone = value => JSON.parse(JSON.stringify(value));
+const q = selector => document.querySelector(selector);
+const qa = selector => [...document.querySelectorAll(selector)];
+
+function normalizeConfig(value){
+  const config = clone(defaultConfig);
+  if(value && typeof value === 'object') Object.assign(config, value);
+  config.widgets = Object.assign({}, defaultConfig.widgets);
+  Object.entries(value?.widgets || {}).forEach(([id, enabled]) => {
+    if(allowedWidgetIds.has(id)) config.widgets[id] = enabled;
+  });
+  return config;
+}
+
+function saved(){
+  try {
+    return normalizeConfig(JSON.parse(localStorage.getItem('auditDashboardConfig')));
+  } catch {
+    return clone(defaultConfig);
+  }
+}
+
+function persist(config){
+  localStorage.setItem('auditDashboardConfig', JSON.stringify(normalizeConfig(config)));
+}
+
+function setVal(id, value){
+  const element = q(`#${id}`);
+  if(element) element.value = value;
+}
+
+function getVal(id){
+  return q(`#${id}`)?.value || '';
+}
+
+function loadPanel(config){
+  const layout = q(`input[name="layout"][value="${config.layout}"]`);
+  if(layout) layout.checked = true;
+  setVal('cfgClient', config.client);
+  setVal('cfgLocation', config.location);
+  setVal('cfgTemplate', config.template);
+  setVal('cfgDate', config.dateRange);
+  setVal('cfgThreshold', config.threshold);
+  setVal('cfgUrgent', config.urgent);
+  setVal('cfgGroupBy', config.groupBy);
+  setVal('cfgRefresh', config.refresh);
+  qa('[data-toggle-widget]').forEach(input => {
+    input.checked = config.widgets?.[input.dataset.toggleWidget] !== false;
+  });
+}
+
+function collect(){
+  const widgets = {};
+  qa('[data-toggle-widget]').forEach(input => {
+    widgets[input.dataset.toggleWidget] = input.checked;
+  });
+  return normalizeConfig({
+    layout: q('input[name="layout"]:checked')?.value || 'executive',
+    client: getVal('cfgClient'),
+    location: getVal('cfgLocation'),
+    template: getVal('cfgTemplate'),
+    dateRange: getVal('cfgDate'),
+    threshold: getVal('cfgThreshold'),
+    urgent: getVal('cfgUrgent'),
+    groupBy: getVal('cfgGroupBy'),
+    refresh: getVal('cfgRefresh'),
+    widgets
+  });
+}
+
+function apply(config){
+  config = normalizeConfig(config);
+  qa('[data-widget]').forEach(widget => {
+    widget.classList.toggle('widget-hidden', config.widgets?.[widget.dataset.widget] === false);
+  });
+  const main = q('#dashboardMain');
+  if(main) main.classList.toggle('compact', config.layout === 'compact');
+
+  const filters = qa('.filters .filter b');
+  if(filters[0]) filters[0].textContent = config.dateRange;
+  if(filters[1]) filters[1].textContent = config.client;
+  if(filters[3]) filters[3].textContent = config.location;
+  if(filters[4]) filters[4].textContent = config.template;
+
+  const passRateCard = qa('.kpis .card').find(card => card.querySelector('.kpi-label')?.textContent.trim() === 'Pass Rate');
+  const caption = passRateCard?.querySelector('.kpi-caption');
+  if(caption) caption.textContent = `Pass threshold ${config.threshold}%`;
+}
+
+function openConfig(){
+  loadPanel(saved());
+  q('#configOverlay')?.classList.add('open');
+}
+
+function closeConfig(){
+  q('#configOverlay')?.classList.remove('open');
+}
+
+function toast(message){
+  let element = q('.toast');
+  if(!element){
+    element = document.createElement('div');
+    element.className = 'toast';
+    document.body.appendChild(element);
+  }
+  element.textContent = message;
+  element.classList.add('show');
+  setTimeout(() => element.classList.remove('show'), 2200);
+}
+
+function setBars(mode){
+  qa('[data-bar]').forEach((wrap, index) => {
+    const scores = {
+      score: [92,88,84,68,90,81],
+      section: [96,81,78,55,87,75],
+      urgent: [1,2,2,5,1,3]
+    };
+    const value = scores[mode][index];
+    const bar = wrap.querySelector('.bar');
+    if(!bar) return;
+    const height = mode === 'urgent' ? Math.max(35, value * 42) : Math.max(35, value * 2.45);
+    bar.style.setProperty('--h', `${height}px`);
+    bar.dataset.value = mode === 'urgent' ? `${value} flags` : `${value}%`;
+    bar.classList.toggle('fail', (mode !== 'urgent' && value < 72) || (mode === 'urgent' && value >= 4));
+    bar.classList.toggle('mid', mode !== 'urgent' && value >= 72 && value < 84);
+  });
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-segment]');
+  if(!button) return;
+  qa('[data-segment]').forEach(item => item.classList.remove('active'));
+  button.classList.add('active');
+  setBars(button.dataset.segment);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const config = saved();
+  loadPanel(config);
+  apply(config);
+  setBars('score');
+
+  q('#openConfigBtn')?.addEventListener('click', openConfig);
+  q('#closeConfigBtn')?.addEventListener('click', closeConfig);
+  q('#configOverlay')?.addEventListener('click', event => {
+    if(event.target.id === 'configOverlay') closeConfig();
+  });
+  document.addEventListener('keydown', event => {
+    if(event.key === 'Escape') closeConfig();
+  });
+  q('#saveConfigBtn')?.addEventListener('click', () => {
+    const next = collect();
+    persist(next);
+    apply(next);
+    closeConfig();
+    toast('Dashboard configuration saved');
+  });
+  q('#resetConfigBtn')?.addEventListener('click', () => {
+    const fresh = clone(defaultConfig);
+    persist(fresh);
+    loadPanel(fresh);
+    apply(fresh);
+    toast('Dashboard reset to default');
+  });
+  qa('[data-toggle-widget],input[name="layout"],#cfgClient,#cfgLocation,#cfgTemplate,#cfgDate,#cfgThreshold').forEach(element => {
+    element.addEventListener('change', () => apply(collect()));
+  });
+});
