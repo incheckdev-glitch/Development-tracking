@@ -808,3 +808,39 @@ button{cursor:pointer}
   .main{padding:15px}
   .table{display:block;overflow-x:auto;white-space:nowrap}
 }
+
+
+/* Stable top summary cards: keep the original 2 x 2 KPI arrangement beside Pass vs Fail. */
+.top-summary-grid{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(560px,1.28fr) minmax(390px,.92fr);
+  gap:15px;
+  align-items:stretch;
+}
+.top-summary-grid .kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  grid-auto-flow:row;
+  gap:13px;
+  min-width:0;
+  height:100%;
+}
+.top-summary-grid .kpi-grid > .card{
+  width:100%;
+  min-width:0;
+  height:100%;
+}
+.top-summary-grid .overview-pass-fail{
+  width:100%;
+  min-width:0;
+  height:100%;
+}
+@media(max-width:1200px){
+  .top-summary-grid{grid-template-columns:1fr}
+  .top-summary-grid .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}
+}
+@media(max-width:700px){
+  .top-summary-grid .kpi-grid{grid-template-columns:1fr}
+}

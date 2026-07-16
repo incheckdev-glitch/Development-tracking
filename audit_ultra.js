@@ -165,17 +165,27 @@ function setBars(mode){
 function ensureDashboardCanvas(){
   const main = document.getElementById("dashboardMain");
   if(!main) return null;
+
+  /* Keep the four KPI cards and Pass vs Fail in their original top-summary layout. */
+  const topSummary = main.querySelector(".top-summary-grid");
   let canvas = document.getElementById("dashboardCanvas");
   if(!canvas){
     canvas = document.createElement("section");
     canvas.id = "dashboardCanvas";
     canvas.className = "dashboard-canvas";
-    const kpis = main.querySelector(".kpi-grid");
-    if(kpis && kpis.parentNode) kpis.insertAdjacentElement("afterend", canvas);
+    if(topSummary) topSummary.insertAdjacentElement("afterend", canvas);
     else main.appendChild(canvas);
+  } else if(topSummary && canvas.previousElementSibling !== topSummary){
+    topSummary.insertAdjacentElement("afterend", canvas);
   }
-  const widgets = Array.from(main.querySelectorAll("[data-widget]")).filter(el => !el.closest("#configOverlay") && !el.closest("#dashboardCanvas"));
+
+  const widgets = Array.from(main.querySelectorAll("[data-widget]")).filter(el =>
+    !el.closest("#configOverlay") &&
+    !el.closest("#dashboardCanvas") &&
+    !el.closest(".top-summary-grid")
+  );
   widgets.forEach(widget => canvas.appendChild(widget));
+
   Array.from(main.querySelectorAll(".grid-main,.grid-three")).forEach(section => {
     if(!section.querySelector("[data-widget]")) section.style.display = "none";
   });
