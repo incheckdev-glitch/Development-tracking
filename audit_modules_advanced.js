@@ -52,17 +52,6 @@
       .action-status{width:100%;border:1px solid var(--stroke);border-radius:12px;background:rgba(2,6,23,.35);color:var(--text);padding:8px}
       html[data-theme="light"] .module-card{background:rgba(255,255,255,.82);color:#172033}
       html[data-theme="light"] .module-sub{color:#667085}
-      .app{grid-template-columns:minmax(0,1fr)!important}
-      .sidebar{display:none!important}
-      html[data-theme="light"] .card-title,html[data-theme="light"] .kpi-value,html[data-theme="light"] .location-bar b,html[data-theme="light"] .legend-row,html[data-theme="light"] .legend-row b,html[data-theme="light"] .progress-row,html[data-theme="light"] .progress-row b,html[data-theme="light"] .table td,html[data-theme="light"] .table th{color:#172033!important}
-      html[data-theme="light"] .bar:before{color:#172033!important;text-shadow:0 1px 0 rgba(255,255,255,.9)}
-      html[data-theme="light"] .location-bar span,html[data-theme="light"] .svg-axis,html[data-theme="light"] .risk-axis,html[data-theme="light"] .card-subtitle{color:#5f6f85!important}
-      html[data-theme="light"] .segment{background:#f3f6fa!important;border-color:rgba(15,23,42,.18)!important}
-      html[data-theme="light"] .segment button{color:#52637a!important}
-      html[data-theme="light"] .segment button.active{background:#d9f5fb!important;color:#075667!important;box-shadow:0 1px 4px rgba(15,23,42,.12)}
-      html[data-theme="light"] .bar-compare{border-bottom-color:rgba(15,23,42,.20)!important}
-      html[data-theme="light"] .table td{background:#f8fafc!important;border-color:rgba(15,23,42,.11)!important}
-      html[data-theme="light"] .card{border-color:rgba(15,23,42,.15)!important;box-shadow:0 14px 34px rgba(15,23,42,.10)!important}
       @media(max-width:1100px){.advanced-modules{grid-template-columns:1fr}.module-card,.module-card.full{grid-column:1/-1}.form-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);

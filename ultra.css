@@ -60,19 +60,11 @@ button,input,select{font:inherit}
 button{cursor:pointer}
 .app{
   display:grid;
-  grid-template-columns:300px minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr);
   min-height:100vh;
+  width:100%;
 }
-.sidebar{
-  position:sticky;
-  top:0;
-  height:100vh;
-  padding:26px 20px;
-  background:linear-gradient(180deg, rgba(255,255,255,.105), rgba(255,255,255,.035));
-  border-right:1px solid var(--stroke);
-  backdrop-filter:blur(28px);
-  z-index:4;
-}
+.sidebar{display:none!important}
 .brand{
   display:flex;
   align-items:center;
@@ -151,7 +143,7 @@ button{cursor:pointer}
   width:7px;height:7px;border-radius:50%;background:var(--green);
   box-shadow:0 0 0 6px rgba(52,211,153,.12);
 }
-.main{padding:24px;min-width:0;width:100%;max-width:none}
+.main{grid-column:1/-1;padding:24px;min-width:0;width:100%;max-width:none}
 .topbar{
   display:flex;align-items:center;justify-content:space-between;gap:18px;
   margin-bottom:18px;
@@ -806,4 +798,13 @@ button{cursor:pointer}
   .top-summary-grid:has(.overview-pass-fail.widget-hidden) .kpi-grid{
     grid-template-columns:1fr;
   }
+}
+
+/* Full-width layout safety after removing the sidebar */
+.app > .main{grid-column:1/-1}
+.card,.module-card,.grid-main,.grid-three,.top-summary-grid,.secondary-insights-grid{min-width:0}
+.table{width:100%}
+@media(max-width:900px){
+  .main{padding:15px}
+  .table{display:block;overflow-x:auto;white-space:nowrap}
 }
