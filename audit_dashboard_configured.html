@@ -274,64 +274,26 @@
 </div>
 </div>
 
-<div class="card pad" data-widget="sectionFailure">
+<div class="card pad" data-widget="sectionFailure" data-failure-view="section">
 <div class="title-row">
 <div>
-<div class="title">
+<div class="title" data-failure-title>
          Failure Rate by Section
         </div>
-<div class="subtitle">
+<div class="subtitle" data-failure-subtitle>
          Top failing audit sections.
         </div>
 </div>
+<div class="segment failure-view-switch" aria-label="Failure rate view">
+<button class="active" data-failure-view-button="section" type="button">Sections</button>
+<button data-failure-view-button="location" type="button">Locations</button>
 </div>
-<div class="progress-row">
-<span>
-        Food Safety
-       </span>
-<div class="track">
-<span class="danger" style="width:31%">
-</span>
 </div>
-<b>
-        31%
-       </b>
-</div>
-<div class="progress-row">
-<span>
-        Cleaning
-       </span>
-<div class="track">
-<span class="danger" style="width:24%">
-</span>
-</div>
-<b>
-        24%
-       </b>
-</div>
-<div class="progress-row">
-<span>
-        Staff Hygiene
-       </span>
-<div class="track">
-<span style="width:18%">
-</span>
-</div>
-<b>
-        18%
-       </b>
-</div>
-<div class="progress-row">
-<span>
-        Documents
-       </span>
-<div class="track">
-<span style="width:12%">
-</span>
-</div>
-<b>
-        12%
-       </b>
+<div data-failure-list>
+<div class="progress-row"><span>Food Safety</span><div class="track"><span class="danger" style="width:31%"></span></div><b>31%</b></div>
+<div class="progress-row"><span>Cleaning</span><div class="track"><span class="warn" style="width:24%"></span></div><b>24%</b></div>
+<div class="progress-row"><span>Staff Hygiene</span><div class="track"><span style="width:18%"></span></div><b>18%</b></div>
+<div class="progress-row"><span>Documents</span><div class="track"><span style="width:12%"></span></div><b>12%</b></div>
 </div>
 </div>
 </section>

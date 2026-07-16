@@ -844,3 +844,6 @@ button{cursor:pointer}
 @media(max-width:700px){
   .top-summary-grid .kpi-grid{grid-template-columns:1fr}
 }
+
+.failure-view-switch{flex-shrink:0}
+@media(max-width:640px){.failure-view-switch{width:100%;margin-top:4px}.failure-view-switch button{flex:1}.card-title-row,.title-row{flex-wrap:wrap}}

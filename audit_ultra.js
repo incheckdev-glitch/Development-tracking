@@ -545,7 +545,9 @@ function bindGlobalActions(){
     }
     const progress = event.target.closest(".progress-row");
     if(progress){
-      openDrilldown("Section Failure Breakdown", detailCards([["Section", progress.children[0]?.textContent || "-"],["Failure rate", progress.children[2]?.textContent || "-"],["Top cause", "Repeated item failures"],["Recommended action", "Review failed questions"]]));
+      const failureCard = progress.closest('[data-widget="sectionFailure"]');
+      const isLocation = failureCard?.dataset.failureView === 'location';
+      openDrilldown(isLocation ? "Location Failure Breakdown" : "Section Failure Breakdown", detailCards([[isLocation ? "Location" : "Section", progress.children[0]?.textContent || "-"],["Failure rate", progress.children[2]?.textContent || "-"],["Top cause", "Repeated item failures"],["Recommended action", "Review failed questions"]]));
       return;
     }
   });
@@ -570,6 +572,55 @@ document.addEventListener("click", event => {
   group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   setBars(btn.dataset.segment);
+});
+
+
+const failureBreakdownViews = {
+  section: {
+    title: 'Failure Rate by Section',
+    subtitle: 'Top failing audit sections.',
+    rows: [
+      ['Food Safety', 31, 'danger'],
+      ['Cleaning', 24, 'warn'],
+      ['Staff Hygiene', 18, ''],
+      ['Documents', 12, '']
+    ]
+  },
+  location: {
+    title: 'Section Failure by Location',
+    subtitle: 'Section failure rates grouped by location.',
+    rows: [
+      ['Dbayeh Branch', 34, 'danger'],
+      ['Verdun Branch', 27, 'warn'],
+      ['Tripoli Branch', 21, 'warn'],
+      ['Hamra Branch', 14, '']
+    ]
+  }
+};
+
+function renderFailureBreakdown(card, view){
+  const data = failureBreakdownViews[view] || failureBreakdownViews.section;
+  card.dataset.failureView = view;
+  const title = card.querySelector('[data-failure-title]');
+  const subtitle = card.querySelector('[data-failure-subtitle]');
+  const list = card.querySelector('[data-failure-list]');
+  if(title) title.textContent = data.title;
+  if(subtitle) subtitle.textContent = data.subtitle;
+  card.querySelectorAll('[data-failure-view-button]').forEach(button => {
+    button.classList.toggle('active', button.dataset.failureViewButton === view);
+  });
+  if(list){
+    list.innerHTML = data.rows.map(([label, rate, tone]) =>
+      `<div class="progress-row"><span>${label}</span><div class="track"><span class="${tone}" style="width:${rate}%"></span></div><b>${rate}%</b></div>`
+    ).join('');
+  }
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-failure-view-button]');
+  if(!button) return;
+  const card = button.closest('[data-widget="sectionFailure"]');
+  if(card) renderFailureBreakdown(card, button.dataset.failureViewButton);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
