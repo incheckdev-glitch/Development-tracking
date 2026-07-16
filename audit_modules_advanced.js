@@ -87,7 +87,7 @@
     const list = actions();
     const open = list.filter(item => item.status !== 'Completed').length;
     return `<div class="module-card full" id="correctiveActionModule">
-      <div class="module-head"><div><div class="module-title">Corrective Action Module</div><div class="module-sub">Track urgent findings, owners, due dates, evidence, and re-audit status.</div></div><div class="module-actions"><span class="chip bad">${open} Open</span><button class="mini-btn" id="newCorrectiveActionBtn">New Action</button></div></div>
+      <div class="module-head"><div><div class="module-title">Corrective Action</div><div class="module-sub">Track urgent findings, owners, due dates, evidence, and re-audit status.</div></div><div class="module-actions"><span class="chip bad">${open} Open</span></div></div>
       <table class="table"><tr><th>Finding</th><th>Location</th><th>Owner</th><th>Due</th><th>Status</th><th>Evidence</th><th>Action</th></tr>${list.map(item => `<tr><td>${item.finding}<br><small>${item.source}</small></td><td>${item.location}</td><td>${item.owner}</td><td>${item.due}</td><td><select class="action-status" data-action-status="${item.id}"><option ${item.status==='Open'?'selected':''}>Open</option><option ${item.status==='In Progress'?'selected':''}>In Progress</option><option ${item.status==='Review'?'selected':''}>Review</option><option ${item.status==='Completed'?'selected':''}>Completed</option></select></td><td><span class="status ${item.evidence==='Uploaded'?'pass':'warn'}">${item.evidence}</span></td><td><button class="mini-btn" data-open-action="${item.id}">Open</button></td></tr>`).join('')}</table>
     </div>`;
   }
