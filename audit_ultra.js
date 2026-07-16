@@ -580,20 +580,60 @@ const failureBreakdownViews = {
     title: 'Failure Rate by Section',
     subtitle: 'Top failing audit sections.',
     rows: [
-      ['Food Safety', 31, 'danger'],
-      ['Cleaning', 24, 'warn'],
-      ['Staff Hygiene', 18, ''],
-      ['Documents', 12, '']
+      { label: 'Food Safety', rate: 31, tone: 'danger' },
+      { label: 'Cleaning', rate: 24, tone: 'warn' },
+      { label: 'Staff Hygiene', rate: 18, tone: '' },
+      { label: 'Documents', rate: 12, tone: '' }
     ]
   },
   location: {
     title: 'Section Failure by Location',
-    subtitle: 'Section failure rates grouped by location.',
+    subtitle: 'Each location shows the total failure rate and section failure distribution.',
     rows: [
-      ['Dbayeh Branch', 34, 'danger'],
-      ['Verdun Branch', 27, 'warn'],
-      ['Tripoli Branch', 21, 'warn'],
-      ['Hamra Branch', 14, '']
+      {
+        label: 'Dbayeh Branch',
+        rate: 34,
+        tone: 'danger',
+        details: [
+          ['Food Safety', 14],
+          ['Cleaning', 9],
+          ['Staff Hygiene', 6],
+          ['Documents', 5]
+        ]
+      },
+      {
+        label: 'Verdun Branch',
+        rate: 27,
+        tone: 'warn',
+        details: [
+          ['Food Safety', 11],
+          ['Cleaning', 7],
+          ['Staff Hygiene', 5],
+          ['Documents', 4]
+        ]
+      },
+      {
+        label: 'Tripoli Branch',
+        rate: 21,
+        tone: 'warn',
+        details: [
+          ['Food Safety', 8],
+          ['Cleaning', 6],
+          ['Staff Hygiene', 4],
+          ['Documents', 3]
+        ]
+      },
+      {
+        label: 'Hamra Branch',
+        rate: 14,
+        tone: '',
+        details: [
+          ['Food Safety', 5],
+          ['Cleaning', 4],
+          ['Staff Hygiene', 3],
+          ['Documents', 2]
+        ]
+      }
     ]
   }
 };
@@ -610,12 +650,14 @@ function renderFailureBreakdown(card, view){
     button.classList.toggle('active', button.dataset.failureViewButton === view);
   });
   if(list){
-    list.innerHTML = data.rows.map(([label, rate, tone]) =>
-      `<div class="progress-row"><span>${label}</span><div class="track"><span class="${tone}" style="width:${rate}%"></span></div><b>${rate}%</b></div>`
-    ).join('');
+    list.innerHTML = data.rows.map(row => {
+      const details = Array.isArray(row.details) && row.details.length
+        ? `<div class="failure-details">${row.details.map(([section, value]) => `<span class="failure-tag"><strong>${section}</strong> ${value}%</span>`).join('')}</div>`
+        : '';
+      return `<div class="${details ? 'failure-row' : 'progress-row'}"><span>${row.label}</span><div><div class="track"><span class="${row.tone}" style="width:${row.rate}%"></span></div>${details}</div><b>${row.rate}%</b></div>`;
+    }).join('');
   }
 }
-
 document.addEventListener('click', event => {
   const button = event.target.closest('[data-failure-view-button]');
   if(!button) return;

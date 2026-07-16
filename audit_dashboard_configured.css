@@ -52,3 +52,4 @@ a{color:inherit;text-decoration:none}button,input,select{font:inherit}.app{displ
 
 .failure-view-switch{flex-shrink:0}
 @media(max-width:640px){.failure-view-switch{width:100%;margin-top:4px}.failure-view-switch button{flex:1}.card-title-row,.title-row{flex-wrap:wrap}}
+.failure-row{display:grid;grid-template-columns:118px 1fr 52px;gap:10px;align-items:start;font-size:12.5px;margin:12px 0}.failure-row .track{margin-top:3px}.failure-details{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.failure-tag{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10.5px;font-weight:800;background:rgba(255,255,255,.08);color:var(--muted)}.failure-tag strong{color:var(--text);font-weight:900;margin-right:4px}
