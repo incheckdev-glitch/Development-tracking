@@ -64,7 +64,7 @@
     block.id = 'advancedAuditNav';
     block.innerHTML = `<div class="nav-title">Advanced Audit</div>
       <a class="nav-link" href="#correctiveActionModule"><span class="nav-icon">🛠️</span><b>Corrective Actions</b></a>
-      <a class="nav-link" href="#drilldownPagesModule"><span class="nav-icon">🔎</span><b>Drill-down Pages</b></a>`;
+      <a class="nav-link" href="#drilldownPagesModule"><span class="nav-icon">🔎</span><b>Audit History Center</b></a>`;
     const viewsTitle = [...sidebar.querySelectorAll('.nav-title')].find(item => item.textContent.trim() === 'Views');
     viewsTitle ? sidebar.insertBefore(block, viewsTitle) : sidebar.appendChild(block);
   }
@@ -87,14 +87,14 @@
     const list = actions();
     const open = list.filter(item => item.status !== 'Completed').length;
     return `<div class="module-card full" id="correctiveActionModule">
-      <div class="module-head"><div><div class="module-title">Corrective Action</div><div class="module-sub">Track urgent findings, owners, due dates, evidence, and re-audit status.</div></div><div class="module-actions"><span class="chip bad">${open} Open</span></div></div>
-      <table class="table"><tr><th>Finding</th><th>Location</th><th>Owner</th><th>Due</th><th>Status</th><th>Evidence</th><th>Action</th></tr>${list.map(item => `<tr><td>${item.finding}<br><small>${item.source}</small></td><td>${item.location}</td><td>${item.owner}</td><td>${item.due}</td><td><select class="action-status" data-action-status="${item.id}"><option ${item.status==='Open'?'selected':''}>Open</option><option ${item.status==='In Progress'?'selected':''}>In Progress</option><option ${item.status==='Review'?'selected':''}>Review</option><option ${item.status==='Completed'?'selected':''}>Completed</option></select></td><td><span class="status ${item.evidence==='Uploaded'?'pass':'warn'}">${item.evidence}</span></td><td><button class="mini-btn" data-open-action="${item.id}">Open</button></td></tr>`).join('')}</table>
+      <div class="module-head"><div><div class="module-title">Corrective Action</div><div class="module-sub">Track urgent findings, owners, due dates, and re-audit status.</div></div><div class="module-actions"><span class="chip bad">${open} Open</span></div></div>
+      <table class="table"><tr><th>Finding</th><th>Location</th><th>Owner</th><th>Due</th><th>Status</th><th>Action</th></tr>${list.map(item => `<tr><td>${item.finding}<br><small>${item.source}</small></td><td>${item.location}</td><td>${item.owner}</td><td>${item.due}</td><td><select class="action-status" data-action-status="${item.id}"><option ${item.status==='Open'?'selected':''}>Open</option><option ${item.status==='In Progress'?'selected':''}>In Progress</option><option ${item.status==='Review'?'selected':''}>Review</option><option ${item.status==='Completed'?'selected':''}>Completed</option></select></td><td><button class="mini-btn" data-open-action="${item.id}">Open</button></td></tr>`).join('')}</table>
     </div>`;
   }
 
   function drill(active){
     const safeActive = active === 'auditor' ? 'auditor' : 'location';
-    return `<div class="module-card full" id="drilldownPagesModule"><div class="module-head"><div><div class="module-title">Drill-down Pages</div><div class="module-sub">Full detail views for location and auditor history.</div></div><span class="chip info">2 Pages</span></div><div class="drill-tabs"><button class="${safeActive==='location'?'active':''}" data-drill="location">Location</button><button class="${safeActive==='auditor'?'active':''}" data-drill="auditor">Auditor</button></div><div class="drill-page-body" id="drillPageBody">${drillContent(safeActive)}</div></div>`;
+    return `<div class="module-card full" id="drilldownPagesModule"><div class="module-head"><div><div class="module-title">Audit History Center</div><div class="module-sub">Full detail views for location and auditor history.</div></div><span class="chip info">2 Pages</span></div><div class="drill-tabs"><button class="${safeActive==='location'?'active':''}" data-drill="location">Location</button><button class="${safeActive==='auditor'?'active':''}" data-drill="auditor">Auditor</button></div><div class="drill-page-body" id="drillPageBody">${drillContent(safeActive)}</div></div>`;
   }
 
   function drillContent(type){
@@ -138,7 +138,7 @@
   function openAction(id){
     const item = actions().find(action => action.id === id);
     if(!item) return;
-    modal('Corrective Action Details', cards([['Finding',item.finding],['Location',item.location],['Owner',item.owner],['Due',item.due],['Priority',item.priority],['Status',item.status],['Evidence',item.evidence],['Source',item.source]]) + `<div style="margin-top:14px"><button class="btn" id="completeAction">Mark Completed</button></div>`);
+    modal('Corrective Action Details', cards([['Finding',item.finding],['Location',item.location],['Owner',item.owner],['Due',item.due],['Priority',item.priority],['Status',item.status],['Source',item.source]]) + `<div style="margin-top:14px"><button class="btn" id="completeAction">Mark Completed</button></div>`);
     document.getElementById('completeAction')?.addEventListener('click', () => {
       const list = actions();
       const action = list.find(entry => entry.id === id);

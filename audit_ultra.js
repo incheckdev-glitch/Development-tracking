@@ -574,7 +574,6 @@ document.addEventListener("click", event => {
 
 document.addEventListener("DOMContentLoaded", () => {
   installAdvancedStyles();
-  ensureTopButtons();
   ensureDashboardCanvas();
   createConfigOverlay();
   ensureDrilldownModal();
