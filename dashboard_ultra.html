@@ -1,693 +1,601 @@
 <!DOCTYPE html>
+
 <html lang="en">
- <head>
-  <meta charset="utf-8"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<title>
    InCheck360 Audit Command Center
   </title>
-  <meta content="width=device-width, initial-scale=1" name="viewport"/>
-  <link href="ultra.css" rel="stylesheet"/>
- </head>
- <body>
-  <div class="app">
-   <aside class="sidebar">
-    <div class="brand">
-     <div class="brand-logo">
-      360
-     </div>
-     <div>
-      <h2>
-       InCheck360
-      </h2>
-      <p>
-       Audit Command Center
-      </p>
-     </div>
-    </div>
-    <div class="nav-title">
-     Audit Module
-    </div>
-    <a class="nav-link active" href="dashboard_ultra.html">
-     <span class="nav-icon">
-      📊
-     </span>
-     <b>
-      Dashboard
-     </b>
-    </a>
-    <a class="nav-link" href="report_ultra.html">
-     <span class="nav-icon">
-      📄
-     </span>
-     <b>
-      Audit Report
-     </b>
-    </a>
-    <a class="nav-link" href="#" id="openWidgetBuilderBtn">
-     <span class="nav-icon">
-      🧩
-     </span>
-     <b>
-      Widget Builder
-     </b>
-    </a>
-    <div class="nav-title">
-     Views
-    </div>
-    <a class="nav-link">
-     <span class="nav-icon">
-      🏢
-     </span>
-     <b>
-      Client
-     </b>
-    </a>
-    <a class="nav-link">
-     <span class="nav-icon">
-      🧭
-     </span>
-     <b>
-      Group
-     </b>
-    </a>
-    <a class="nav-link">
-     <span class="nav-icon">
-      📍
-     </span>
-     <b>
-      Location
-     </b>
-    </a>
-    <a class="nav-link">
-     <span class="nav-icon">
-      👥
-     </span>
-     <b>
-      Auditor Team
-     </b>
-    </a>
-    <div class="side-module">
-     <span class="live-badge">
-      <i>
-      </i>
-      Advanced static demo
-     </span>
-     <div class="mini-title">
-      Phase Two Scope
-     </div>
-     <p>
-      Dashboard builder, corrective actions, drill-down pages, and audit performance widgets are loaded on this page.
-     </p>
-    </div>
-   </aside>
-   <main class="main" id="dashboardMain">
-    <header class="topbar">
-     <div class="searchbox">
-      <span>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="ultra.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="app">
+<main class="main" id="dashboardMain">
+<header class="topbar">
+<div class="searchbox">
+<span>
        ⌕
       </span>
-      <input placeholder="Search client, location, audit, item, section..."/>
-     </div>
-     <div class="top-actions">
-      <div class="avatar-stack">
-       <div class="avatar">
+<input placeholder="Search client, location, audit, item, section..."/>
+</div>
+<div class="top-actions">
+<div class="avatar-stack">
+<div class="avatar">
         OC
        </div>
-       <div class="avatar">
+<div class="avatar">
         RN
        </div>
-       <div class="avatar">
+<div class="avatar">
         KY
        </div>
-      </div>
-      <button class="btn secondary">
+</div>
+<button class="btn secondary">
        Export CSV
       </button>
-      <a class="btn secondary" href="report_ultra.html">
+<a class="btn secondary" href="report_ultra.html">
        Open Report
       </a>
-      <button class="btn" id="openConfigBtn" type="button">
+<button class="btn" id="openConfigBtn" type="button">
        Configure Dashboard
       </button>
-     </div>
-    </header>
-    <section class="filters">
-     <div class="filter">
-      <label>
+</div>
+</header>
+<section class="filters">
+<div class="filter">
+<label>
        Date range
       </label>
-      <b>
+<b>
        01 Jun - 22 Jun 2026
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Client
       </label>
-      <b>
+<b>
        SAS Horeca S.A.L
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Group
       </label>
-      <b>
+<b>
        Lebanon Operations
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Location
       </label>
-      <b>
+<b>
        All Locations
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Checklist Template
       </label>
-      <b>
+<b>
        Food Safety Audit
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Auditor
       </label>
-      <b>
+<b>
        All Teams
       </b>
-     </div>
-    </section>
-    <section class="kpi-grid">
-     <div class="card kpi">
-      <div class="kpi-head">
-       <div class="kpi-label">
+</div>
+</section>
+<section class="top-summary-grid"><section class="kpi-grid">
+<div class="card kpi">
+<div class="kpi-head">
+<div class="kpi-label">
         Average Score
        </div>
-       <div class="kpi-icon">
+<div class="kpi-icon">
         🎯
        </div>
-      </div>
-      <div class="kpi-value">
+</div>
+<div class="kpi-value">
        86.4%
       </div>
-      <span class="chip good">
+<span class="chip good">
        ▲ 4.2%
       </span>
-      <div class="kpi-caption">
+<div class="kpi-caption">
        Weighted final score
       </div>
-     </div>
-     <div class="card kpi">
-      <div class="kpi-head">
-       <div class="kpi-label">
+</div>
+<div class="card kpi">
+<div class="kpi-head">
+<div class="kpi-label">
         Pass Rate
        </div>
-       <div class="kpi-icon">
+<div class="kpi-icon">
         ✅
        </div>
-      </div>
-      <div class="kpi-value">
+</div>
+<div class="kpi-value">
        78%
       </div>
-      <span class="chip good">
+<span class="chip good">
        18 Passed
       </span>
-      <div class="kpi-caption">
+<div class="kpi-caption">
        Pass threshold 80%
       </div>
-     </div>
-     <div class="card kpi">
-      <div class="kpi-head">
-       <div class="kpi-label">
+</div>
+<div class="card kpi">
+<div class="kpi-head">
+<div class="kpi-label">
         Failed Audits
        </div>
-       <div class="kpi-icon">
+<div class="kpi-icon">
         🚨
        </div>
-      </div>
-      <div class="kpi-value">
+</div>
+<div class="kpi-value">
        5
       </div>
-      <span class="chip bad">
+<span class="chip bad">
        2 Critical
       </span>
-      <div class="kpi-caption">
+<div class="kpi-caption">
        Final result = Fail
       </div>
-     </div>
-     <div class="card kpi">
-      <div class="kpi-head">
-       <div class="kpi-label">
+</div>
+<div class="card kpi">
+<div class="kpi-head">
+<div class="kpi-label">
         Urgent Findings
        </div>
-       <div class="kpi-icon">
+<div class="kpi-icon">
         ⚠️
        </div>
-      </div>
-      <div class="kpi-value">
+</div>
+<div class="kpi-value">
        7
       </div>
-      <span class="chip bad">
+<span class="chip bad">
        3 Open
       </span>
-      <div class="kpi-caption">
+<div class="kpi-caption">
        Urgent + failed items
       </div>
-     </div>
-    </section>
-    <section class="grid-main" style="grid-template-columns:1fr">
-     <div class="card card-pad" data-widget="locationPerformance">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
-         Location Performance Comparison
-        </div>
-        <div class="card-subtitle">
-         Switch between final score, section score, and urgent flags.
-        </div>
-       </div>
-       <div class="segment">
-        <button class="active" data-segment="score">
-         Score
-        </button>
-        <button data-segment="section">
-         Section
-        </button>
-        <button data-segment="urgent">
-         Urgent
-        </button>
-       </div>
-      </div>
-      <div class="bar-compare">
-       <div class="location-bar" data-location-bar="">
-        <div class="bar" data-value="92%" style="--h:220px">
-        </div>
-        <b>
-         Hamra
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="location-bar" data-location-bar="">
-        <div class="bar" data-value="88%" style="--h:210px">
-        </div>
-        <b>
-         Achrafieh
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="location-bar" data-location-bar="">
-        <div class="bar" data-value="84%" style="--h:200px">
-        </div>
-        <b>
-         Verdun
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="location-bar" data-location-bar="">
-        <div class="bar fail" data-value="68%" style="--h:162px">
-        </div>
-        <b>
-         Dbayeh
-        </b>
-        <span>
-         Fail
-        </span>
-       </div>
-       <div class="location-bar" data-location-bar="">
-        <div class="bar" data-value="90%" style="--h:215px">
-        </div>
-        <b>
-         Jounieh
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="location-bar" data-location-bar="">
-        <div class="bar mid" data-value="81%" style="--h:193px">
-        </div>
-        <b>
-         Tripoli
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-      </div>
-     </div>
-    </section>
-    <section class="grid-three">
-     <div class="card card-pad" data-widget="trend">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
-         Pass / Fail Trend
-        </div>
-        <div class="card-subtitle">
-         Daily completed audit trend.
-        </div>
-       </div>
-       <span class="chip info">
-        22 days
-       </span>
-      </div>
-      <div class="svg-chart">
-       <svg preserveaspectratio="none" viewbox="0 0 620 300">
-        <path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44 L620,300 L0,300 Z" fill="rgba(103,232,249,.2)">
-        </path>
-        <path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44" fill="none" stroke="#67e8f9" stroke-width="5">
-        </path>
-        <path d="M0,235 C70,246 132,210 205,225 C272,240 340,182 415,205 C510,232 560,194 620,188" fill="none" stroke="#fb7185" stroke-dasharray="9 8" stroke-width="4">
-        </path>
-       </svg>
-       <div class="svg-axis">
-        <span>
-         Jun 1
-        </span>
-        <span>
-         Jun 7
-        </span>
-        <span>
-         Jun 14
-        </span>
-        <span>
-         Jun 22
-        </span>
-       </div>
-      </div>
-     </div>
-     <div class="card card-pad" data-widget="passFail">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
+</div>
+</section><div class="card card-pad overview-pass-fail" data-widget="passFail">
+<div class="card-title-row">
+<div>
+<div class="card-title">
          Pass vs Fail
         </div>
-        <div class="card-subtitle">
+<div class="card-subtitle">
          Final result after all logic.
         </div>
-       </div>
-      </div>
-      <div class="donut-layout">
-       <div class="donut">
-        <div class="donut-inner">
-         <div>
-          <b>
+</div>
+</div>
+<div class="donut-layout">
+<div class="donut">
+<div class="donut-inner">
+<div>
+<b>
            78%
           </b>
-          <span>
+<span>
            Pass rate
           </span>
-         </div>
-        </div>
-       </div>
-       <div class="legend-list">
-        <div class="legend-row">
-         <span>
-          <i class="legend-dot" style="background:var(--green)">
-          </i>
+</div>
+</div>
+</div>
+<div class="legend-list">
+<div class="legend-row">
+<span>
+<i class="legend-dot" style="background:var(--green)">
+</i>
           Passed audits
          </span>
-         <b>
+<b>
           18
          </b>
-        </div>
-        <div class="legend-row">
-         <span>
-          <i class="legend-dot" style="background:var(--red)">
-          </i>
+</div>
+<div class="legend-row">
+<span>
+<i class="legend-dot" style="background:var(--red)">
+</i>
           Failed audits
          </span>
-         <b>
+<b>
           5
          </b>
-        </div>
-        <div class="legend-row">
-         <span>
-          <i class="legend-dot" style="background:var(--amber)">
-          </i>
+</div>
+<div class="legend-row">
+<span>
+<i class="legend-dot" style="background:var(--amber)">
+</i>
           Critical override
          </span>
-         <b>
+<b>
           2
          </b>
+</div>
+</div>
+</div>
+</div></section>
+<section class="grid-main" style="grid-template-columns:1fr">
+<div class="card card-pad" data-widget="locationPerformance">
+<div class="card-title-row">
+<div>
+<div class="card-title">
+         Location Performance Comparison
         </div>
-       </div>
-      </div>
-     </div>
-     <div class="card card-pad" data-widget="sectionFailure">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
+<div class="card-subtitle">
+         Switch between final score and urgent flags.
+        </div>
+</div>
+<div class="segment">
+<button class="active" data-segment="score">
+         Score
+        </button>
+<button data-segment="urgent">
+         Urgent
+        </button>
+</div>
+</div>
+<div class="bar-compare">
+<div class="location-bar" data-location-bar="">
+<div class="bar" data-value="92%" style="--h:220px">
+</div>
+<b>
+         Hamra
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="location-bar" data-location-bar="">
+<div class="bar" data-value="88%" style="--h:210px">
+</div>
+<b>
+         Achrafieh
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="location-bar" data-location-bar="">
+<div class="bar" data-value="84%" style="--h:200px">
+</div>
+<b>
+         Verdun
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="location-bar" data-location-bar="">
+<div class="bar fail" data-value="68%" style="--h:162px">
+</div>
+<b>
+         Dbayeh
+        </b>
+<span>
+         Fail
+        </span>
+</div>
+<div class="location-bar" data-location-bar="">
+<div class="bar" data-value="90%" style="--h:215px">
+</div>
+<b>
+         Jounieh
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="location-bar" data-location-bar="">
+<div class="bar mid" data-value="81%" style="--h:193px">
+</div>
+<b>
+         Tripoli
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+</div>
+</div>
+</section>
+<section class="grid-three secondary-insights-grid">
+<div class="card card-pad" data-widget="trend">
+<div class="card-title-row">
+<div>
+<div class="card-title">
+         Pass / Fail Trend
+        </div>
+<div class="card-subtitle">
+         Daily completed audit trend.
+        </div>
+</div>
+<span class="chip info">
+        22 days
+       </span>
+</div>
+<div class="svg-chart">
+<svg preserveaspectratio="none" viewbox="0 0 620 300">
+<path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44 L620,300 L0,300 Z" fill="rgba(103,232,249,.2)">
+</path>
+<path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44" fill="none" stroke="#67e8f9" stroke-width="5">
+</path>
+<path d="M0,235 C70,246 132,210 205,225 C272,240 340,182 415,205 C510,232 560,194 620,188" fill="none" stroke="#fb7185" stroke-dasharray="9 8" stroke-width="4">
+</path>
+</svg>
+<div class="svg-axis">
+<span>
+         Jun 1
+        </span>
+<span>
+         Jun 7
+        </span>
+<span>
+         Jun 14
+        </span>
+<span>
+         Jun 22
+        </span>
+</div>
+</div>
+</div>
+
+<div class="card card-pad" data-widget="sectionFailure">
+<div class="card-title-row">
+<div>
+<div class="card-title">
          Failure Rate by Section
         </div>
-        <div class="card-subtitle">
+<div class="card-subtitle">
          Top failing audit sections.
         </div>
-       </div>
-      </div>
-      <div class="progress-list">
-       <div class="progress-row">
-        <span>
+</div>
+</div>
+<div class="progress-list">
+<div class="progress-row">
+<span>
          Food Safety
         </span>
-        <div class="track">
-         <span class="danger" style="width:31%">
-         </span>
-        </div>
-        <b>
+<div class="track">
+<span class="danger" style="width:31%">
+</span>
+</div>
+<b>
          31%
         </b>
-       </div>
-       <div class="progress-row">
-        <span>
+</div>
+<div class="progress-row">
+<span>
          Cleaning
         </span>
-        <div class="track">
-         <span class="warn" style="width:24%">
-         </span>
-        </div>
-        <b>
+<div class="track">
+<span class="warn" style="width:24%">
+</span>
+</div>
+<b>
          24%
         </b>
-       </div>
-       <div class="progress-row">
-        <span>
+</div>
+<div class="progress-row">
+<span>
          Staff Hygiene
         </span>
-        <div class="track">
-         <span style="width:18%">
-         </span>
-        </div>
-        <b>
+<div class="track">
+<span style="width:18%">
+</span>
+</div>
+<b>
          18%
         </b>
-       </div>
-       <div class="progress-row">
-        <span>
+</div>
+<div class="progress-row">
+<span>
          Documents
         </span>
-        <div class="track">
-         <span style="width:12%">
-         </span>
-        </div>
-        <b>
+<div class="track">
+<span style="width:12%">
+</span>
+</div>
+<b>
          12%
         </b>
-       </div>
-      </div>
-     </div>
-    </section>
-    <section class="grid-three" style="grid-template-columns:repeat(2,1fr)">
-     <div class="card card-pad" data-widget="urgentFindings">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
+</div>
+</div>
+</div>
+</section>
+<section class="grid-three" style="grid-template-columns:repeat(2,1fr)">
+<div class="card card-pad" data-widget="urgentFindings">
+<div class="card-title-row">
+<div>
+<div class="card-title">
          Urgent Findings Queue
         </div>
-        <div class="card-subtitle">
+<div class="card-subtitle">
          Urgent + failed items appear first in report.
         </div>
-       </div>
-       <span class="chip bad">
+</div>
+<span class="chip bad">
         3 open
        </span>
-      </div>
-      <div class="finding-card">
-       <div class="finding-icon">
+</div>
+<div class="finding-card">
+<div class="finding-icon">
         !
        </div>
-       <div>
-        <b>
+<div>
+<b>
          Fridge temperature above threshold
         </b>
-        <p>
+<p>
          Dbayeh • Food Safety • measured 11°C, max 5°C.
         </p>
-       </div>
-       <span class="status fail">
+</div>
+<span class="status fail">
         Open
        </span>
-      </div>
-      <div class="finding-card">
-       <div class="finding-icon">
+</div>
+<div class="finding-card">
+<div class="finding-icon">
         !
        </div>
-       <div>
-        <b>
+<div>
+<b>
          Expired item found in storage
         </b>
-        <p>
+<p>
          Dbayeh • Food Safety • one expired sauce batch.
         </p>
-       </div>
-       <span class="status fail">
+</div>
+<span class="status fail">
         Open
        </span>
-      </div>
-     </div>
-     <div class="card card-pad" data-widget="topFailedItems">
-      <div class="card-title-row">
-       <div>
-        <div class="card-title">
+</div>
+</div>
+<div class="card card-pad" data-widget="topFailedItems">
+<div class="card-title-row">
+<div>
+<div class="card-title">
          Top Failed Items
         </div>
-        <div class="card-subtitle">
+<div class="card-subtitle">
          Most repeated failed questions.
         </div>
-       </div>
-      </div>
-      <table class="table">
-       <tr>
-        <th>
+</div>
+</div>
+<table class="table">
+<tr>
+<th>
          Question
         </th>
-        <th>
+<th>
          Fails
         </th>
-        <th>
+<th>
          Rate
         </th>
-       </tr>
-       <tr>
-        <td>
+</tr>
+<tr>
+<td>
          Fridge temperature within range?
         </td>
-        <td>
+<td>
          6
         </td>
-        <td>
-         <span class="status fail">
+<td>
+<span class="status fail">
           26%
          </span>
-        </td>
-       </tr>
-       <tr>
-        <td>
+</td>
+</tr>
+<tr>
+<td>
          Cleaning log completed?
         </td>
-        <td>
+<td>
          5
         </td>
-        <td>
-         <span class="status fail">
+<td>
+<span class="status fail">
           22%
          </span>
-        </td>
-       </tr>
-       <tr>
-        <td>
+</td>
+</tr>
+<tr>
+<td>
          Pest control evidence available?
         </td>
-        <td>
+<td>
          4
         </td>
-        <td>
-         <span class="status warn">
+<td>
+<span class="status warn">
           17%
          </span>
-        </td>
-       </tr>
-      </table>
-     </div>
-    </section>
-    <section class="card card-pad" data-widget="recentAudits" style="margin-top:15px">
-     <div class="card-title-row">
-      <div>
-       <div class="card-title">
+</td>
+</tr>
+</table>
+</div>
+</section>
+<section class="card card-pad" data-widget="recentAudits" style="margin-top:15px">
+<div class="card-title-row">
+<div>
+<div class="card-title">
         Recent Completed Audits
        </div>
-       <div class="card-subtitle">
+<div class="card-subtitle">
         Rows can open the detailed report.
        </div>
-      </div>
-      <span class="chip info">
+</div>
+<span class="chip info">
        23 completed
       </span>
-     </div>
-     <div class="audit-list">
-      <div class="audit-row">
-       <small>
+</div>
+<div class="audit-list">
+<div class="audit-row">
+<small>
         22 Jun 2026
        </small>
-       <b>
+<b>
         Dbayeh Branch
        </b>
-       <span>
+<span>
         Omar Chatila
        </span>
-       <b>
+<b>
         68%
        </b>
-       <span class="status fail">
+<span class="status fail">
         Fail
        </span>
-       <small>
+<small>
         Critical section failed: Food Safety
        </small>
-       <a class="action-link" href="report_ultra.html">
+<a class="action-link" href="report_ultra.html">
         View
        </a>
-      </div>
-      <div class="audit-row">
-       <small>
+</div>
+<div class="audit-row">
+<small>
         21 Jun 2026
        </small>
-       <b>
+<b>
         Hamra Branch
        </b>
-       <span>
+<span>
         Rana N.
        </span>
-       <b>
+<b>
         94%
        </b>
-       <span class="status pass">
+<span class="status pass">
         Pass
        </span>
-       <small>
+<small>
         No critical failure
        </small>
-       <a class="action-link" href="report_ultra.html">
+<a class="action-link" href="report_ultra.html">
         View
        </a>
-      </div>
-     </div>
-    </section>
-   </main>
-  </div>
-  <script src="audit_ultra.js">
-  </script>
-  <script src="audit_modules_advanced.js">
-  </script>
- </body>
+</div>
+</div>
+</section>
+</main>
+</div>
+<script src="audit_ultra.js">
+</script>
+<script src="audit_modules_advanced.js">
+</script>
+</body>
 </html>
