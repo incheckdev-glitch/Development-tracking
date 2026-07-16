@@ -1,842 +1,843 @@
 <!DOCTYPE html>
+
 <html>
- <head>
-  <meta charset="utf-8"/>
-  <title>
+<head>
+<meta charset="utf-8"/>
+<title>
    InCheck360 Audit Dashboard Working Config
   </title>
-  <meta content="width=device-width, initial-scale=1" name="viewport"/>
-  <link href="audit_dashboard_configured.css" rel="stylesheet"/>
- </head>
- <body>
-  <div class="app">
-   <aside class="sidebar">
-    <div class="brand">
-     <div class="logo">
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="audit_dashboard_configured.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand">
+<div class="logo">
       360
      </div>
-     <div>
-      <h2>
+<div>
+<h2>
        InCheck360
       </h2>
-      <p>
+<p>
        Audit Command Center
       </p>
-     </div>
-    </div>
-    <nav class="nav">
-     <div class="nav-title">
+</div>
+</div>
+<nav class="nav">
+<div class="nav-title">
       Audit Module
      </div>
-     <a class="active" href="audit_dashboard_configured.html">
-      <span>
+<a class="active" href="audit_dashboard_configured.html">
+<span>
        📊
       </span>
-      <b>
+<b>
        Dashboard
       </b>
-     </a>
-     <a href="audit_report_configured.html">
-      <span>
+</a>
+<a href="audit_report_configured.html">
+<span>
        📄
       </span>
-      <b>
+<b>
        Audit Report
       </b>
-     </a>
-     <a>
-      <span>
+</a>
+<a>
+<span>
        🧩
       </span>
-      <b>
+<b>
        Widget Builder
       </b>
-     </a>
-    </nav>
-    <div class="side-note">
-     <b>
+</a>
+</nav>
+<div class="side-note">
+<b>
       Working Static Preview
      </b>
-     <p>
+<p>
       The Configure Dashboard button now opens a real panel and saves settings in browser local storage.
      </p>
-    </div>
-   </aside>
-   <main class="main" id="dashboardMain">
-    <header class="topbar">
-     <div class="search">
-      <span>
+</div>
+</aside>
+<main class="main" id="dashboardMain">
+<header class="topbar">
+<div class="search">
+<span>
        ⌕
       </span>
-      <input placeholder="Search client, location, item, section..."/>
-     </div>
-     <div class="actions">
-      <a class="btn secondary" href="audit_report_configured.html">
+<input placeholder="Search client, location, item, section..."/>
+</div>
+<div class="actions">
+<a class="btn secondary" href="audit_report_configured.html">
        Open Report
       </a>
-      <button class="btn" id="openConfigBtn" type="button">
+<button class="btn" id="openConfigBtn" type="button">
        Configure Dashboard
       </button>
-     </div>
-    </header>
-    <section class="filters">
-     <div class="filter">
-      <label>
+</div>
+</header>
+<section class="filters">
+<div class="filter">
+<label>
        Date Range
       </label>
-      <b>
+<b>
        01 Jun - 22 Jun 2026
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Client
       </label>
-      <b>
+<b>
        SAS Horeca S.A.L
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Group
       </label>
-      <b>
+<b>
        Lebanon Operations
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Location
       </label>
-      <b>
+<b>
        All Locations
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Template
       </label>
-      <b>
+<b>
        Food Safety Audit
       </b>
-     </div>
-     <div class="filter">
-      <label>
+</div>
+<div class="filter">
+<label>
        Auditor
       </label>
-      <b>
+<b>
        All Teams
       </b>
-     </div>
-    </section>
-    <section class="kpis">
-     <div class="card pad">
-      <div class="kpi-label">
+</div>
+</section>
+<section class="top-summary-grid"><section class="kpis">
+<div class="card pad">
+<div class="kpi-label">
        Average Score
       </div>
-      <div class="kpi-value">
+<div class="kpi-value">
        86.4%
       </div>
-      <span class="chip good">
+<span class="chip good">
        ▲ 4.2%
       </span>
-      <div class="subtitle">
+<div class="subtitle">
        Weighted final score
       </div>
-     </div>
-     <div class="card pad">
-      <div class="kpi-label">
+</div>
+<div class="card pad">
+<div class="kpi-label">
        Pass Rate
       </div>
-      <div class="kpi-value">
+<div class="kpi-value">
        78%
       </div>
-      <span class="chip good">
+<span class="chip good">
        18 Passed
       </span>
-      <div class="kpi-caption subtitle">
+<div class="kpi-caption subtitle">
        Pass threshold 80%
       </div>
-     </div>
-     <div class="card pad">
-      <div class="kpi-label">
+</div>
+<div class="card pad">
+<div class="kpi-label">
        Failed Audits
       </div>
-      <div class="kpi-value">
+<div class="kpi-value">
        5
       </div>
-      <span class="chip bad">
+<span class="chip bad">
        2 Critical
       </span>
-      <div class="subtitle">
+<div class="subtitle">
        Final result = Fail
       </div>
-     </div>
-     <div class="card pad">
-      <div class="kpi-label">
+</div>
+<div class="card pad">
+<div class="kpi-label">
        Urgent Findings
       </div>
-      <div class="kpi-value">
+<div class="kpi-value">
        7
       </div>
-      <span class="chip bad">
+<span class="chip bad">
        3 Open
       </span>
-      <div class="subtitle">
+<div class="subtitle">
        Urgent + failed items
       </div>
-     </div>
-    </section>
-    <section class="grid-main" style="grid-template-columns:1fr">
-     <div class="card pad" data-widget="locationPerformance">
-      <div class="title-row">
-       <div>
-        <div class="title">
-         Location Performance Comparison
-        </div>
-        <div class="subtitle">
-         Switch between final score, section score, and urgent flags.
-        </div>
-       </div>
-       <div class="segment">
-        <button class="active" data-segment="score">
-         Score
-        </button>
-        <button data-segment="section">
-         Section
-        </button>
-        <button data-segment="urgent">
-         Urgent
-        </button>
-       </div>
-      </div>
-      <div class="bars">
-       <div class="bar-wrap" data-bar="">
-        <div class="bar" data-value="92%" style="--h:220px">
-        </div>
-        <b>
-         Hamra
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="bar-wrap" data-bar="">
-        <div class="bar" data-value="88%" style="--h:210px">
-        </div>
-        <b>
-         Achrafieh
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="bar-wrap" data-bar="">
-        <div class="bar" data-value="84%" style="--h:200px">
-        </div>
-        <b>
-         Verdun
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="bar-wrap" data-bar="">
-        <div class="bar fail" data-value="68%" style="--h:162px">
-        </div>
-        <b>
-         Dbayeh
-        </b>
-        <span>
-         Fail
-        </span>
-       </div>
-       <div class="bar-wrap" data-bar="">
-        <div class="bar" data-value="90%" style="--h:215px">
-        </div>
-        <b>
-         Jounieh
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-       <div class="bar-wrap" data-bar="">
-        <div class="bar mid" data-value="81%" style="--h:193px">
-        </div>
-        <b>
-         Tripoli
-        </b>
-        <span>
-         Pass
-        </span>
-       </div>
-      </div>
-     </div>
-    </section>
-    <section class="grid-three">
-     <div class="card pad" data-widget="trend">
-      <div class="title-row">
-       <div>
-        <div class="title">
-         Pass / Fail Trend
-        </div>
-        <div class="subtitle">
-         Daily trend for completed audits.
-        </div>
-       </div>
-       <span class="chip info">
-        22 days
-       </span>
-      </div>
-      <div class="svgchart">
-       <svg preserveaspectratio="none" viewbox="0 0 620 300">
-        <defs>
-         <lineargradient id="areaPass" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#67e8f9" stop-opacity=".5">
-          </stop>
-          <stop offset="100%" stop-color="#67e8f9" stop-opacity="0">
-          </stop>
-         </lineargradient>
-        </defs>
-        <path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44 L620,300 L0,300 Z" fill="url(#areaPass)">
-        </path>
-        <path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44" fill="none" stroke="#67e8f9" stroke-width="5">
-        </path>
-        <path d="M0,235 C70,246 132,210 205,225 C272,240 340,182 415,205 C510,232 560,194 620,188" fill="none" stroke="#fb7185" stroke-dasharray="9 8" stroke-width="4">
-        </path>
-       </svg>
-       <div class="axis">
-        <span>
-         Jun 1
-        </span>
-        <span>
-         Jun 7
-        </span>
-        <span>
-         Jun 14
-        </span>
-        <span>
-         Jun 22
-        </span>
-       </div>
-      </div>
-     </div>
-     <div class="card pad" data-widget="passFail">
-      <div class="title-row">
-       <div>
-        <div class="title">
+</div>
+</section><div class="card pad overview-pass-fail" data-widget="passFail">
+<div class="title-row">
+<div>
+<div class="title">
          Pass vs Fail
         </div>
-        <div class="subtitle">
+<div class="subtitle">
          Final result after all logic.
         </div>
-       </div>
-      </div>
-      <div class="donut">
-       <div>
-        <b>
+</div>
+</div>
+<div class="donut">
+<div>
+<b>
          78%
         </b>
-        <span class="subtitle">
+<span class="subtitle">
          Pass rate
         </span>
-       </div>
-      </div>
-     </div>
-     <div class="card pad" data-widget="sectionFailure">
-      <div class="title-row">
-       <div>
-        <div class="title">
+</div>
+</div>
+</div></section>
+<section class="grid-main" style="grid-template-columns:1fr">
+<div class="card pad" data-widget="locationPerformance">
+<div class="title-row">
+<div>
+<div class="title">
+         Location Performance Comparison
+        </div>
+<div class="subtitle">
+         Switch between final score, section score, and urgent flags.
+        </div>
+</div>
+<div class="segment">
+<button class="active" data-segment="score">
+         Score
+        </button>
+<button data-segment="section">
+         Section
+        </button>
+<button data-segment="urgent">
+         Urgent
+        </button>
+</div>
+</div>
+<div class="bars">
+<div class="bar-wrap" data-bar="">
+<div class="bar" data-value="92%" style="--h:220px">
+</div>
+<b>
+         Hamra
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="bar-wrap" data-bar="">
+<div class="bar" data-value="88%" style="--h:210px">
+</div>
+<b>
+         Achrafieh
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="bar-wrap" data-bar="">
+<div class="bar" data-value="84%" style="--h:200px">
+</div>
+<b>
+         Verdun
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="bar-wrap" data-bar="">
+<div class="bar fail" data-value="68%" style="--h:162px">
+</div>
+<b>
+         Dbayeh
+        </b>
+<span>
+         Fail
+        </span>
+</div>
+<div class="bar-wrap" data-bar="">
+<div class="bar" data-value="90%" style="--h:215px">
+</div>
+<b>
+         Jounieh
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+<div class="bar-wrap" data-bar="">
+<div class="bar mid" data-value="81%" style="--h:193px">
+</div>
+<b>
+         Tripoli
+        </b>
+<span>
+         Pass
+        </span>
+</div>
+</div>
+</div>
+</section>
+<section class="grid-three secondary-insights-grid">
+<div class="card pad" data-widget="trend">
+<div class="title-row">
+<div>
+<div class="title">
+         Pass / Fail Trend
+        </div>
+<div class="subtitle">
+         Daily trend for completed audits.
+        </div>
+</div>
+<span class="chip info">
+        22 days
+       </span>
+</div>
+<div class="svgchart">
+<svg preserveaspectratio="none" viewbox="0 0 620 300">
+<defs>
+<lineargradient id="areaPass" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#67e8f9" stop-opacity=".5">
+</stop>
+<stop offset="100%" stop-color="#67e8f9" stop-opacity="0">
+</stop>
+</lineargradient>
+</defs>
+<path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44 L620,300 L0,300 Z" fill="url(#areaPass)">
+</path>
+<path d="M0,215 C70,170 112,185 168,130 C230,70 280,135 338,94 C406,46 470,90 620,44" fill="none" stroke="#67e8f9" stroke-width="5">
+</path>
+<path d="M0,235 C70,246 132,210 205,225 C272,240 340,182 415,205 C510,232 560,194 620,188" fill="none" stroke="#fb7185" stroke-dasharray="9 8" stroke-width="4">
+</path>
+</svg>
+<div class="axis">
+<span>
+         Jun 1
+        </span>
+<span>
+         Jun 7
+        </span>
+<span>
+         Jun 14
+        </span>
+<span>
+         Jun 22
+        </span>
+</div>
+</div>
+</div>
+
+<div class="card pad" data-widget="sectionFailure">
+<div class="title-row">
+<div>
+<div class="title">
          Failure Rate by Section
         </div>
-        <div class="subtitle">
+<div class="subtitle">
          Top failing audit sections.
         </div>
-       </div>
-      </div>
-      <div class="progress-row">
-       <span>
+</div>
+</div>
+<div class="progress-row">
+<span>
         Food Safety
        </span>
-       <div class="track">
-        <span class="danger" style="width:31%">
-        </span>
-       </div>
-       <b>
+<div class="track">
+<span class="danger" style="width:31%">
+</span>
+</div>
+<b>
         31%
        </b>
-      </div>
-      <div class="progress-row">
-       <span>
+</div>
+<div class="progress-row">
+<span>
         Cleaning
        </span>
-       <div class="track">
-        <span class="danger" style="width:24%">
-        </span>
-       </div>
-       <b>
+<div class="track">
+<span class="danger" style="width:24%">
+</span>
+</div>
+<b>
         24%
        </b>
-      </div>
-      <div class="progress-row">
-       <span>
+</div>
+<div class="progress-row">
+<span>
         Staff Hygiene
        </span>
-       <div class="track">
-        <span style="width:18%">
-        </span>
-       </div>
-       <b>
+<div class="track">
+<span style="width:18%">
+</span>
+</div>
+<b>
         18%
        </b>
-      </div>
-      <div class="progress-row">
-       <span>
+</div>
+<div class="progress-row">
+<span>
         Documents
        </span>
-       <div class="track">
-        <span style="width:12%">
-        </span>
-       </div>
-       <b>
+<div class="track">
+<span style="width:12%">
+</span>
+</div>
+<b>
         12%
        </b>
-      </div>
-     </div>
-    </section>
-    <section class="grid-three" style="grid-template-columns:repeat(2,1fr)">
-     <div class="card pad" data-widget="urgentFindings">
-      <div class="title-row">
-       <div>
-        <div class="title">
+</div>
+</div>
+</section>
+<section class="grid-three" style="grid-template-columns:repeat(2,1fr)">
+<div class="card pad" data-widget="urgentFindings">
+<div class="title-row">
+<div>
+<div class="title">
          Urgent Findings Queue
         </div>
-        <div class="subtitle">
+<div class="subtitle">
          Urgent + failed items appear first in report.
         </div>
-       </div>
-       <span class="chip bad">
+</div>
+<span class="chip bad">
         3 open
        </span>
-      </div>
-      <div class="finding">
-       <div class="finding-icon">
+</div>
+<div class="finding">
+<div class="finding-icon">
         !
        </div>
-       <div>
-        <b>
+<div>
+<b>
          Fridge temperature above threshold
         </b>
-        <p>
+<p>
          Dbayeh • Food Safety • measured 11°C, max 5°C.
         </p>
-       </div>
-       <span class="status fail">
+</div>
+<span class="status fail">
         Open
        </span>
-      </div>
-      <div class="finding">
-       <div class="finding-icon">
+</div>
+<div class="finding">
+<div class="finding-icon">
         !
        </div>
-       <div>
-        <b>
+<div>
+<b>
          Expired item found in storage
         </b>
-        <p>
+<p>
          Dbayeh • Food Safety • one expired sauce batch.
         </p>
-       </div>
-       <span class="status fail">
+</div>
+<span class="status fail">
         Open
        </span>
-      </div>
-     </div>
-     <div class="card pad" data-widget="topFailedItems">
-      <div class="title-row">
-       <div>
-        <div class="title">
+</div>
+</div>
+<div class="card pad" data-widget="topFailedItems">
+<div class="title-row">
+<div>
+<div class="title">
          Top Failed Items
         </div>
-        <div class="subtitle">
+<div class="subtitle">
          Most repeated failed questions.
         </div>
-       </div>
-      </div>
-      <table class="table">
-       <tr>
-        <th>
+</div>
+</div>
+<table class="table">
+<tr>
+<th>
          Question
         </th>
-        <th>
+<th>
          Fails
         </th>
-        <th>
+<th>
          Rate
         </th>
-       </tr>
-       <tr>
-        <td>
+</tr>
+<tr>
+<td>
          Fridge temperature within range?
         </td>
-        <td>
+<td>
          6
         </td>
-        <td>
-         <span class="status fail">
+<td>
+<span class="status fail">
           26%
          </span>
-        </td>
-       </tr>
-       <tr>
-        <td>
+</td>
+</tr>
+<tr>
+<td>
          Cleaning log completed?
         </td>
-        <td>
+<td>
          5
         </td>
-        <td>
-         <span class="status fail">
+<td>
+<span class="status fail">
           22%
          </span>
-        </td>
-       </tr>
-       <tr>
-        <td>
+</td>
+</tr>
+<tr>
+<td>
          Pest control evidence?
         </td>
-        <td>
+<td>
          4
         </td>
-        <td>
-         <span class="status warn">
+<td>
+<span class="status warn">
           17%
          </span>
-        </td>
-       </tr>
-      </table>
-     </div>
-    </section>
-    <section class="card pad" data-widget="recentAudits" style="margin-top:15px">
-     <div class="title-row">
-      <div>
-       <div class="title">
+</td>
+</tr>
+</table>
+</div>
+</section>
+<section class="card pad" data-widget="recentAudits" style="margin-top:15px">
+<div class="title-row">
+<div>
+<div class="title">
         Recent Completed Audits
        </div>
-       <div class="subtitle">
+<div class="subtitle">
         Rows can open the detailed report.
        </div>
-      </div>
-      <span class="chip info">
+</div>
+<span class="chip info">
        23 completed
       </span>
-     </div>
-     <div class="audit-row">
-      <small>
+</div>
+<div class="audit-row">
+<small>
        22 Jun 2026
       </small>
-      <b>
+<b>
        Dbayeh Branch
       </b>
-      <span>
+<span>
        Omar Chatila
       </span>
-      <b>
+<b>
        68%
       </b>
-      <span class="status fail">
+<span class="status fail">
        Fail
       </span>
-      <small>
+<small>
        Critical section failed: Food Safety
       </small>
-      <a class="action-link" href="audit_report_configured.html">
+<a class="action-link" href="audit_report_configured.html">
        View
       </a>
-     </div>
-     <div class="audit-row">
-      <small>
+</div>
+<div class="audit-row">
+<small>
        21 Jun 2026
       </small>
-      <b>
+<b>
        Hamra Branch
       </b>
-      <span>
+<span>
        Rana N.
       </span>
-      <b>
+<b>
        94%
       </b>
-      <span class="status pass">
+<span class="status pass">
        Pass
       </span>
-      <small>
+<small>
        No critical failure
       </small>
-      <a class="action-link" href="audit_report_configured.html">
+<a class="action-link" href="audit_report_configured.html">
        View
       </a>
-     </div>
-    </section>
-   </main>
-  </div>
-  <div class="config-overlay" id="configOverlay">
-   <aside class="config-panel">
-    <div class="config-header">
-     <div>
-      <span class="eyebrow">
+</div>
+</section>
+</main>
+</div>
+<div class="config-overlay" id="configOverlay">
+<aside class="config-panel">
+<div class="config-header">
+<div>
+<span class="eyebrow">
        Dashboard Builder
       </span>
-      <h2>
+<h2>
        Configure Audit Dashboard
       </h2>
-      <p>
+<p>
        Choose widgets, default filters, layout density, and role visibility. Settings are saved locally in this browser.
       </p>
-     </div>
-     <button class="icon-btn" id="closeConfigBtn" type="button">
+</div>
+<button class="icon-btn" id="closeConfigBtn" type="button">
       ×
      </button>
-    </div>
-    <div class="config-body">
-     <section class="config-section">
-      <h3>
+</div>
+<div class="config-body">
+<section class="config-section">
+<h3>
        Layout Preset
       </h3>
-      <div class="preset-grid">
-       <label class="preset-card">
-        <input checked="" name="layout" type="radio" value="executive"/>
-        <span>
+<div class="preset-grid">
+<label class="preset-card">
+<input checked="" name="layout" type="radio" value="executive"/>
+<span>
          Executive
         </span>
-        <small>
+<small>
          KPI + performance overview
         </small>
-       </label>
-       <label class="preset-card">
-        <input name="layout" type="radio" value="operations"/>
-        <span>
+</label>
+<label class="preset-card">
+<input name="layout" type="radio" value="operations"/>
+<span>
          Operations
         </span>
-        <small>
+<small>
          Urgent queue + audit list
         </small>
-       </label>
-       <label class="preset-card">
-        <input name="layout" type="radio" value="compact"/>
-        <span>
+</label>
+<label class="preset-card">
+<input name="layout" type="radio" value="compact"/>
+<span>
          Compact
         </span>
-        <small>
+<small>
          Dense layout
         </small>
-       </label>
-      </div>
-     </section>
-     <section class="config-section">
-      <h3>
+</label>
+</div>
+</section>
+<section class="config-section">
+<h3>
        Default Filters
       </h3>
-      <div class="config-grid">
-       <label>
+<div class="config-grid">
+<label>
         Client
         <select id="cfgClient">
-         <option>
+<option>
           SAS Horeca S.A.L
          </option>
-         <option>
+<option>
           Kcal DMCC
          </option>
-         <option>
+<option>
           Lebanese Roaster
          </option>
-         <option>
+<option>
           All Clients
          </option>
-        </select>
-       </label>
-       <label>
+</select>
+</label>
+<label>
         Location
         <select id="cfgLocation">
-         <option>
+<option>
           All Locations
          </option>
-         <option>
+<option>
           Dbayeh Branch
          </option>
-         <option>
+<option>
           Hamra Branch
          </option>
-         <option>
+<option>
           Achrafieh Branch
          </option>
-        </select>
-       </label>
-       <label>
+</select>
+</label>
+<label>
         Checklist Template
         <select id="cfgTemplate">
-         <option>
+<option>
           Food Safety Audit
          </option>
-         <option>
+<option>
           Cleaning Audit
          </option>
-         <option>
+<option>
           Operations Audit
          </option>
-         <option>
+<option>
           All Audit Templates
          </option>
-        </select>
-       </label>
-       <label>
+</select>
+</label>
+<label>
         Date Range
         <select id="cfgDate">
-         <option>
+<option>
           01 Jun - 22 Jun 2026
          </option>
-         <option>
+<option>
           This Week
          </option>
-         <option>
+<option>
           This Month
          </option>
-         <option>
+<option>
           Last 30 Days
          </option>
-        </select>
-       </label>
-      </div>
-     </section>
-     <section class="config-section">
-      <h3>
+</select>
+</label>
+</div>
+</section>
+<section class="config-section">
+<h3>
        Visible Widgets
       </h3>
-      <div class="toggle-grid">
-       <label>
-        <input checked="" data-toggle-widget="locationPerformance" type="checkbox"/>
+<div class="toggle-grid">
+<label>
+<input checked="" data-toggle-widget="locationPerformance" type="checkbox"/>
         Location Performance
        </label>
-       <label>
-        <input checked="" data-toggle-widget="trend" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="trend" type="checkbox"/>
         Pass / Fail Trend
        </label>
-       <label>
-        <input checked="" data-toggle-widget="passFail" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="passFail" type="checkbox"/>
         Pass vs Fail
        </label>
-       <label>
-        <input checked="" data-toggle-widget="sectionFailure" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="sectionFailure" type="checkbox"/>
         Section Failure Rate
        </label>
-       <label>
-        <input checked="" data-toggle-widget="urgentFindings" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="urgentFindings" type="checkbox"/>
         Urgent Findings
        </label>
-       <label>
-        <input checked="" data-toggle-widget="topFailedItems" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="topFailedItems" type="checkbox"/>
         Top Failed Items
        </label>
-       <label>
-        <input checked="" data-toggle-widget="recentAudits" type="checkbox"/>
+<label>
+<input checked="" data-toggle-widget="recentAudits" type="checkbox"/>
         Recent Audits
        </label>
-      </div>
-     </section>
-     <section class="config-section">
-      <h3>
+</div>
+</section>
+<section class="config-section">
+<h3>
        Role Visibility
       </h3>
-      <div class="roles">
-       <label>
-        <input checked="" type="checkbox"/>
+<div class="roles">
+<label>
+<input checked="" type="checkbox"/>
         Admin
        </label>
-       <label>
-        <input checked="" type="checkbox"/>
+<label>
+<input checked="" type="checkbox"/>
         GM
        </label>
-       <label>
-        <input checked="" type="checkbox"/>
+<label>
+<input checked="" type="checkbox"/>
         HOO
        </label>
-       <label>
-        <input type="checkbox"/>
+<label>
+<input type="checkbox"/>
         Location Manager
        </label>
-       <label>
-        <input type="checkbox"/>
+<label>
+<input type="checkbox"/>
         Auditor
        </label>
-      </div>
-     </section>
-     <section class="config-section">
-      <h3>
+</div>
+</section>
+<section class="config-section">
+<h3>
        Widget Parameters
       </h3>
-      <div class="config-grid">
-       <label>
+<div class="config-grid">
+<label>
         Score threshold
         <input id="cfgThreshold" max="100" min="0" type="number" value="80"/>
-       </label>
-       <label>
+</label>
+<label>
         Urgent alert threshold
         <input id="cfgUrgent" max="50" min="0" type="number" value="3"/>
-       </label>
-       <label>
+</label>
+<label>
         Default group by
         <select id="cfgGroupBy">
-         <option>
+<option>
           Location
          </option>
-         <option>
+<option>
           Client
          </option>
-         <option>
+<option>
           Group
          </option>
-         <option>
+<option>
           Auditor
          </option>
-        </select>
-       </label>
-       <label>
+</select>
+</label>
+<label>
         Refresh mode
         <select id="cfgRefresh">
-         <option>
+<option>
           Manual
          </option>
-         <option>
+<option>
           Every 5 minutes
          </option>
-         <option>
+<option>
           Every 15 minutes
          </option>
-         <option>
+<option>
           Hourly
          </option>
-        </select>
-       </label>
-      </div>
-     </section>
-    </div>
-    <div class="config-footer">
-     <span>
+</select>
+</label>
+</div>
+</section>
+</div>
+<div class="config-footer">
+<span>
       Changes apply to this static preview only.
      </span>
-     <div>
-      <button class="btn secondary" id="resetConfigBtn" type="button">
+<div>
+<button class="btn secondary" id="resetConfigBtn" type="button">
        Reset
       </button>
-      <button class="btn" id="saveConfigBtn" type="button">
+<button class="btn" id="saveConfigBtn" type="button">
        Save Configuration
       </button>
-     </div>
-    </div>
-   </aside>
-  </div>
-  <script src="audit_dashboard_configured.js">
-  </script>
- </body>
+</div>
+</div>
+</aside>
+</div>
+<script src="audit_dashboard_configured.js">
+</script>
+</body>
 </html>
