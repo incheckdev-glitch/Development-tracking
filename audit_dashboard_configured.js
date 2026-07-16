@@ -279,3 +279,25 @@ document.addEventListener('DOMContentLoaded', () => {
     element.addEventListener('change', () => apply(collect()));
   });
 });
+
+
+// Standalone light/dark mode toggle for the configured dashboard.
+const configuredThemeStorageKey = 'incheck360AuditTheme';
+function applyConfiguredTheme(theme){
+  const normalized = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', normalized);
+  localStorage.setItem(configuredThemeStorageKey, normalized);
+  const button = document.getElementById('themeToggleBtn');
+  if(button){
+    button.textContent = normalized === 'light' ? '☀️ Light' : '🌙 Dark';
+    button.setAttribute('aria-pressed', String(normalized === 'light'));
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem(configuredThemeStorageKey) || 'dark';
+  applyConfiguredTheme(savedTheme);
+  document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    applyConfiguredTheme(current === 'light' ? 'dark' : 'light');
+  });
+});

@@ -854,3 +854,10 @@ button{cursor:pointer}
 .failure-details{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .failure-tag{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10.5px;font-weight:800;background:rgba(255,255,255,.08);color:var(--muted)}
 .failure-tag strong{color:var(--text);font-weight:900;margin-right:4px}
+
+
+/* Dashboard appearance toggle */
+.dashboard-toolbar{display:flex;justify-content:flex-end;align-items:center;margin:0 0 12px}
+.theme-toggle-btn{min-width:112px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+@media(max-width:700px){.dashboard-toolbar{justify-content:stretch}.theme-toggle-btn{width:100%}}
+@media print{.dashboard-toolbar{display:none!important}}
